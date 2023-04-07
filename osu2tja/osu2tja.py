@@ -1,9 +1,11 @@
-# -*- coding: gbk -*-
+# -*- coding: utf-8 -*-
 from functools import reduce
 import sys
 import optparse
 import copy
 import codecs
+import os
+import math
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
@@ -423,19 +425,7 @@ def osu2tja(filename):
 	global osu_format_ver
 	global commands_within
 	global taiko_mode	
-
-	# check filename
-	if not filename.lower().endswith(".osu"):
-		print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename)
-		return False
-	
-	# try to open file
-	try:
-		fp = codecs.open(filename, "r", "utf8")
-	except IOError:
-		print("Can't open file `%s`" % filename)
-		return False
-	
+		
 	# data structures to hold information
 	audio = ""
 	title = ""
@@ -449,6 +439,8 @@ def osu2tja(filename):
 	# state vars
 	osu_ver_str = ""
 	curr_sec = ""
+
+	fp = codecs.open(filename, "r", "utf8")
 	# read data
 	for line in fp:
 		line = line.strip()
@@ -477,6 +469,9 @@ def osu2tja(filename):
 		# read in useful infomation in following sections
 		if curr_sec == "General":
 			if vname == "AudioFilename":
+				root, ext = os.path.splitext(vval)
+				if ext != ".ogg":
+					vval = root+".ogg"
 				audio = vval
 			elif vname == "PreviewTime":
 				preview = int(vval)
@@ -497,6 +492,8 @@ def osu2tja(filename):
 		elif curr_sec == "Difficulty":
 			if vname == "SliderMultiplier":
 				slider_velocity = float(vval)
+			elif vname == "OverallDifficulty":
+				difficulty = math.floor(float(vval))
 		elif curr_sec == "TimingPoints":
 			prev_timing_point = timingpoints and timingpoints[-1] or None
 			data = get_timing_point(line, prev_timing_point)
@@ -547,16 +544,26 @@ def osu2tja(filename):
 	bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm # current bar length
 	
 	bar_cnt = 1
-	print("TITLE:%s" % title.encode("shift-jis"))
-	print("SUBTITLE:%s" % (subtitle or artist).encode("shift-jis"))
+	print("TITLE:%s" % title)
+	if subtitle != "" and artist != "":
+		subtitle = f"{artist} ｢{subtitle}｣より"
+	print("SUBTITLE:--%s" % (subtitle or artist))
 	print("WAVE:%s" % audio)
 	print("BPM:%.2f" % timingpoints[0]["bpm"])
 	print("OFFSET:-%.3f" % (timingpoints[0]["offset"] / 1000.0))
 	print("DEMOSTART:%.3f" % (preview / 1000.0))
 
 	print("")
-	print("COURSE:3") # TODO: GUESS DIFFICULTY
-	print("LEVEL:9")  # TODO: GUESS LEVEL
+	if version in "Inner Oni":
+		course = "Edit"
+	else:
+		course = "Oni"
+	print(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
+	if difficulty != "":
+		level = difficulty+4
+	else:
+		level = 9
+	print(f"LEVEL:{level}")  # TODO: GUESS LEVEL
 	
 	# don't write score init and score diff
 	# taiko jiro will calculate score automatically
@@ -649,6 +656,7 @@ def osu2tja(filename):
 
 	print("#END")
 	print(WATER_MARK)
+	print(f"//created by {creator}")
 	
 if __name__ == "__main__":
 	parser = optparse.OptionParser()

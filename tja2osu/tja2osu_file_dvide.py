@@ -194,7 +194,7 @@ def divide_tja(filename):
         fout.close()
         
         sys.stdout = old_stdout
-        print("Generate:%s.osu" % name)
+        print("Generate:%s.osu" % name, file=sys.stderr)
 
 if __name__ == "__main__":
     assert len(sys.argv) > 1

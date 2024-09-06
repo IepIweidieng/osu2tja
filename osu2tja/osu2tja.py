@@ -147,7 +147,7 @@ def get_timing_point(str, prev_timing_point=None):
         ret["GGT"] = is_ggt
 
     except:
-        print("Osu file Error, at [TimingPoints] section, please check")
+        print("Osu file Error, at [TimingPoints] section, please check", file=sys.stderr)
         return {}
 
     return ret
@@ -478,14 +478,14 @@ def osu2tja(fp, course, level, audio_name):
     tja_contents = list()
     # check filename
     # if not filename.lower().endswith(".osu"):
-    #    print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename)
+    #    print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename, file=sys.stderr)
     #    return False
 
     # try to open file
     # try:
     #    fp = codecs.open(filename, "r", "utf8")
     # except IOError:
-    #    print("Can't open file `%s`" % filename)
+    #    print("Can't open file `%s`" % filename, file=sys.stderr)
     #    return False
 
     # data structures to hold information
@@ -517,7 +517,7 @@ def osu2tja(fp, course, level, audio_name):
             if not ignore_format_ver:
                 if osu_format_ver not in OSU_VER_SUPPORT:
                     print("Only support osu file format v%s at the moment. You may try option -i to force convert if you will." %
-                          ("/".join([str(i) for i in OSU_VER_SUPPORT])))
+                          ("/".join([str(i) for i in OSU_VER_SUPPORT])), file=sys.stderr)
                     return False
 
         # new section? Update section name.
@@ -739,5 +739,5 @@ if __name__ == "__main__":
     osu2tja(args[0])
 
     if show_head_info:
-        print(slider_combo_cnt_240)
-        print(slider_combo_cnt_less)
+        print(slider_combo_cnt_240, file=sys.stderr)
+        print(slider_combo_cnt_less, file=sys.stderr)

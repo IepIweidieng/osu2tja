@@ -54,7 +54,7 @@ def try_decode(bytes_):
     for enc in ["utf-8-sig", "gbk", "shift-jis", "big5"]:
         try:
             ret[enc] = bytes_.decode("gbk")
-            print(enc, len(ret[enc]))
+            print(enc, len(ret[enc]), file=sys.stderr)
         except:
             pass
     
@@ -182,7 +182,7 @@ def get_all(filename):
         else: handle_note(line)
 
 def get_real_offset(int_offset):
-#    print("INTOffset", int_offset)
+#    print("INTOffset", int_offset, file=sys.stderr)
     tm = get_red_tm_at(int_offset)
     tpb = 60000 / tm["bpm"]
     int_delta = abs(int_offset - tm["offset"])
@@ -194,14 +194,14 @@ def get_real_offset(int_offset):
     ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
     
     if int(ret) in ():
-        print(tm)
-        print(t_unit_cnt)
-        print("DELAT = ", int_delta)
-        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24)
-        print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"])
-        print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]))
+        print(tm, file=sys.stderr)
+        print(t_unit_cnt, file=sys.stderr)
+        print("DELAT = ", int_delta, file=sys.stderr)
+        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24, file=sys.stderr)
+        print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
+        print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
 
-        print("CMP", int(tm["offset"]+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt))
+        print("CMP", int(tm["offset"]+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt), file=sys.stderr)
         
     return ret     
    
@@ -239,7 +239,7 @@ def handle_cmd(line):
 def real_do_cmd(cmd):
     global curr_time
 
-#    print("handle cmd", cmd)
+#    print("handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
     if cmd[0] == DELAY:
@@ -316,7 +316,7 @@ def add_a_note(snd, offset):
         lasting_note = get_osu_type(snd)
     if get_osu_type(snd) in (SLIDER_END, SPINNER_END):
         lasting_note = None
-#    print(HitObjects[-1])
+#    print(HitObjects[-1], file=sys.stderr)
 
 def get_last_tm():
     return TimingPoints[-1]
@@ -364,7 +364,7 @@ def create_new_tm():
     
     tm = {}
     tm["offset"] = int(curr_time)
-#    print("GREATE NEW TM", tm["offset"])
+#    print("GREATE NEW TM", tm["offset"], file=sys.stderr)
     tm["redline"] = None
     tm["scroll"] = last_green_tm and last_green_tm["scroll"] or 1.0 
     tm["measure"] = last_tm["measure"]
@@ -375,7 +375,7 @@ def create_new_tm():
     
 
 def get_t_unit(tm, tot_note):
-    #print(tm["bpm"], tot_note)
+    #print(tm["bpm"], tot_note, file=sys.stderr)
     return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
 
 debug_mode = False
@@ -394,7 +394,7 @@ def handle_a_bar():
     for data in bar_data:
         if isinstance(data, str):
             tot_note += 1
-    #print("TOT_NOTE", tot_note)
+    #print("TOT_NOTE", tot_note, file=sys.stderr)
     
     if False and debug_mode:
         pure_data = filter(lambda x:x[0].isdigit(), bar_data)
@@ -404,7 +404,7 @@ def handle_a_bar():
 
         p2= "%.4f %.2f" % (get_last_tm()["bpm"], \
                 get_t_unit(get_last_tm(), tot_note) * tot_note)
-        print(p1)
+        print(p1, file=sys.stderr)
 
     #debug
     last_debug = curr_time
@@ -422,18 +422,18 @@ def handle_a_bar():
                 continue
             add_a_note(data, curr_time)
             if print_each_note:
-                print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note))
+                print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note), file=sys.stderr)
             curr_time += get_t_unit(get_last_tm(), tot_note)           
         else: #cmd
             real_do_cmd(data)
     bar_data = [] 
     
     if print_each_note:
-        print("after bar, curr_time= %f", curr_time)
+        print("after bar, curr_time= %f", curr_time, file=sys.stderr)
     # check x.x measure, casue it's not compatible in osu
     tm = get_last_tm()
     if abs(round(tm["measure"]) - tm["measure"]) > 0.001:
-        print("unsupported measure", tm["measure"])
+        print("unsupported measure", tm["measure"], file=sys.stderr)
         bak = tm["measure"]
         tm["measure"] = 20 # a big measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
@@ -516,7 +516,7 @@ def write_HitObjects():
     for ho in HitObjects:
         beg_offset = get_real_offset(ho[2])
         if int(beg_offset) != int(ho[2]):
-#            print("OFFSET FIXED", int(beg_offset), int(ho[2]))
+#            print("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
             pass
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is no science")

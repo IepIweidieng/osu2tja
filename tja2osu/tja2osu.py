@@ -388,7 +388,6 @@ debug_mode = False
 last_debug = None
 def handle_a_bar():
     global bar_data, curr_time
-    if not bar_data: return
     
     #debug
     global last_debug
@@ -419,19 +418,22 @@ def handle_a_bar():
     note_cnt = -1
     #debug
     
-    for data in bar_data:
-        if isinstance(data, str): #note
-            note_cnt += 1
-            if data == "0" or \
-                (lasting_note != None and data != '8'):
-                curr_time += get_t_unit(get_last_tm(), tot_note)
-                continue
-            add_a_note(data, curr_time)
-            if print_each_note:
-                print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note), file=sys.stderr)
-            curr_time += get_t_unit(get_last_tm(), tot_note)           
-        else: #cmd
-            real_do_cmd(data)
+    if not tot_note: # empty or command-only measure
+        curr_time += get_t_unit(get_last_tm(), 1)
+    else:
+        for data in bar_data:
+            if isinstance(data, str): #note
+                note_cnt += 1
+                if data == "0" or \
+                    (lasting_note != None and data != '8'):
+                    curr_time += get_t_unit(get_last_tm(), tot_note)
+                    continue
+                add_a_note(data, curr_time)
+                if print_each_note:
+                    print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note), file=sys.stderr)
+                curr_time += get_t_unit(get_last_tm(), tot_note)           
+            else: #cmd
+                real_do_cmd(data)
     bar_data = [] 
     
     if print_each_note:

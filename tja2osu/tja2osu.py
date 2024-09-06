@@ -66,9 +66,9 @@ def convert_str(str):
         ret3 = None    
     
     ret = []
-    if ret1: ret.append(ret1);print len(ret1)
-    if ret2: ret.append(ret2);print len(ret2)
-    if ret3: ret.append(ret3);print len(ret3)
+    if ret1: ret.append(ret1);print(len(ret1))
+    if ret2: ret.append(ret2);print(len(ret2))
+    if ret3: ret.append(ret3);print(len(ret3))
     if not ret:
         return str
     else:
@@ -81,7 +81,7 @@ def convert_str(str):
 
 def check_unsupported(filename):
     return
-    assert isinstance(filename, basestring)
+    assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename)
     except IOError: rtassert(False, "can't open tja file.")
@@ -91,15 +91,15 @@ def check_unsupported(filename):
         END_cnt += (("#"+END) in line)
         rtassert(END_cnt <= 1, "don't support multiple fumen.")
 
-def rm_jiro_comment(str):
-    assert isinstance(str, basestring)
-    try: i = str.index('//')
-    except : return str
-    return str[:i]
+def rm_jiro_comment(str_):
+    assert isinstance(str_, str)
+    try: i = str_.index('//')
+    except : return str_
+    return str_[:i]
 
 def get_meta_data(filename):
     global TITLE, SUBTITILE, WAVE, OFFSET, DEMOSTART, COURSE, BPM
-    assert isinstance(filename, basestring)
+    assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename)
     except IOError: rtassert(False, "can't open tja file.")
@@ -193,7 +193,7 @@ def get_all(filename):
         else: handle_note(line)
 
 def get_real_offset(int_offset):
-#    print "INTOffset", int_offset
+#    print("INTOffset", int_offset)
     tm = get_red_tm_at(int_offset)
     tpb = 60000 / tm["bpm"]
     int_delta = abs(int_offset - tm["offset"])
@@ -205,15 +205,15 @@ def get_real_offset(int_offset):
     ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
     
     if int(ret) in ():
-		print tm
-		print t_unit_cnt
-		print "DELAT = ", int_delta
-		print "GET BEAT CNT", int_delta/tpb, t_unit_cnt/24
-		print int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"]
-		print int(tm["offset"] + beat_cnt * 60000 / tm["bpm"])
+        print(tm)
+        print(t_unit_cnt)
+        print("DELAT = ", int_delta)
+        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24)
+        print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"])
+        print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]))
 
-		print "CMP", int(tm["offset"]+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt)
-		
+        print("CMP", int(tm["offset"]+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt))
+        
     return ret     
    
 def handle_cmd(line):
@@ -250,7 +250,7 @@ def handle_cmd(line):
 def real_do_cmd(cmd):
     global curr_time
 
-#    print "handle cmd", cmd
+#    print("handle cmd", cmd)
     
     # handle delay, no timing point change
     if cmd[0] == DELAY:
@@ -327,7 +327,7 @@ def add_a_note(snd, offset):
         lasting_note = get_osu_type(snd)
     if get_osu_type(snd) in (SLIDER_END, SPINNER_END):
         lasting_note = None
-#    print HitObjects[-1]
+#    print(HitObjects[-1])
 
 def get_last_tm():
     return TimingPoints[-1]
@@ -375,7 +375,7 @@ def create_new_tm():
     
     tm = {}
     tm["offset"] = int(curr_time)
-#    print "GREATE NEW TM", tm["offset"] 
+#    print("GREATE NEW TM", tm["offset"])
     tm["redline"] = None
     tm["scroll"] = last_green_tm and last_green_tm["scroll"] or 1.0 
     tm["measure"] = last_tm["measure"]
@@ -386,7 +386,7 @@ def create_new_tm():
     
 
 def get_t_unit(tm, tot_note):
-    #print tm["bpm"], tot_note
+    #print(tm["bpm"], tot_note)
     return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
 
 debug_mode = False
@@ -403,9 +403,9 @@ def handle_a_bar():
 
     tot_note = 0
     for data in bar_data:
-        if isinstance(data, basestring):
+        if isinstance(data, str):
             tot_note += 1
-    #print "TOT_NOTE", tot_note
+    #print("TOT_NOTE", tot_note)
     
     if False and debug_mode:
         pure_data = filter(lambda x:x[0].isdigit(), bar_data)
@@ -415,17 +415,17 @@ def handle_a_bar():
 
         p2= "%.4f %.2f" % (get_last_tm()["bpm"], \
                 get_t_unit(get_last_tm(), tot_note) * tot_note)
-        print p1
+        print(p1)
 
-	#debug
+    #debug
     last_debug = curr_time
     print_each_note = False #(int(curr_time) == 112814)
     bak_curr_time = curr_time
     note_cnt = -1
-	#debug
-	
+    #debug
+    
     for data in bar_data:
-        if isinstance(data, basestring): #note
+        if isinstance(data, str): #note
             note_cnt += 1
             if data == "0" or \
                 (lasting_note != None and data != '8'):
@@ -433,18 +433,18 @@ def handle_a_bar():
                 continue
             add_a_note(data, curr_time)
             if print_each_note:
-                print note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note) 
+                print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note))
             curr_time += get_t_unit(get_last_tm(), tot_note)           
         else: #cmd
             real_do_cmd(data)
     bar_data = [] 
     
     if print_each_note:
-        print "after bar, curr_time= %f", curr_time
+        print("after bar, curr_time= %f", curr_time)
     # check x.x measure, casue it's not compatible in osu
     tm = get_last_tm()
     if abs(round(tm["measure"]) - tm["measure"]) > 0.001:
-        print "unsupported measure", tm["measure"]
+        print("unsupported measure", tm["measure"])
         bak = tm["measure"]
         tm["measure"] = 20 # a big measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
@@ -458,8 +458,8 @@ def handle_note(line):
             handle_a_bar()
 
 def write_fmt_ver_str():
-    print "osu file format v9"
-    print
+    print("osu file format v9")
+    print("")
 
 def write_General():
     global Title, Source, AudioFilename, PreviewTime
@@ -468,71 +468,71 @@ def write_General():
     AudioFilename = WAVE
     PreviewTime = DEMOSTART * 1000
 
-    print "[General]"
-    print "AudioFilename:", AudioFilename
-    print "AudioLeadIn:", AudioLeadIn
-    print "PreviewTime:", int(PreviewTime)
-    print "CountDown:", CountDown
-    print "SampleSet:", SampleSet
-    print "StackLeniency:", StackLeniency
-    print "Mode:", Mode
-    print "LetterboxInBreaks:", LetterboxInBreaks
-    print
+    print("[General]")
+    print("AudioFilename:", AudioFilename)
+    print("AudioLeadIn:", AudioLeadIn)
+    print("PreviewTime:", int(PreviewTime))
+    print("CountDown:", CountDown)
+    print("SampleSet:", SampleSet)
+    print("StackLeniency:", StackLeniency)
+    print("Mode:", Mode)
+    print("LetterboxInBreaks:", LetterboxInBreaks)
+    print("")
 
 # no use, but required by osu
 def write_Editor():
-    print "[Editor]"
-    print "DistanceSpacing: 0.8"
-    print "BeatDivisor: 4"
-    print "GridSize: 4"
-    print
+    print("[Editor]")
+    print("DistanceSpacing: 0.8")
+    print("BeatDivisor: 4")
+    print("GridSize: 4")
+    print("")
 
 def write_Metadata():
     global Title, Source, AudioFilename, PreviewTime, Version
     Title = TITLE
     Source = SUBTITLE    
     Version = COURSE
-    print "[Metadata]"
-    print "Title:", convert_str(Title)
-    print "Artist:", convert_str(Artist)
-    print "Creator:", convert_str(Creator)
-    print "Version:", convert_str(Version)
-    print "Source:", convert_str(Source)
-    print "Tags:", Tags
-    print
+    print("[Metadata]")
+    print("Title:", convert_str(Title))
+    print("Artist:", convert_str(Artist))
+    print("Creator:", convert_str(Creator))
+    print("Version:", convert_str(Version))
+    print("Source:", convert_str(Source))
+    print("Tags:", Tags)
+    print("")
 
 def write_Difficulty():
-    print "[Difficulty]"
-    print "HPDrainRate:", HPDrainRate
-    print "CircleSize:", CircleSize
-    print "OverallDifficulty:", OverallDifficulty
-    print "ApproachRate:", ApproachRate
-    print "SliderMultiplier:", SliderMultiplier
-    print "SliderTickRate:", SliderTickRate
-    print 
+    print("[Difficulty]")
+    print("HPDrainRate:", HPDrainRate)
+    print("CircleSize:", CircleSize)
+    print("OverallDifficulty:", OverallDifficulty)
+    print("ApproachRate:", ApproachRate)
+    print("SliderMultiplier:", SliderMultiplier)
+    print("SliderTickRate:", SliderTickRate)
+    print("")
 
 def write_TimingPoints():
-    print "[TimingPoints]"
+    print("[TimingPoints]")
     for tm in TimingPoints:
         if tm["redline"]: str = 60000.0/tm["bpm"]
         else: str = -100/tm["scroll"]
-        print "%d,%f,%d,1,0,100,%d,%d" % (int(tm["offset"]), str, \
-            int(round(tm["measure"])), tm["redline"], tm["GGT"])
+        print("%d,%f,%d,1,0,100,%d,%d" % (int(tm["offset"]), str, \
+            int(round(tm["measure"])), tm["redline"], tm["GGT"]))
         tm["offset"] = int(tm["offset"])
-    print
+    print("")
 
 def write_HitObjects():
-    print "[HitObjects]"
+    print("[HitObjects]")
     lasting_note = None
     for ho in HitObjects:
-    	beg_offset = get_real_offset(ho[2])
+        beg_offset = get_real_offset(ho[2])
         if int(beg_offset) != int(ho[2]):
-#            print "OFFSET FIXED", int(beg_offset), int(ho[2])
+#            print("OFFSET FIXED", int(beg_offset), int(ho[2]))
             pass
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is no science")
-            print "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0],
-                    ho[1])
+            print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0],
+                    ho[1]))
         elif ho[0] == SLIDER:
             rtassert(lasting_note is None, "this is no science")            
             lasting_note = ho
@@ -545,21 +545,21 @@ def write_HitObjects():
             ln = lasting_note
             tm = get_tm_at(int(ln[2]))
             curve_len = 100 * (ho[2] - ln[2]) * tm["bpm"]  * SliderMultiplier * tm["scroll"] / 60000
-            print "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
+            print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
                     int(get_real_offset(ln[2])), ln[0], ln[1], \
-                    int(CircleX+curve_len), CircleY, 1, curve_len)
+                    int(CircleX+curve_len), CircleY, 1, curve_len))
             lasting_note = None
         elif ho[0] == SPINNER_END:
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SPINNER, "this is no science")
             ln = lasting_note
-            print "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
-                    ln[0], ln[1], int(get_real_offset(ho[2])))
+            print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
+                    ln[0], ln[1], int(get_real_offset(ho[2]))))
             lasting_note = None
-    print
+    print("")
 
 def tja2osu(filename):
-    assert isinstance(filename, basestring)
+    assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     check_unsupported(filename)
 
@@ -578,7 +578,7 @@ def tja2osu(filename):
 
 def rtassert(b, str=""):
     if not b:
-        print >> sys.stderr, str
+        print(str, file=sys.stderr)
         exit()
 
 def get_help_str():
@@ -586,6 +586,5 @@ def get_help_str():
 
 if __name__ == "__main__":
     rtassert(len(sys.argv) >= 2, "need a filename\n" +get_help_str())
-    global debug_mode
     debug_mode = (len(sys.argv) >= 3 and ("debug" in sys.argv))
     tja2osu(sys.argv[1])

@@ -74,6 +74,8 @@ def check_unsupported(filename):
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
     END_cnt = 0
     for line in fobj:
         rtassert(("#"+BRANCH).decode() not in line, "don't support branch")
@@ -92,6 +94,8 @@ def get_meta_data(filename):
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
     for line in fobj:
         line = line.strip()
         try: i = line.index(b":")
@@ -166,6 +170,8 @@ def get_all(filename):
     global has_started, curr_time
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
 
     has_started = False
     curr_time = -OFFSET * 1000

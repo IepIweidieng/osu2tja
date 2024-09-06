@@ -27,6 +27,8 @@ def get_comm_data(filename):
     global TITLE, SUBTITLE, BPM, WAVE, OFFSET
     try: fobj = open(filename, "rb")
     except IOError: tja2osu.rtassert(False, "can't open tja file.")
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
     course_list = []
     for line in fobj:
         line = line.strip()
@@ -56,7 +58,10 @@ def divide_diff(filename):
     diff_data = []
     started = False
     i = 0
-    for line in open(filename, "rb"):
+    fobj = open(filename, "rb")
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
+    for line in fobj:
         line = line.strip()
         if b"#END" in line:
             diff_data.append(line.decode("latin1"))
@@ -89,6 +94,7 @@ def divide_diff(filename):
             started = True
         if started:
             diff_data.append(line.decode("latin1"))
+    fobj.close()
 
     assert i == len(course_list), course_list
 
@@ -99,6 +105,8 @@ def divide_branch(filename):
     assert filename.endswith(".tja")
     try: fobj = open(os.path.join("tmp", filename), "rb")
     except IOError: assert False, "can't open tja file."
+    if fobj.peek(3) == "".encode("utf-8-sig"):
+        fobj.seek(3) # ignore UTF-8 BOM
     branch_data = [[], [], []]
     which = None
 

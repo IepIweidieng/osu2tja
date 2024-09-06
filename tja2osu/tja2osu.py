@@ -49,46 +49,35 @@ DELAY = "DELAY"
 SCROLL = "SCROLL"
 
 # guess str
-def convert_str(str):
-    try:
-        ret1 = str.decode("gbk").encode("utf-8")
-    except:
-        ret1 = None
-
-    try:
-        ret2 = str.decode("shift-jis").encode("utf-8")
-    except:
-        ret2 = None
-
-    try:
-        ret3 = str.decode("big5").encode("utf-8")
-    except:
-        ret3 = None    
+def try_decode(bytes_):
+    ret = {}
+    for enc in ["utf-8-sig", "gbk", "shift-jis", "big5"]:
+        try:
+            ret[enc] = bytes_.decode("gbk")
+            print(enc, len(ret[enc]))
+        except:
+            pass
     
-    ret = []
-    if ret1: ret.append(ret1);print(len(ret1))
-    if ret2: ret.append(ret2);print(len(ret2))
-    if ret3: ret.append(ret3);print(len(ret3))
-    if not ret:
-        return str
-    else:
-        ans = None
-        for ret0 in ret:
-            if ans is None or len(ret0) < len(ans):
-                ans = ret0
-        return ans
+    encoding, decoded = None, bytes_.decode("latin-1")
+    for enc, dec in ret.items():
+        if encoding is None or len(dec) < len(decoded):
+            encoding, decoded = enc, dec
+    return encoding, decoded
 
+def convert_str(bytes_):
+    _, decoded = try_decode(bytes_)
+    return decoded
 
 def check_unsupported(filename):
     return
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
-    try: fobj = open(filename)
+    try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
     END_cnt = 0
     for line in fobj:
-        rtassert(("#"+BRANCH) not in line, "don't support branch")
-        END_cnt += (("#"+END) in line)
+        rtassert(("#"+BRANCH).decode() not in line, "don't support branch")
+        END_cnt += (("#"+END).decode() in line)
         rtassert(END_cnt <= 1, "don't support multiple fumen.")
 
 def rm_jiro_comment(str_):
@@ -101,21 +90,21 @@ def get_meta_data(filename):
     global TITLE, SUBTITILE, WAVE, OFFSET, DEMOSTART, COURSE, BPM
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
-    try: fobj = open(filename)
+    try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
     for line in fobj:
         line = line.strip()
-        try: i = line.index(":")
+        try: i = line.index(b":")
         except ValueError: continue
         vname = line[:i].strip()
         vval = line[i+1:].strip()
-        if vname == "TITLE": TITLE = vval
-        elif vname == "SUBTITLE": SUBTITILE = vval
-        elif vname == "BPM": BPM = float(vval)
-        elif vname == "WAVE": WAVE = vval
-        elif vname == "OFFSET": OFFSET = float(vval)
-        elif vname == "DEMOSTART": DEMOSTART = float(vval)
-        elif vname == "COURSE": COURSE = vval
+        if vname == b"TITLE": TITLE = convert_str(vval)
+        elif vname == b"SUBTITLE": SUBTITILE = convert_str(vval)
+        elif vname == b"BPM": BPM = float(vval)
+        elif vname == b"WAVE": WAVE = convert_str(vval)
+        elif vname == b"OFFSET": OFFSET = float(vval)
+        elif vname == b"DEMOSTART": DEMOSTART = float(vval)
+        elif vname == b"COURSE": COURSE = vval.decode("latin1")
 
 def add_default_timing_point():
     global TimingPoints
@@ -175,14 +164,14 @@ lasting_note = None
 
 def get_all(filename):
     global has_started, curr_time
-    try: fobj = open(filename)
+    try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
 
     has_started = False
     curr_time = -OFFSET * 1000
     add_default_timing_point()
     for line in fobj:
-        line = line.strip()
+        line = line.decode("latin-1").strip()
         line = rm_jiro_comment(line)
         if not has_started and ("#"+START) in line:
             has_started = True
@@ -493,11 +482,11 @@ def write_Metadata():
     Source = SUBTITLE    
     Version = COURSE
     print("[Metadata]")
-    print("Title:", convert_str(Title))
-    print("Artist:", convert_str(Artist))
-    print("Creator:", convert_str(Creator))
-    print("Version:", convert_str(Version))
-    print("Source:", convert_str(Source))
+    print("Title:", Title)
+    print("Artist:", Artist)
+    print("Creator:", Creator)
+    print("Version:", Version)
+    print("Source:", Source)
     print("Tags:", Tags)
     print("")
 

@@ -25,23 +25,23 @@ def get_comm_data(filename):
     assert isinstance(filename, str)
     assert filename.endswith(".tja")
     global TITLE, SUBTITLE, BPM, WAVE, OFFSET
-    try: fobj = open(filename)
+    try: fobj = open(filename, "rb")
     except IOError: tja2osu.rtassert(False, "can't open tja file.")
     course_list = []
     for line in fobj:
         line = line.strip()
-        try: i = line.index(":")
+        try: i = line.index(b":")
         except ValueError: continue
         vname = line[:i].strip()
         vval = line[i+1:].strip()
-        if vname == "TITLE": TITLE = vval
-        elif vname == "SUBTITLE": SUBTITILE = vval
-        elif vname == "BPM": BPM = vval
-        elif vname == "WAVE": WAVE = vval
-        elif vname == "OFFSET": OFFSET = vval
-        elif vname == "DEMOSTART": DEMOSTART = vval
-        elif vname == "COURSE":
-            vval = get_course_by_number(vval)
+        if vname == b"TITLE": TITLE = tja2osu.convert_str(vval)
+        elif vname == b"SUBTITLE": SUBTITILE = tja2osu.convert_str(vval)
+        elif vname == b"BPM": BPM = vval.decode("latin-1")
+        elif vname == b"WAVE": WAVE = tja2osu.convert_str(vval)
+        elif vname == b"OFFSET": OFFSET = vval.decode("latin-1")
+        elif vname == b"DEMOSTART": DEMOSTART = vval.decode("latin-1")
+        elif vname == b"COURSE":
+            vval = get_course_by_number(vval.decode("latin-1"))
             course_list.append(vval)
     fobj.close()
     return course_list
@@ -56,16 +56,18 @@ def divide_diff(filename):
     diff_data = []
     started = False
     i = 0
-    for line in open(filename):
+    for line in open(filename, "rb"):
         line = line.strip()
-        if "#END" in line:
-            diff_data.append(line)
+        if b"#END" in line:
+            diff_data.append(line.decode("latin1"))
 
             if i >= len(file_list):
                 course_list.append("No%d" % i)
                 file_list.append(filename[:-4]+ (" No%d" % i) + ".tja")
-                
-            fout = open(os.path.join("tmp", file_list[i]), "w")
+
+            # convert to UTF-8-BOM TJA for easier encoding handling
+            # only compatible with newer simulators such as TJAPlayer3 and taiko-web
+            fout = open(os.path.join("tmp", file_list[i]), "w", encoding="utf-8-sig")
 
             print("TITLE:", TITLE, file=fout)
             print("SUBTITLE:", SUBTITLE, file=fout)
@@ -83,10 +85,10 @@ def divide_diff(filename):
             i += 1
             continue
 
-        if not started and "#START" in line:
+        if not started and b"#START" in line:
             started = True
         if started:
-            diff_data.append(line)
+            diff_data.append(line.decode("latin1"))
 
     assert i == len(course_list), course_list
 
@@ -95,7 +97,7 @@ def divide_diff(filename):
 def divide_branch(filename):
     assert isinstance(filename, str)
     assert filename.endswith(".tja")
-    try: fobj = open(os.path.join("tmp", filename))
+    try: fobj = open(os.path.join("tmp", filename), "rb")
     except IOError: assert False, "can't open tja file."
     branch_data = [[], [], []]
     which = None
@@ -103,42 +105,44 @@ def divide_branch(filename):
     has_branch = False
     for line in fobj:
         line = line.strip()
-        if "#BRANCHSTART" in line:
+        if b"#BRANCHSTART" in line:
             has_branch = True
             continue
-        if "#BRANCHEND" in line \
-            or "#SECTION" in line:
+        if b"#BRANCHEND" in line \
+            or b"#SECTION" in line:
             continue
-        if "#E" in line:
+        if b"#E" in line:
             which = "E"
-        elif "#N" in line:
+        elif b"#N" in line:
             which = "N"
-        elif ("#M" in line) and ("#MEASURE" not in line):
+        elif (b"#M" in line) and (b"#MEASURE" not in line):
             which = "M"
-        elif "#BRANCHEND" in line:
+        elif b"#BRANCHEND" in line:
             which = None
         else:
             _line = line.strip()
-            try: i = _line.index(":")
+            try: i = _line.index(b":")
             except ValueError: pass
             vname = _line[:i].strip()
             vval = _line[i+1:].strip()
-            if vname == "COURSE":
-                branch_data[0].append("COURSE:"+vval+"(Kurouto)")
-                branch_data[1].append("COURSE:"+vval+"(Futsuu)")
-                branch_data[2].append("COURSE:"+vval+"(Tatsujin)")
+            if vname == b"COURSE":
+                vval_str = vval.decode("latin1")
+                branch_data[0].append("COURSE:" + vval_str + "(Kurouto)")
+                branch_data[1].append("COURSE:" + vval_str + "(Futsuu)")
+                branch_data[2].append("COURSE:" + vval_str + "(Tatsujin)")
                 continue
 
+            line_str = line.decode("latin1")
             if which == None:
-                branch_data[0].append(line)
-                branch_data[1].append(line)
-                branch_data[2].append(line)
+                branch_data[0].append(line_str)
+                branch_data[1].append(line_str)
+                branch_data[2].append(line_str)
             elif which == "E":
-                branch_data[0].append(line)
+                branch_data[0].append(line_str)
             elif which == "N":
-                branch_data[1].append(line)                
+                branch_data[1].append(line_str)
             elif which == "M":
-                branch_data[2].append(line)                
+                branch_data[2].append(line_str)
             else:
                 assert False
     fobj.close()
@@ -149,7 +153,9 @@ def divide_branch(filename):
             filename[:-4]+"(Tatsujin).tja"]
     i = 0
     for f in file_list:
-        fout = open(os.path.join("tmp", f), "w")
+        # convert to UTF-8-BOM TJA for easier encoding handling
+        # only compatible with newer simulators such as TJAPlayer3 and taiko-web
+        fout = open(os.path.join("tmp", f), "w", encoding="utf-8-sig")
         for str_ in branch_data[i]:
             print(str_, file=fout)
         fout.close()

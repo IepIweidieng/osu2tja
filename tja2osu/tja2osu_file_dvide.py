@@ -39,7 +39,7 @@ def get_comm_data(filename):
         vname = line[:i].strip()
         vval = line[i+1:].strip()
         if vname == b"TITLE": TITLE = tja2osu.convert_str(vval)
-        elif vname == b"SUBTITLE": SUBTITILE = tja2osu.convert_str(vval)
+        elif vname == b"SUBTITLE": SUBTITLE = tja2osu.convert_str(vval)
         elif vname == b"BPM": BPM = vval.decode("latin-1")
         elif vname == b"WAVE": WAVE = tja2osu.convert_str(vval)
         elif vname == b"OFFSET": OFFSET = vval.decode("latin-1")

@@ -89,7 +89,7 @@ def rm_jiro_comment(str_):
     return str_[:i]
 
 def get_meta_data(filename):
-    global TITLE, SUBTITILE, WAVE, OFFSET, DEMOSTART, COURSE, BPM
+    global TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, COURSE, BPM
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
@@ -103,7 +103,7 @@ def get_meta_data(filename):
         vname = line[:i].strip()
         vval = line[i+1:].strip()
         if vname == b"TITLE": TITLE = convert_str(vval)
-        elif vname == b"SUBTITLE": SUBTITILE = convert_str(vval)
+        elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval)
         elif vname == b"BPM": BPM = float(vval)
         elif vname == b"WAVE": WAVE = convert_str(vval)
         elif vname == b"OFFSET": OFFSET = float(vval)

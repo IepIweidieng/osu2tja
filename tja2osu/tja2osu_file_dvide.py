@@ -26,7 +26,7 @@ def get_course_by_number(str_):
 def get_comm_data(filename):
     assert isinstance(filename, str)
     assert filename.endswith(".tja")
-    global TITLE, SUBTITLE, BPM, WAVE, OFFSET
+    global TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
     try: fobj = open(filename, "rb")
     except IOError: tja2osu.rtassert(False, "can't open tja file.")
     if fobj.peek(3) == "".encode("utf-8-sig"):

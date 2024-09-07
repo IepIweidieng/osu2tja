@@ -221,7 +221,7 @@ def handle_cmd(line):
         i = line.index('#'+MEASURE)
         arg_str = line[i+1+len('#'+MEASURE):].strip()
         arg1, arg2 = arg_str.split('/')
-        cmd = (MEASURE, 4.0*int(arg1.strip()) / int(arg2.strip()))
+        cmd = (MEASURE, 4.0*float(arg1.strip()) / float(arg2.strip()))
     elif ("#"+SCROLL) in line:
         i = line.index('#'+SCROLL)
         arg_str = line[i+1+len('#'+SCROLL):].strip()

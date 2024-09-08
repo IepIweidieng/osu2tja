@@ -540,8 +540,9 @@ def write_HitObjects():
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SLIDER)
             ln = lasting_note
-            tm = get_tm_at(int(ln[2]))
-            curve_len = 100 * (ho[2] - ln[2]) * tm["bpm"]  * SliderMultiplier * tm["scroll"] / 60000
+            tmr = get_red_tm_at(int(ln[2]))
+            tmg = get_tm_at(int(ln[2])) # green if red + green, otherwise red
+            curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
             print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
                     int(get_real_offset(ln[2])), ln[0], ln[1], \
                     int(CircleX+curve_len), CircleY, 1, curve_len))

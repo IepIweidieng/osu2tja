@@ -466,14 +466,14 @@ def write_General():
     PreviewTime = DEMOSTART * 1000
 
     print("[General]")
-    print("AudioFilename:", AudioFilename)
-    print("AudioLeadIn:", AudioLeadIn)
-    print("PreviewTime:", int(PreviewTime))
-    print("CountDown:", CountDown)
-    print("SampleSet:", SampleSet)
-    print("StackLeniency:", StackLeniency)
-    print("Mode:", Mode)
-    print("LetterboxInBreaks:", LetterboxInBreaks)
+    print("AudioFilename: %s" % (AudioFilename,))
+    print("AudioLeadIn: %d" % (round(AudioLeadIn)),)
+    print("PreviewTime: %d" % (round(PreviewTime)),)
+    print("CountDown: %d" % (CountDown,))
+    print("SampleSet: %s" % (SampleSet,))
+    print("StackLeniency: %s" % (repr(StackLeniency),))
+    print("Mode: %d" % (Mode,))
+    print("LetterboxInBreaks: %d" % (LetterboxInBreaks,))
     print("")
 
 # no use, but required by osu
@@ -490,22 +490,22 @@ def write_Metadata():
     Source = SUBTITLE    
     Version = COURSE
     print("[Metadata]")
-    print("Title:", Title)
-    print("Artist:", Artist)
-    print("Creator:", Creator)
-    print("Version:", Version)
-    print("Source:", Source)
-    print("Tags:", Tags)
+    print("Title:%s" % (Title,))
+    print("Artist:%s" % (Artist,))
+    print("Creator:%s" % (Creator,))
+    print("Version:%s" % (Version,))
+    print("Source:%s" % (Source,))
+    print("Tags:%s" % (Tags,))
     print("")
 
 def write_Difficulty():
     print("[Difficulty]")
-    print("HPDrainRate:", HPDrainRate)
-    print("CircleSize:", CircleSize)
-    print("OverallDifficulty:", OverallDifficulty)
-    print("ApproachRate:", ApproachRate)
-    print("SliderMultiplier:", SliderMultiplier)
-    print("SliderTickRate:", SliderTickRate)
+    print("HPDrainRate:%s" % (repr(HPDrainRate),))
+    print("CircleSize:%s" % (repr(CircleSize),))
+    print("OverallDifficulty:%s" % (repr(OverallDifficulty),))
+    print("ApproachRate:%s" % (repr(ApproachRate),))
+    print("SliderMultiplier:%s" % (repr(SliderMultiplier),))
+    print("SliderTickRate:%s" % (repr(SliderTickRate),))
     print("")
 
 def write_TimingPoints():

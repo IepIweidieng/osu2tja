@@ -404,11 +404,11 @@ def handle_a_bar():
     if False and debug_mode:
         pure_data = filter(lambda x:x[0].isdigit(), bar_data)
         p1= "%6d %2.1f %2d %s" % (int(curr_time), \
-                get_last_tm()["measure"], len(pure_data), \
+                get_last_red_tm()["measure"], len(pure_data), \
                 "".join(pure_data))
 
-        p2= "%.4f %.2f" % (get_last_tm()["bpm"], \
-                get_t_unit(get_last_tm(), tot_note) * tot_note)
+        p2= "%.4f %.2f" % (get_last_red_tm()["bpm"], \
+                get_t_unit(get_last_red_tm(), tot_note) * tot_note)
         print(p1, file=sys.stderr)
 
     #debug
@@ -419,19 +419,19 @@ def handle_a_bar():
     #debug
     
     if not tot_note: # empty or command-only measure
-        curr_time += get_t_unit(get_last_tm(), 1)
+        curr_time += get_t_unit(get_last_red_tm(), 1)
     else:
         for data in bar_data:
             if isinstance(data, str): #note
                 note_cnt += 1
                 if data == "0" or \
                     (lasting_note != None and data != '8'):
-                    curr_time += get_t_unit(get_last_tm(), tot_note)
+                    curr_time += get_t_unit(get_last_red_tm(), tot_note)
                     continue
                 add_a_note(data, curr_time)
                 if print_each_note:
-                    print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_tm(), tot_note), get_t_unit(get_last_tm(), tot_note), file=sys.stderr)
-                curr_time += get_t_unit(get_last_tm(), tot_note)           
+                    print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note), get_t_unit(get_last_red_tm(), tot_note), file=sys.stderr)
+                curr_time += get_t_unit(get_last_red_tm(), tot_note)           
             else: #cmd
                 real_do_cmd(data)
     bar_data = [] 
@@ -439,7 +439,7 @@ def handle_a_bar():
     if print_each_note:
         print("after bar, curr_time= %f", curr_time, file=sys.stderr)
     # check x.x measure, casue it's not compatible in osu
-    tm = get_last_tm()
+    tm = get_last_red_tm()
     if abs(round(tm["measure"]) - tm["measure"]) > 0.001:
         print("unsupported measure", tm["measure"], file=sys.stderr)
         bak = tm["measure"]

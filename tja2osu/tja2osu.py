@@ -37,8 +37,8 @@ OverallDifficulty = 8.333
 ApproachRate = 5
 SliderMultiplier = 1.47
 SliderTickRate = 4
-CircleX = 416
-CircleY = 176
+CircleX = 256
+CircleY = 192
 
 # const_data
 BRANCH = "BRANCH"

@@ -10,6 +10,8 @@ BPM = 0.0
 WAVE = "NO WAVE FILE"
 OFFSET = 0.0
 DEMOSTART = 0.0
+SONGVOL = 100.0
+SEVOL = 100.0
 COURSE = "Oni"
 
 # osu data
@@ -92,7 +94,7 @@ def rm_jiro_comment(str_):
     return str_[:i]
 
 def get_meta_data(filename):
-    global TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, COURSE, BPM
+    global TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE, BPM
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
@@ -111,6 +113,8 @@ def get_meta_data(filename):
         elif vname == b"WAVE": WAVE = convert_str(vval)
         elif vname == b"OFFSET": OFFSET = float(vval)
         elif vname == b"DEMOSTART": DEMOSTART = float(vval)
+        elif vname == b"SONGVOL": SONGVOL = float(vval)
+        elif vname == b"SEVOL": SEVOL = float(vval)
         elif vname == b"COURSE": COURSE = vval.decode("latin1")
 
 def add_default_timing_point():
@@ -554,11 +558,13 @@ def write_Difficulty():
 
 def write_TimingPoints():
     print("[TimingPoints]")
+    sevol_scaled = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
     for tm in TimingPoints:
         if tm["redline"]: str = 60000.0/tm["bpm"]
         else: str = -100/tm["scroll"]
-        print("%d,%f,%d,1,0,100,%d,%d" % (int(tm["offset"]), str, \
-            int(round(tm["measure"])), tm["redline"], tm["GGT"] + 8 * tm["hidefirst"]))
+        print("%d,%f,%d,1,0,%d,%d,%d" % (int(tm["offset"]), str, \
+            int(round(tm["measure"])), sevol_scaled,
+            tm["redline"], tm["GGT"] + 8 * tm["hidefirst"]))
         tm["offset"] = int(tm["offset"])
     print("")
 

@@ -12,6 +12,8 @@ BPM = "0.0" # use string copying
 WAVE = ""
 OFFSET = "0.0" # use string copying
 DEMOSTART = "0.0" # use string copying
+SONGVOL = "100.0" # use string copying
+SEVOL = "100.0" # use string copying
 
 def get_course_by_number(str_):
     if not str_.isdigit():
@@ -26,7 +28,7 @@ def get_course_by_number(str_):
 def get_comm_data(filename):
     assert isinstance(filename, str)
     assert filename.endswith(".tja")
-    global TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
+    global TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL
     try: fobj = open(filename, "rb")
     except IOError: tja2osu.rtassert(False, "can't open tja file.")
     if fobj.peek(3) == "".encode("utf-8-sig"):
@@ -44,6 +46,8 @@ def get_comm_data(filename):
         elif vname == b"WAVE": WAVE = tja2osu.convert_str(vval)
         elif vname == b"OFFSET": OFFSET = vval.decode("latin-1")
         elif vname == b"DEMOSTART": DEMOSTART = vval.decode("latin-1")
+        elif vname == b"SONGVOL": SONGVOL = vval.decode("latin-1")
+        elif vname == b"SEVOL": SEVOL = vval.decode("latin-1")
         elif vname == b"COURSE":
             vval = get_course_by_number(vval.decode("latin-1"))
             course_list.append(vval)
@@ -83,6 +87,8 @@ def divide_diff(filename):
             print("WAVE:%s" % (WAVE,), file=fout)
             print("OFFSET:%s" % (OFFSET,), file=fout)
             print("DEMOSTART:%s" % (DEMOSTART,), file=fout)
+            print("SONGVOL:%s" % (SONGVOL,), file=fout)
+            print("SEVOL:%s" % (SEVOL,), file=fout)
             print("", file=fout)
             print("COURSE:%s" % (course_list[i],), file=fout)
 

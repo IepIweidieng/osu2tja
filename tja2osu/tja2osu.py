@@ -1,4 +1,5 @@
 # $Id$
+import math
 import sys
 import copy
 
@@ -186,7 +187,12 @@ def get_all(filename):
             has_started = True
             continue
         if not has_started: continue
-        if ("#"+END) in line: break
+        if ("#"+END) in line:
+            # prevent bar lines at and after #END
+            tm = get_last_red_tm()
+            real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
+            real_do_cmd((BARLINEOFF,)) # hide its bar line
+            break
         if ("#" in line): handle_cmd(line)
         else: handle_note(line)
 
@@ -481,7 +487,7 @@ def handle_a_bar():
     if abs(round(tmr["measure"]) - tmr["measure"]) > 0.001:
         print("unsupported measure", tmr["measure"], file=sys.stderr)
         bak = tmr["measure"]
-        tmr["measure"] = 20 # a big measure for osu
+        tmr["measure"] = max(1, math.ceil(round(bak, 3))) # a big enough measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
 
 def handle_note(line):

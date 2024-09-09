@@ -45,6 +45,8 @@ BPMCHANGE = "BPMCHANGE"
 MEASURE = "MEASURE"
 GOGOSTART = "GOGOSTART"
 GOGOEND = "GOGOEND"
+BARLINEOFF = "BARLINEOFF"
+BARLINEON = "BARLINEON"
 DELAY = "DELAY"
 SCROLL = "SCROLL"
 
@@ -118,6 +120,7 @@ def add_default_timing_point():
     tm["scroll"] = 1.0
     tm["measure"] = 4.0
     tm["GGT"] = False
+    tm["hidefirst"] = False
     tm["bpm"] = BPM
 
     TimingPoints.append(tm)
@@ -230,6 +233,10 @@ def handle_cmd(line):
         cmd = (GOGOSTART,)
     elif ("#"+GOGOEND) in line:
         cmd = (GOGOEND,)
+    elif ("#"+BARLINEOFF) in line:
+        cmd = (BARLINEOFF,)
+    elif ("#"+BARLINEON) in line:
+        cmd = (BARLINEON,)
     elif ("#"+DELAY) in line:
         i = line.index('#'+DELAY)
         arg_str = line[i+1+len('#'+DELAY):].strip()        
@@ -311,6 +318,28 @@ def real_do_cmd(cmd):
             new_tm["redline"] = False
             new_tm["GGT"] = False
             TimingPoints.append(new_tm)        
+    elif cmd[0] == BARLINEOFF:
+        tm = get_last_tm()
+        tmr = get_last_red_tm()
+        for t in [tm, tmr]:
+            if int(curr_time) == t["offset"]:
+                t["hidefirst"] = True
+        if tm == tmr: # not a red + green timing point pair
+            new_tm = create_new_tm()
+            new_tm["redline"] = False
+            new_tm["hidefirst"] = True
+            TimingPoints.append(new_tm)
+    elif cmd[0] == BARLINEON:
+        tm = get_last_tm()
+        tmr = get_last_red_tm()
+        for t in [tm, tmr]:
+            if int(curr_time) == t["offset"]:
+                t["hidefirst"] = False
+        if tm == tmr: # not a red + green timing point pair
+            new_tm = create_new_tm()
+            new_tm["redline"] = False
+            new_tm["hidefirst"] = False
+            TimingPoints.append(new_tm)
     else:
         assert False, "unknown or unsupported command"
 
@@ -375,6 +404,7 @@ def create_new_tm():
     tm["scroll"] = last_green_tm and last_green_tm["scroll"] or 1.0 
     tm["measure"] = last_tm["measure"]
     tm["GGT"] = last_tm["GGT"]
+    tm["hidefirst"] = last_tm["hidefirst"]
     tm["bpm"] = last_red_tm["bpm"]
     
     return tm
@@ -438,12 +468,20 @@ def handle_a_bar():
     
     if print_each_note:
         print("after bar, curr_time= %f", curr_time, file=sys.stderr)
+    # handle bar line visibility
+    tmr = get_last_red_tm()
+    tm = get_last_tm()
+    if tm["hidefirst"]: # still hidden
+        real_do_cmd((MEASURE, tmr["measure"])) # insert bar line
+        real_do_cmd((BARLINEOFF,)) # hide bar line
+    elif tmr["hidefirst"]: # no longer hidden
+        real_do_cmd((MEASURE, tmr["measure"])) # insert bar line
+        real_do_cmd((BARLINEON,)) # unhide bar line
     # check x.x measure, casue it's not compatible in osu
-    tm = get_last_red_tm()
-    if abs(round(tm["measure"]) - tm["measure"]) > 0.001:
-        print("unsupported measure", tm["measure"], file=sys.stderr)
-        bak = tm["measure"]
-        tm["measure"] = 20 # a big measure for osu
+    if abs(round(tmr["measure"]) - tmr["measure"]) > 0.001:
+        print("unsupported measure", tmr["measure"], file=sys.stderr)
+        bak = tmr["measure"]
+        tmr["measure"] = 20 # a big measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
 
 def handle_note(line):
@@ -455,7 +493,7 @@ def handle_note(line):
             handle_a_bar()
 
 def write_fmt_ver_str():
-    print("osu file format v9")
+    print("osu file format v14")
     print("")
 
 def write_General():
@@ -514,7 +552,7 @@ def write_TimingPoints():
         if tm["redline"]: str = 60000.0/tm["bpm"]
         else: str = -100/tm["scroll"]
         print("%d,%f,%d,1,0,100,%d,%d" % (int(tm["offset"]), str, \
-            int(round(tm["measure"])), tm["redline"], tm["GGT"]))
+            int(round(tm["measure"])), tm["redline"], tm["GGT"] + 8 * tm["hidefirst"]))
         tm["offset"] = int(tm["offset"])
     print("")
 

@@ -466,8 +466,7 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     delay_time = int(math.floor(end)) - int(math.floor(begin + beat_cnt * mspb))
     # Note: #DELAY value can be in any sign
 
-    # jiro will ignore delays short than 0.001s
-    # TODO: add up total epsilon!? and fix it later?
+    # jiro will ignore delays shorter than 0.001s
     if abs(delay_time) >= 1:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 

@@ -83,81 +83,83 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
             fp.close()
             osu_info["filename"] = filename
             osu_infos.append(osu_info)
-        osu_infos.sort(key=lambda x: x["difficulty"], reverse=True)
-        osu_infos = osu_infos[:4]  # Select the top 4 difficulties
 
-        if not osu_infos:
-            raise ValueError(f"No valid difficulties found in {source_path}")
+        osu_infos.sort(key=lambda x: x["difficulty"])  # Sort from easiest to hardest
 
-        original_audio_name = osu_infos[0]["audio"]
-        title = osu_infos[0]["title"]
-        title_for_path = ''.join((
-            ch if ch not in bad_chars_for_path else '_'
-            for ch in osu_infos[0]["title_ascii"]))
-        new_audio_name = title_for_path + path.splitext(original_audio_name)[-1]
+        # Calculate how many folders are needed (each folder supports up to 4 difficulties)
+        num_folders = (len(osu_infos) + 3) // 4  # Round up to the nearest number of folders
+        difficulties_per_folder = 4
 
-        # Generate Oni, Hard, Normal, Easy from the top 4 difficulties
-        difficulties = ["Oni", "Hard", "Normal", "Easy"]
-        selected_infos = osu_infos[:len(difficulties)]
+        for folder_num in range(num_folders):
+            # Get the subset of difficulties for this folder
+            start_idx = folder_num * difficulties_per_folder
+            end_idx = min(start_idx + difficulties_per_folder, len(osu_infos))
+            selected_infos = osu_infos[start_idx:end_idx]
 
-        # Extract audio first
-        storage_path = path.join(target_path, title_for_path)
-        os.makedirs(storage_path, exist_ok=True)
-        osu_zip.extract(original_audio_name, storage_path)
-        audio_path_orig = path.join(storage_path, original_audio_name)
-        audio_path_new = path.join(storage_path, new_audio_name)
-        if audio_path_new != audio_path_orig:
-            print(f"Renaming {audio_path_orig} -> {audio_path_new} ...")
-            os.rename(audio_path_orig, audio_path_new)
-        print(f"Extracted Audio for {title}")
-        new_audio_name = convert_to_ogg(storage_path, new_audio_name)
+            # Determine folder name
+            title = selected_infos[0]["title"]  # Use the title of the first map for naming
+            title_for_path = ''.join((
+                ch if ch not in bad_chars_for_path else '_'
+                for ch in selected_infos[0]["title_ascii"]))
+            folder_name = f"{title_for_path} - {folder_num + 1}"
 
-        head_meta: List[str] = []
-        head_sync_main: List[str] = []
-        head_syncs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
-        head_diffs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
-        diff_contents: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+            # Extract audio first
+            info = selected_infos[0]
+            storage_path = path.join(target_path, folder_name)
+            os.makedirs(storage_path, exist_ok=True)
+            osu_zip.extract(info["audio"], storage_path)
+            info["audio"] = convert_to_ogg(storage_path, info["audio"])
 
-        for i, info in enumerate(selected_infos):
-            try:
-                reset_global_variables()
-                with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
-                    level = info["difficulty"]
-                    head_meta, head_syncs[difficulties[i]], head_diffs[difficulties[i]], diff_contents[difficulties[i]] = (
-                        osu2tja(diff_fp, difficulties[i], level, new_audio_name)
-                    )
-                    if len(head_sync_main) == 0:
-                        head_sync_main = head_syncs[difficulties[i]]
-                        print(f"main sync headers: {head_sync_main}")
-                    elif head_syncs[difficulties[i]] != head_sync_main:
-                        print(f"Warning: Generated a different sync header for {difficulties[i]}: {head_syncs[difficulties[i]]}")
-            except Exception as e:
-                warning_message = f"Error processing difficulty {difficulties[i]}: {e}"
-                print(warning_message)
-                warnings.append(warning_message)  # Track warnings for non-fatal errors
+            # Adjust difficulties for this folder
+            difficulties = ["Oni", "Hard", "Normal", "Easy"][:len(selected_infos)]
 
-        # Save .tja file
-        with open(path.join(storage_path, f"{title_for_path}.tja"), "w+") as f:
-            f.write("\n".join(head_meta))
-            f.write("\n")
-            f.write("\n".join(head_sync_main))
-            f.write("\n")
-            for diff in difficulties:
-                if diff_contents[diff]:
-                    f.write("\n")
-                    f.write("\n".join(head_diffs[diff]))
-                    f.write("\n")
-                    f.write("\n".join(head_syncs[diff]))
-                    f.write("\n\n")
-                    f.write("\n".join(diff_contents[diff]))
-                    f.write("\n")
-        print(f"Converted {title} to TJA")
+            head_meta: List[str] = []
+            head_sync_main: List[str] = []
+            head_syncs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+            head_diffs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+            diff_contents: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+
+            for i, info in enumerate(reversed(selected_infos)):  # Start from easiest, scale to hardest
+                try:
+                    reset_global_variables()
+                    with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
+                        level = int(info["difficulty"] + folder_num)  # Progressive scaling of stars
+                        head_meta, head_syncs[difficulties[i]], head_diffs[difficulties[i]], diff_contents[difficulties[i]] = (
+                            osu2tja(diff_fp, difficulties[i], level, info["audio"])
+                        )
+                        if len(head_sync_main) == 0:
+                            head_sync_main = head_syncs[difficulties[i]]
+                            print(f"main sync headers: {head_sync_main}")
+                        elif head_syncs[difficulties[i]] != head_sync_main:
+                            print(f"Warning: Generated a different sync header for {difficulties[i]}: {head_syncs[difficulties[i]]}")
+                except Exception as e:
+                    warning_message = f"Error processing difficulty {difficulties[i]}: {e}"
+                    print(warning_message)
+                    warnings.append(warning_message)  # Track warnings for non-fatal errors
+
+            # Save .tja file
+            with open(path.join(storage_path, f"{folder_name}.tja"), "w+") as f:
+                f.write("\n".join(head_meta))
+                f.write("\n")
+                f.write("\n".join(head_sync_main))
+                f.write("\n")
+                for diff in difficulties:
+                    if diff_contents[diff]:
+                        f.write("\n")
+                        f.write("\n".join(head_diffs[diff]))
+                        f.write("\n")
+                        f.write("\n".join(head_syncs[diff]))
+                        f.write("\n\n")
+                        f.write("\n".join(diff_contents[diff]))
+                        f.write("\n")
+
+            print(f"Converted {folder_name} to TJA")
 
         osu_zip.close()
 
         # If there are warnings, notify the user in the console
         if warnings:
-            print(f"\nWarning: {title} may have possible errors due to the following issues:")
+            print("\nWarning: Some maps may have possible errors due to the following issues:")
             for warning in warnings:
                 print(f"- {warning}")
 
@@ -192,7 +194,7 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str):
 if __name__ == "__main__":
     print("Select conversion mode:")
     print("1. osz2tja (default)")
-    print("2. tja2osz")
+    print("2. tja2osz (not implemented)")
     choice = input("Enter 1 or 2: ")
 
     # Set default input and output folders

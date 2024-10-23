@@ -59,7 +59,7 @@ def divide_diff(filename):
     assert filename.endswith(".tja")
 
     course_list = get_comm_data(filename)
-    file_list = [filename[:-4]+" "+x+".tja" for x in course_list]
+    file_list = [filename[:-4] + " " + x + ".tja" for x in course_list]
 
     diff_data = []
     started = False
@@ -74,7 +74,7 @@ def divide_diff(filename):
 
             if i >= len(file_list):
                 course_list.append("No%d" % i)
-                file_list.append(filename[:-4]+ (" No%d" % i) + ".tja")
+                file_list.append(filename[:-4]+(" No%d" % i)+".tja")
 
             # convert to UTF-8-BOM TJA for easier encoding handling
             # only compatible with newer simulators such as TJAPlayer3 and taiko-web
@@ -92,7 +92,8 @@ def divide_diff(filename):
             print("", file=fout)
             print("COURSE:%s" % (course_list[i],), file=fout)
 
-            for str_ in diff_data: print(str_, file=fout)
+            for str_ in diff_data:
+                print(str_, file=fout)
             fout.close()
             diff_data = []
             started = False
@@ -205,7 +206,7 @@ def divide_tja(filename):
         name = all_ready_file[:-4]
         piece = name.rsplit(None, 1)
         name = piece[0] + "[" + piece[1] + "]"
-        fout = open(os.path.join("out", "%s.osu" % (name,)) ,"w")
+        fout = open(os.path.join("out", "%s.osu" % (name,)), "w")
         sys.stdout = fout
         module = reload(tja2osu)
         tja2osu.tja2osu(os.path.join("tmp", all_ready_file))
@@ -217,4 +218,3 @@ def divide_tja(filename):
 if __name__ == "__main__":
     assert len(sys.argv) > 1
     divide_tja(sys.argv[1])
-    

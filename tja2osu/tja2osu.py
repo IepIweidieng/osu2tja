@@ -4,8 +4,8 @@ import sys
 import copy
 
 # jiro data
-TITLE = "NO TITILE"
-SUBTITLE = "NO SUB TITLE"
+TITLE = "NO TITLE"
+SUBTITLE = "NO SUBTITLE"
 BPM = 0.0
 WAVE = "NO WAVE FILE"
 OFFSET = 0.0

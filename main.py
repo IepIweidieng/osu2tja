@@ -8,22 +8,24 @@ from io import TextIOWrapper
 
 
 def extract_osu_file_info(file) -> Dict[str, object]:
-    line: str = file.readline()
     result: Dict[str, object] = dict()
-    print(type(line))
-    while line != None:
+    for line in file:
+        if line == "[Difficulty]":
+            break
+
         if line.startswith("Version:"):
             result["version"] = line.split(":")[1].strip()
         elif line.startswith("OverallDifficulty:"):
             result["difficulty"] = float(line.split(":")[1])
+        elif line.startswith("Title:") and "title" not in result:
+            result["title"] = line.split(":")[1].strip()
         elif line.startswith("TitleUnicode:"):
             result["title"] = line.split(":")[1].strip()
         elif line.startswith("AudioFilename:"):
             result["audio"] = line.split(":")[1].strip()
 
         if len(result.keys()) == 4:
-            return result
-        line = file.readline()
+            break
     return result
 
 

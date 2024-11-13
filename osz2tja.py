@@ -84,7 +84,7 @@ def convert(source_path: str, target_path: str) -> None:
 
     # extract audio first
     storage_path = path.join(target_path, title)
-    os.mkdir(storage_path)
+    os.makedirs(storage_path)
     osu_zip.extract(original_audio_name, storage_path)
     audio_path_orig = path.join(storage_path, original_audio_name)
     audio_path_new = path.join(storage_path, new_audio_name)

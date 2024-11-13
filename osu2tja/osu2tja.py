@@ -10,7 +10,7 @@ from typing import IO, List, Optional, Tuple, Union
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
-OSU_VER_MIN = 5
+OSU_VER_MIN = 4
 OSU_VER_MAX = 14
 OSU_VER_SUPPORT = range(OSU_VER_MIN, OSU_VER_MAX + 1)
 
@@ -123,11 +123,11 @@ def get_timing_point(str, prev_timing_point=None):
 
     # in case new items are added to osu format
     ps = str.split(',')
-    if len(ps) < 8:
+    if len(ps) < 7:
         return {}
 
-    offset, rawbpmv, beats, _, _, _, _, is_ggt = ps[:8]
-    is_ggt = (is_ggt != '0')
+    offset, rawbpmv, beats = ps[:3]
+    is_ggt = (len(ps) > 7 and ps[7] != '0')
 
     # fill a timing point dict
     ret = {}

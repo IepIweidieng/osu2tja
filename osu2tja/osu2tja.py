@@ -6,6 +6,7 @@ import copy
 import codecs
 import os
 import math
+from typing import IO, List, Optional, Tuple, Union
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
@@ -465,7 +466,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
             combo_cnt += 1
 
 
-def osu2tja(fp, course, level, audio_name):
+def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[List[str], List[str]]:
     global slider_velocity, timingpoints
     global balloons, tail_fix
     global osu_format_ver
@@ -474,17 +475,6 @@ def osu2tja(fp, course, level, audio_name):
 
     tja_heads = list()
     tja_contents = list()
-    # check filename
-    # if not filename.lower().endswith(".osu"):
-    #    print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename, file=sys.stderr)
-    #    return False
-
-    # try to open file
-    # try:
-    #    fp = codecs.open(filename, "r", "utf8")
-    # except IOError:
-    #    print("Can't open file `%s`" % filename, file=sys.stderr)
-    #    return False
 
     # data structures to hold information
     audio = ""
@@ -609,7 +599,7 @@ def osu2tja(fp, course, level, audio_name):
     if subtitle != "" and artist != "":
         subtitle = f"{artist} ｢{subtitle}｣より"
     tja_heads.append("SUBTITLE:--%s" % (subtitle or artist))
-    tja_heads.append("WAVE:%s" % audio_name)
+    tja_heads.append("WAVE:%s" % (audio_name or audio))
     tja_heads.append("BPM:%.2f" % timingpoints[0]["bpm"])
     tja_heads.append("OFFSET:-%.3f" % (timingpoints[0]["offset"] / 1000.0))
     tja_heads.append("DEMOSTART:%.3f" % (preview / 1000.0))
@@ -720,7 +710,7 @@ def osu2tja(fp, course, level, audio_name):
     return tja_heads, tja_contents
 
 
-if __name__ == "__main__":
+def main():
     parser = optparse.OptionParser()
     parser.add_option("-d", "--debug", action="store_const",
                       const=True, dest="debug", default=False)
@@ -728,10 +718,29 @@ if __name__ == "__main__":
                       const=True, dest="guess_measure", default=False)
     (options, args) = parser.parse_args()
 
+    global show_head_info, guess_measure
     show_head_info = options.debug
     guess_measure = options.guess_measure
-    osu2tja(args[0])
+
+    filename = args[0]
+
+    # check filename
+    if not filename.lower().endswith(".osu"):
+        print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename, file=sys.stderr)
+        return
+
+    # try to open file
+    try:
+        fp = codecs.open(filename, "r", "utf8")
+        osu2tja(fp, 3, 9, None) # defaulted course and level
+    except IOError:
+       print("Can't open file `%s`" % filename, file=sys.stderr)
+       return
 
     if show_head_info:
         print(slider_combo_cnt_240, file=sys.stderr)
         print(slider_combo_cnt_less, file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

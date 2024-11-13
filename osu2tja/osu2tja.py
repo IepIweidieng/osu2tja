@@ -164,14 +164,13 @@ commands_within = []
 
 # debug args
 show_head_info = False
-ignore_format_ver = False
 combo_cnt = 0
 guess_measure = False
 
 
 def reset_global_variables():
     global timingpoints, balloons, slider_velocity, tail_fix, taiko_mode, osu_format_ver, commands_within
-    global show_head_info, ignore_format_ver, combo_cnt, guess_measure
+    global show_head_info, combo_cnt, guess_measure
     timingpoints = []
     balloons = []
     slider_velocity = None
@@ -182,7 +181,6 @@ def reset_global_variables():
 
     # debug args
     show_head_info = False
-    ignore_format_ver = False
     combo_cnt = 0
     guess_measure = False
 
@@ -469,7 +467,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
 
 def osu2tja(fp, course, level, audio_name):
     global slider_velocity, timingpoints
-    global balloons, tail_fix, ignore_format_ver
+    global balloons, tail_fix
     global osu_format_ver
     global commands_within
     global taiko_mode
@@ -514,11 +512,10 @@ def osu2tja(fp, course, level, audio_name):
             osu_format_ver_pos = line.index(
                 OSU_VER_STR_PREFIX) + len(OSU_VER_STR_PREFIX)
             osu_format_ver = int(osu_ver_str[osu_format_ver_pos:])
-            if not ignore_format_ver:
-                if osu_format_ver not in OSU_VER_SUPPORT:
-                    print("Only support osu file format v%s at the moment. You may try option -i to force convert if you will." %
-                          ("/".join([str(i) for i in OSU_VER_SUPPORT])), file=sys.stderr)
-                    return False
+            if osu_format_ver not in OSU_VER_SUPPORT:
+                str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
+                print(f"Warning, only osu file format v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
+                      file=sys.stderr)
 
         # new section? Update section name.
         new_sec = get_section_name(line)
@@ -725,8 +722,6 @@ def osu2tja(fp, course, level, audio_name):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
-    parser.add_option("-i", "--ignore_version", action="store_const",
-                      const=True, dest="ignore_version", default=False)
     parser.add_option("-d", "--debug", action="store_const",
                       const=True, dest="debug", default=False)
     parser.add_option("-g", "--guess", action="store_const",
@@ -734,7 +729,6 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     show_head_info = options.debug
-    ignore_format_ver = options.ignore_version
     guess_measure = options.guess_measure
     osu2tja(args[0])
 

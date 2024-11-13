@@ -1,15 +1,20 @@
-osz2tja
-=======
-
-osz2tja is a converter to convert OSU! beatmap to TJA, which is a common format supported by a series of Taiko Simulator.
+# osu2tja
 
 **English**|[简体中文](README.zh-cn.md)
 
-## Usage
+An .osu ⟷ .tja converter, for Python 3.
+
+`.osu` (osu! Beatmap) is the single-difficulty chart format for the game osu!. `.osz` (osu! Beatmap Archive) is the standard zipped form containing multiple `.osu` files and resources for a song entry in osu!.
+
+`.tja` or TJA (unknown acronym, likely "Taiko (Tatsu)jin Another") is a Taiko chart format supported by many simulators, such as TaikoJiro, Taiko-san Daijiro, Malody, TJAPlayer3, and Project OutFox.
+
+It contains 2 major tools: osz2tja & tja2osu.
+
+## osz2tja
 
 Just simply input the following command:
 ```
-python main.py <source .osz filename> <output path>
+python osz2tja.py <source .osz filename> <output path>
 ```
 
 osz2tja will read version files in .osz and exhibit all versions with their overall difficulties, like:
@@ -32,3 +37,13 @@ For example, input "0" after the "Oni:" prompt if you want to match "xxxx(Insane
 Please input "-1" if you want to disable a difficulty.
 
 After matching, osz2tja will generate .tja file and extract audio file to the output path, with a new-created folder named after title.
+
+## tja2osu
+
+Just simply input the following command:
+```
+python tja2osu/tja2osu_file_dvide.py <source .tja filename>
+```
+
+tja2osu will automatically separate all playable difficulties and branches into separate `.tja` files under the `tmp/` directory,
+and then generate the corresponding `.osu` files in the `out/` directory.

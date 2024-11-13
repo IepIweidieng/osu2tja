@@ -77,10 +77,10 @@ def convert(source_path: str, target_path: str) -> None:
 
     print()
     print("Please select difficulties(-1 if not available):")
-    oni_index = int(input("Oni:"))
-    hard_index = int(input("Hard:"))
-    normal_index = int(input("Normal:"))
-    easy_index = int(input("Easy:"))
+    diff_names = ["Easy", "Normal", "Hard", "Oni", "Edit"]
+    diff_indexes = [-1, -1, -1, -1, -1]
+    for diff in range(4, -1, -1):
+        diff_indexes[diff] = int(input(f"{diff_names[diff]}:"))
 
     # extract audio first
     storage_path = path.join(target_path, title)
@@ -95,51 +95,24 @@ def convert(source_path: str, target_path: str) -> None:
     new_audio_name = convert_to_ogg(storage_path, new_audio_name)
 
     head = []
-    oni_contents = []
-    hard_contents = []
-    normal_contents = []
-    easy_contents = []
-    if oni_index != -1:
-        reset_global_variables()
-        oni_fp = TextIOWrapper(osu_zip.open(
-            osu_infos[oni_index]["filename"]), encoding="utf-8")
-        level = int(osu_infos[oni_index]["difficulty"])
-        head, oni_contents = osu2tja(oni_fp, "Oni", level, new_audio_name)
-        oni_fp.close()
-    if hard_index != -1:
-        reset_global_variables()
-        hard_fp = TextIOWrapper(osu_zip.open(
-            osu_infos[hard_index]["filename"]), encoding="utf-8")
-        level = int(osu_infos[hard_index]["difficulty"])
-        head, hard_contents = osu2tja(hard_fp, "Hard", level, new_audio_name)
-        hard_fp.close()
-    if normal_index != -1:
-        reset_global_variables()
-        normal_fp = TextIOWrapper(osu_zip.open(
-            osu_infos[normal_index]["filename"]), encoding="utf-8")
-        level = int(osu_infos[normal_index]["difficulty"])
-        head, normal_contents = osu2tja(
-            normal_fp, "Normal", level, new_audio_name)
-        normal_fp.close()
-    if easy_index != -1:
-        reset_global_variables()
-        easy_fp = TextIOWrapper(osu_zip.open(
-            osu_infos[easy_index]["filename"]), encoding="utf-8")
-        level = int(osu_infos[easy_index]["difficulty"])
-        head, easy_contents = osu2tja(easy_fp, "Easy", level, new_audio_name)
-        easy_fp.close()
+    diff_contents: List[List[str]] = [[], [], [], [], []]
+    for diff in range(4, -1, -1):
+        if diff_indexes[diff] != -1:
+            reset_global_variables()
+            diff_index = diff_indexes[diff]
+            with TextIOWrapper(
+                    osu_zip.open(osu_infos[diff_index]["filename"]),
+                    encoding="utf-8") as diff_fp:
+                level = int(osu_infos[diff_index]["difficulty"])
+                head, diff_contents[diff] = osu2tja(diff_fp, diff_names[diff], level, new_audio_name)
 
     # saving tja
     with open(path.join(storage_path, title+".tja"), "w+") as f:
         f.write("\n".join(head))
-        f.write("\n")
-        f.write("\n".join(oni_contents))
-        f.write("\n")
-        f.write("\n".join(hard_contents))
-        f.write("\n")
-        f.write("\n".join(normal_contents))
-        f.write("\n")
-        f.write("\n".join(easy_contents))
+        for diff in range(4, -1, -1):
+            if diff_indexes[diff] != -1:
+                f.write("\n")
+                f.write("\n".join(diff_contents[diff]))
     print("Tja converted!")
     osu_zip.close()
 

@@ -10,7 +10,7 @@ from typing import IO, List, Optional, Tuple, Union
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
-OSU_VER_MIN = 8
+OSU_VER_MIN = 5
 OSU_VER_MAX = 14
 OSU_VER_SUPPORT = range(OSU_VER_MIN, OSU_VER_MAX + 1)
 

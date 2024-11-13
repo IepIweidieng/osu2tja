@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from array import array
 from functools import reduce
 import sys
 import optparse
@@ -129,10 +130,13 @@ def get_timing_point(str, prev_timing_point=None):
     try:
         ret["offset"] = int(offset)  # time
         if float(rawbpmv) > 0:	   # BPM change or SCROLL speed change
-            bpm = ret["bpm"] = 60 * 1000.0 / float(rawbpmv)
+            mspb = ret["mspb"] = float(rawbpmv)
+            bpm = ret["bpm"] = 60 * 1000.0 / mspb
             ret["scroll"] = 1.0
             ret["redline"] = True
         elif float(rawbpmv) < 0:
+            assert prev_timing_point is not None
+            ret["mspb"] = prev_timing_point.get("mspb", None)
             ret["bpm"] = prev_timing_point.get("bpm", None)
             ret["scroll"] = -100.0 / float(rawbpmv)
             ret["redline"] = False
@@ -152,7 +156,8 @@ def get_timing_point(str, prev_timing_point=None):
 # global variables
 timingpoints = []
 balloons = []
-slider_velocity = None
+slider_multiplier = None
+slider_tick_rate = None
 tail_fix = False
 taiko_mode = False
 osu_format_ver = 0
@@ -165,11 +170,12 @@ guess_measure = False
 
 
 def reset_global_variables():
-    global timingpoints, balloons, slider_velocity, tail_fix, taiko_mode, osu_format_ver, commands_within
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, tail_fix, taiko_mode, osu_format_ver, commands_within
     global show_head_info, combo_cnt, guess_measure
     timingpoints = []
     balloons = []
-    slider_velocity = None
+    slider_multiplier = None
+    slider_tick_rate = None
     tail_fix = False
     taiko_mode = False
     osu_format_ver = 0
@@ -208,22 +214,6 @@ def get_real_offset(int_offset):
     return ret
 
 
-def get_slider_time(l, tm):
-    global slider_velocity
-    tpb = 60.0 * 1000 / tm["bpm"]
-    sv = slider_velocity
-    scroll = tm["scroll"]
-    return 1.0 * l * tpb / (100 * sv * scroll)
-
-
-def get_slider_beat_cnt(l, tm):
-    global slider_velocity
-    tpb = 60.0 * 1000 / tm["bpm"]
-    sv = slider_velocity
-    scroll = tm["scroll"]
-    return get_real_beat_cnt(tm, 1.0 * l / (100 * sv * scroll))
-
-
 def get_slider_sound(str):
     ret = []
     ps = str.split(',')
@@ -241,11 +231,104 @@ def get_donkatsu_by_sound(sound: int):
         else ONP_KATSU if is_katsu else ONP_DON)
 
 
-slider_combo_cnt_240 = 0
-slider_combo_cnt_less = 0
+# https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Taiko/Beatmaps/TaikoBeatmapConverter.cs
+
+"""
+<summary>
+A speed multiplier applied globally to osu!taiko.
+</summary>
+<remarks>
+osu! is generally slower than taiko, so a factor was historically added to increase speed for converts.
+This must be used everywhere slider length or beat length is used in taiko.
+
+Of note, this has never been exposed to the end user, and is considered a hidden internal multiplier.
+</remarks>
+"""
+VELOCITY_MULTIPLIER = 1.4
+
+"""
+<summary>
+Because swells are easier in taiko than spinners are in osu!,
+legacy taiko multiplies a factor when converting the number of required hits.
+</summary>
+"""
+swell_hit_multiplier = 1.65
+
+"""<summary>
+Base osu! slider scoring distance.
+</summary>
+"""
+osu_base_scoring_distance: float = 100
 
 
-def get_note(str):
+def get_precision_adjusted_beat_length(sliderVelocity: float, timingControlPoint) -> float:
+    """
+    <summary>
+    Introduces floating-point errors to post-multiplied beat length for legacy rulesets that depend on it.
+    You should definitely not use this unless you know exactly what you're doing.
+    </summary>
+    """
+    sliderVelocityAsBeatLength: float = -100 / sliderVelocity
+
+    # Note: In stable, the division occurs on floats, but with compiler optimisations turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
+    bpmMultiplier: float = (
+        min(max(array('f', [-sliderVelocityAsBeatLength])[0], 10), 10000) / 100.0
+        if sliderVelocityAsBeatLength < 0
+        else 1)
+
+    return timingControlPoint["mspb"] * bpmMultiplier
+
+
+def should_convert_slider_to_hits(tm, curve_len: float, reverse_cnt: int) -> Tuple[bool, int, float]:
+    isForCurrentRuleset = taiko_mode
+
+    # DO NOT CHANGE OR REFACTOR ANYTHING IN HERE WITHOUT TESTING AGAINST _ALL_ BEATMAPS.
+    # Some of these calculations look redundant, but they are not - extremely small floating point errors are introduced to maintain 1:1 compatibility with stable.
+    # Rounding cannot be used as an alternative since the error deltas have been observed to be between 1e-2 and 1e-6.
+
+    # The true distance, accounting for any repeats. This ends up being the drum roll distance later
+    spans: int = reverse_cnt or 1
+    distance: float = curve_len
+
+    # Do not combine the following two lines!
+    distance *= VELOCITY_MULTIPLIER
+    distance *= spans
+
+    timingPoint = tm
+
+    beatLength: float
+
+    if timingPoint["scroll"] != 1.0:
+        beatLength = get_precision_adjusted_beat_length(timingPoint["scroll"], timingPoint)
+    else:
+        beatLength = timingPoint["mspb"]
+
+    assert slider_multiplier is not None and slider_tick_rate is not None
+    sliderScoringPointDistance: float = osu_base_scoring_distance * (slider_multiplier * VELOCITY_MULTIPLIER) / slider_tick_rate
+
+    # The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.
+    taikoVelocity: float = sliderScoringPointDistance * slider_tick_rate
+    taikoDuration = int(distance / taikoVelocity * beatLength)
+
+    if isForCurrentRuleset:
+        tickSpacing = 0
+        return (False, taikoDuration, tickSpacing)
+
+    osuVelocity: float = taikoVelocity * (1000.0 / beatLength)
+
+    # osu-stable always uses the speed-adjusted beatlength to determine the osu! velocity, but only uses it for conversion if beatmap version < 8
+    if osu_format_ver >= 8:
+        beatLength = timingPoint["mspb"]
+
+    # If the drum roll is to be split into hit circles, assume the ticks are 1/8 spaced within the duration of one beat
+    tickSpacing = min(beatLength / slider_tick_rate, float(taikoDuration) / spans)
+
+    return (tickSpacing > 0
+            and distance / osuVelocity * 1000 < 2 * beatLength,
+            taikoDuration, tickSpacing)
+
+
+def get_note(str: str):
     global timing_point
     global taiko_mode
     ret = []
@@ -263,36 +346,31 @@ def get_note(str):
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append((get_donkatsu_by_sound(sound), offset))
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
-
-        global slider_combo_cnt_240, slider_combo_cnt_less
-        if int(float(ps[7])) * int(ps[6]) >= 480:
-            slider_combo_cnt_240 += int(ps[6]) + 1
-        else:
-            slider_combo_cnt_less += int(ps[6]) + 1
-
+        tm = get_base_timing_point(timingpoints, offset)
         curve_len = float(ps[7])
         reverse_cnt = int(ps[6])
-        total_len = curve_len * reverse_cnt
-        tm = get_base_timing_point(timingpoints, offset)
-        tpb = 1.0 * T_MINUTE / tm["bpm"]
-
-        beat_cnt = get_slider_beat_cnt(curve_len, tm)
-
-        t_noreverse = get_slider_time(curve_len, tm)
+        (should_convert, taiko_duration, tick_spacing) = should_convert_slider_to_hits(tm, curve_len, reverse_cnt)
 
         assert reverse_cnt + 1 == len(get_slider_sound(str))
-        if (taiko_mode and beat_cnt < 1.0) or \
-                (not taiko_mode and beat_cnt * reverse_cnt < 2.0):
-            for i, snd in enumerate((get_slider_sound(str))):
-                point_offset = offset + get_slider_time(curve_len * i, tm)
-                point_offset = get_real_offset(int(point_offset))
-                ret.append((get_donkatsu_by_sound(snd), point_offset))
+        if should_convert:
+            slider_sounds = get_slider_sound(str)
+            i = 0
+            j = offset
+            while j <= offset + taiko_duration + tick_spacing / 8:
+                point_offset = get_real_offset(j)
+                ret.append((get_donkatsu_by_sound(slider_sounds[i]), point_offset))
+
+                j += tick_spacing
+                i = (i + 1) % len(slider_sounds)
+
+                if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
+                    break
         else:
             if sound & HITSND_FINISH:
                 ret.append((ONP_RENDA_DAI, offset))
             else:
                 ret.append((ONP_RENDA, offset))
-            ret.append((ONP_END, offset + t_noreverse * reverse_cnt))
+            ret.append((ONP_END, offset + taiko_duration))
 
     elif type & OSU_NOTE_SPINNER:  # spinner
         ret.append((ONP_BALLOON, offset))
@@ -465,7 +543,7 @@ def osu2tja_level(star_osu: float) -> float:
 
 
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[List[str], List[str]]:
-    global slider_velocity, timingpoints
+    global slider_multiplier, slider_tick_rate, timingpoints
     global balloons, tail_fix
     global osu_format_ver
     global commands_within
@@ -539,7 +617,9 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 artist = vval or artist
         elif curr_sec == "Difficulty":
             if vname == "SliderMultiplier":
-                slider_velocity = float(vval)
+                slider_multiplier = float(vval)
+            elif vname == "SliderTickRate":
+                slider_tick_rate = float(vval)
             elif vname == "OverallDifficulty":
                 difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
         elif curr_sec == "TimingPoints":
@@ -729,10 +809,6 @@ def main():
     except IOError:
        print("Can't open file `%s`" % filename, file=sys.stderr)
        return
-
-    if show_head_info:
-        print(slider_combo_cnt_240, file=sys.stderr)
-        print(slider_combo_cnt_less, file=sys.stderr)
 
 
 if __name__ == "__main__":

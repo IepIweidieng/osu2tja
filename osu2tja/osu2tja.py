@@ -353,12 +353,11 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
     return (numerator, denominator)
 
 # handle an incomplete bar
-# if the (presumed) bar has non-zero length,
 # use #MEASURE to write a bar, and use #DELAY to fix the remaining time error.
 
 
 def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
-    if int(begin) == int(end):
+    if int(begin) == int(end) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
     mspb = T_MINUTE / tm["bpm"]
@@ -408,6 +407,9 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     global combo_cnt, tail_fix
     global commands_within
 
+    if int(begin) == int(end) and len(bar_data) == 0 and len(commands_within) == 0:
+        return
+
     t_unit = 60.0 * 1000 / tm["bpm"] / 24
     offset_list = [int(begin)] + [datum[1] for datum in bar_data] + [int(end)]
     # print offset_list
@@ -417,7 +419,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
         t_unit_cnt = int(round(delta))
         delta_list.append(t_unit_cnt)
 
-    if abs(delta_list[-1]) < 1:
+    if abs(delta_list[-1]) < 1 and len(bar_data) > 0:
         tail_fix = True
         write_bar_data(tm, bar_data[:-1], begin, end, tja_contents)
         return
@@ -436,7 +438,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
 
             commands_within = commands_within[1:]
 
-    delta_gcd = gcd_of_list(delta_list)
+    delta_gcd = max(1, gcd_of_list(delta_list)) # in case the bar has zero length
     ret_str += "0"*int(delta_list[0]/delta_gcd)
     empty_t_unit = ["0"*int(x/delta_gcd-1) for x in delta_list[1:]]
 
@@ -661,7 +663,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         # check if this object falls into this measure
         end = min(bar_offset_begin + bar_max_length, next_measure_offset)
 
-        if next_obj_offset + tpb / 24 >= int(end):
+        if next_obj_offset >= int(end):
             # write_a_measure()
             if int(end) == int(bar_offset_begin + bar_max_length):
                 tm = get_base_timing_point(timingpoints, bar_offset_begin)
@@ -672,8 +674,9 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 bar_offset_begin = get_real_offset(end)
                 bar_max_length = measure * time_per_beat
             elif int(end) == next_measure_offset:  # collect an incomplete bar?
-                write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
-                                     bar_data, bar_offset_begin, end, tja_contents)
+                if tm_idx > 0: # not the start of the initial bar
+                    write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
+                                         bar_data, bar_offset_begin, end, tja_contents)
                 bar_data = []
                 measure = timingpoints[tm_idx]["beats"]
                 if timingpoints[tm_idx]["redline"]:

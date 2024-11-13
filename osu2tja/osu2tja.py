@@ -451,7 +451,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
                                   format_time(int(begin)), delta_gcd/24.0, len(ret_str))
 
     if show_head_info:  # show debug info?
-        ret_str = head + ret_str
+        print(head + ret_str, file=sys.stderr)
 
     tja_contents.append(ret_str + ',')
 

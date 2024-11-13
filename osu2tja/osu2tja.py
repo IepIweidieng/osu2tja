@@ -59,14 +59,8 @@ def make_cmd(cmd, *args):
     return cmd % args
 
 
-def gcd(a, b):
-    if a % b != 0:
-        return gcd(b, a % b)
-    return b
-
-
 def gcd_of_list(l):
-    return reduce(gcd, l)
+    return reduce(math.gcd, l)
 
 # convert time for print
 

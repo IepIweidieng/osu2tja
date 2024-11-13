@@ -4,6 +4,7 @@ import sys
 import optparse
 import copy
 import codecs
+from fractions import Fraction
 import os
 import math
 from typing import IO, List, Optional, Tuple, Union
@@ -340,69 +341,66 @@ measure_table = (
     (9, 9, 4),
 )
 
-# handle an incomplete bar
-# if the bar is empty(contains no notes), use #DELAY command
-# if the bar is not empty, use #MEASURE to write a bar, and # DELAY to consume
-# 	the remaining time.
-
-
-def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
-
-    if len(bar_data) == 0 and int(begin) == int(end):
-        return
-
-    if len(bar_data) == 0:  # use DELAY to skip an empty bar
-        tja_contents.append(make_cmd(FMT_DELAY, (end-begin) / 1000.0))
-        return
-
-    tpb = T_MINUTE / tm["bpm"]
-    my_beat_cnt = 1.0 * (end - begin) * tm["bpm"] / T_MINUTE
-
-    # this is accurate, +1/24 to avoid the last note to be divided to the next
-    # bar
-    min_beat_cnt = get_real_beat_cnt(
-        tm, 1.0 * tm["bpm"] * (bar_data[-1][1]-begin) / T_MINUTE) + 1.0/24
-
-    global guess_measure
-    # force guess measure
-    if not guess_measure:
-        for beat_cnt, numerator, denominator in measure_table:
-            if beat_cnt >= min_beat_cnt and \
-                    int(begin + 1.0 * beat_cnt * T_MINUTE / tm["bpm"]) <= end:
-
-                tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator, denominator))
-                write_bar_data(tm, bar_data, begin, begin +
-                               beat_cnt * tpb, tja_contents)
-                delay_time = end - \
-                    int(begin + 1.0 * beat_cnt * T_MINUTE / tm["bpm"])
-                assert delay_time >= 0, "DELAY FAULT %f" % delay_time
-
-                # jiro will ignore delays short than 0.001s
-                # TODO: add up total epsilon!? and fix it later?
-                if delay_time >= 1:
-                    tja_contents.append(make_cmd(FMT_DELAY, delay_time/1000.0))
-                return
-
-    # Missing all, guess a measure here!
-    denominator = 48*48
-    numerator = int(round(denominator * min_beat_cnt))
-    _gcd = gcd(denominator, numerator)
-    denominator /= _gcd
-    numerator /= _gcd
+def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
+    denominator = tsign_raw.denominator
+    numerator = tsign_raw.numerator
 
     if denominator in (1, 2):
-        fix_mul = 4 / denominator
+        fix_mul = 4 // denominator
         denominator *= fix_mul
         numerator *= fix_mul
 
-    tja_contents.append("//[Warning] This may be erronous!!")
+    return (numerator, denominator)
+
+# handle an incomplete bar
+# if the (presumed) bar has non-zero length,
+# use #MEASURE to write a bar, and use #DELAY to fix the remaining time error.
+
+
+def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
+    if int(begin) == int(end):
+        return
+
+    mspb = T_MINUTE / tm["bpm"]
+    my_beat_cnt = 1.0 * (end - begin) * tm["bpm"] / T_MINUTE
+
+    # this is accurate
+    time_bar_data_last = bar_data[-1][1] if len(bar_data) > 0 else begin
+    min_beat_cnt = 1.0 * tm["bpm"] * (time_bar_data_last - begin) / T_MINUTE
+
+    # force guess measure?
+    global guess_measure
+    for beat_cnt, numerator, denominator in (measure_table if not guess_measure else []):
+        if beat_cnt > min_beat_cnt and \
+                abs(beat_cnt - my_beat_cnt) < 1 / 384 and \
+                abs(int(begin + 1.0 * beat_cnt * mspb) - end) <= 25:
+            break
+    else:
+        # Missing all, guess a measure here!
+        fraction = Fraction(my_beat_cnt / 4).limit_denominator(48 * 48)
+        (numerator, denominator) = get_tsign(fraction)
+
+        # avoid the last note to be divided into the next bar
+        if min_beat_cnt > 0 and numerator <= min_beat_cnt * denominator:
+            numerator = int(min_beat_cnt * denominator) + 1
+            # re-simplify the fraction
+            (numerator, denominator) = get_tsign(Fraction(numerator, denominator))
+        # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
+        # Note: numerator and denominator can both have decimal places
+        elif numerator == 0:
+            (numerator, denominator) = (1, 4 * max(1, mspb))
+
+        beat_cnt = 4 * numerator / denominator
+
     tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator, denominator))
-    write_bar_data(tm, bar_data, begin, begin +
-                   min_beat_cnt * tpb, tja_contents)
-    delay_time = end - int(begin + 1.0 * min_beat_cnt * T_MINUTE / tm["bpm"])
-    if delay_time >= 1:
+    write_bar_data(tm, bar_data, begin, begin + beat_cnt * mspb, tja_contents)
+    delay_time = end - int(begin + beat_cnt * mspb)
+    # Note: #DELAY value can be in any sign
+
+    # jiro will ignore delays short than 0.001s
+    # TODO: add up total epsilon!? and fix it later?
+    if abs(delay_time) >= 1:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
-    return
 
 
 def write_bar_data(tm, bar_data, begin, end, tja_contents):

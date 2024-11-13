@@ -320,24 +320,24 @@ def get_note(str):
     return ret
 
 
-# BEAT - MEASURE TABLE
+# BEAT - MEASURE TABLE: (beat_cnt, numerator, denominator)
 measure_table = (
-    (0.25, "1/16"),
-    (1, "1/4"),
-    (1.25, "5/16"),
-    (1.5, "3/8"),
-    (2, "2/4"),
-    (2.25, "9/16"),
-    (2.5, "5/8"),
-    (3, "3/4"),
-    (3.75, "15/16"),
-    (4, "4/4"),
-    (4.5, "9/8"),
-    (5, "5/4"),
-    (6, "6/4"),
-    (7, "7/4"),
-    (8, "8/4"),
-    (9, "9/4"),
+    (0.25, 1, 16),
+    (1, 1, 4),
+    (1.25, 5, 16),
+    (1.5, 3, 8),
+    (2, 2, 4),
+    (2.25, 9, 16),
+    (2.5, 5, 8),
+    (3, 3, 4),
+    (3.75, 15, 16),
+    (4, 4, 4),
+    (4.5, 9, 8),
+    (5, 5, 4),
+    (6, 6, 4),
+    (7, 7, 4),
+    (8, 8, 4),
+    (9, 9, 4),
 )
 
 # handle an incomplete bar
@@ -366,11 +366,11 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     global guess_measure
     # force guess measure
     if not guess_measure:
-        for beat_cnt, str in measure_table:
+        for beat_cnt, numerator, denominator in measure_table:
             if beat_cnt >= min_beat_cnt and \
                     int(begin + 1.0 * beat_cnt * T_MINUTE / tm["bpm"]) <= end:
 
-                tja_contents.append("#MEASURE"+str)
+                tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator, denominator))
                 write_bar_data(tm, bar_data, begin, begin +
                                beat_cnt * tpb, tja_contents)
                 delay_time = end - \

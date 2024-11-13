@@ -5,6 +5,7 @@ from os import path
 import os
 import optparse
 from io import TextIOWrapper
+import subprocess
 
 
 def extract_osu_file_info(file) -> Dict[str, object]:
@@ -27,6 +28,22 @@ def extract_osu_file_info(file) -> Dict[str, object]:
         if len(result.keys()) == 4:
             break
     return result
+
+
+def convert_to_ogg(audio_path: str) -> str:
+    root, ext = os.path.splitext(audio_path)
+    audio_path_ogg = f"{root}.ogg"
+
+    if ext != ".ogg":
+        print(f"Converting {audio_path} -> {audio_path_ogg} ...")
+        proc = subprocess.run(["ffmpeg", "-i", audio_path, audio_path_ogg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if proc.returncode == 0:
+            os.remove(audio_path) # no longer needed
+            print("Convert Audio Done!")
+            return audio_path_ogg
+
+        print("Convert audio failed. Please verify whether ffmpeg has been properly installed. Continued.")
+    return audio_path
 
 
 def convert(source_path: str, target_path: str) -> None:
@@ -102,9 +119,13 @@ def convert(source_path: str, target_path: str) -> None:
     storage_path = path.join(target_path, title)
     os.mkdir(storage_path)
     osu_zip.extract(original_audio_name, storage_path)
-    os.rename(path.join(storage_path, original_audio_name),
-              path.join(storage_path, new_audio_name))
+    audio_path_orig = path.join(storage_path, original_audio_name)
+    audio_path_new = path.join(storage_path, new_audio_name)
+    if audio_path_new != audio_path_orig:
+        print(f"Renaming {audio_path_orig} -> {audio_path_new} ...")
+        os.rename(audio_path_orig, audio_path_new)
     print("Extract Audio Done!")
+    convert_to_ogg(audio_path_new)
     # saving tja
     with open(path.join(storage_path, title+".tja"), "w+") as f:
         f.write("\n".join(head))

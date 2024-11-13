@@ -504,7 +504,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             osu_format_ver = int(osu_ver_str[osu_format_ver_pos:])
             if osu_format_ver not in OSU_VER_SUPPORT:
                 str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
-                print(f"Warning, only osu file format v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
+                print(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
                       file=sys.stderr)
 
         # new section? Update section name.

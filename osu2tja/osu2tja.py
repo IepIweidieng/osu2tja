@@ -605,10 +605,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads.append("DEMOSTART:%.3f" % (preview / 1000.0))
 
     tja_contents.append("")
-    if version in "Inner Oni":
-        course = "Edit"
-    else:
-        course = "Oni"
     tja_contents.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
     if difficulty != "":
         level = difficulty+4

@@ -30,9 +30,11 @@ def extract_osu_file_info(file) -> Dict[str, object]:
     return result
 
 
-def convert_to_ogg(audio_path: str) -> str:
-    root, ext = os.path.splitext(audio_path)
-    audio_path_ogg = f"{root}.ogg"
+def convert_to_ogg(audio_root: str, audio_name: str) -> str:
+    fname, ext = os.path.splitext(audio_name)
+    audio_name_ogg = f"{fname}.ogg"
+    audio_path = os.path.join(audio_root, audio_name)
+    audio_path_ogg = os.path.join(audio_root, audio_name_ogg)
 
     if ext != ".ogg":
         print(f"Converting {audio_path} -> {audio_path_ogg} ...")
@@ -40,10 +42,10 @@ def convert_to_ogg(audio_path: str) -> str:
         if proc.returncode == 0:
             os.remove(audio_path) # no longer needed
             print("Convert Audio Done!")
-            return audio_path_ogg
+            return audio_name_ogg
 
         print("Convert audio failed. Please verify whether ffmpeg has been properly installed. Continued.")
-    return audio_path
+    return audio_name
 
 
 def convert(source_path: str, target_path: str) -> None:
@@ -80,6 +82,18 @@ def convert(source_path: str, target_path: str) -> None:
     normal_index = int(input("Normal:"))
     easy_index = int(input("Easy:"))
 
+    # extract audio first
+    storage_path = path.join(target_path, title)
+    os.mkdir(storage_path)
+    osu_zip.extract(original_audio_name, storage_path)
+    audio_path_orig = path.join(storage_path, original_audio_name)
+    audio_path_new = path.join(storage_path, new_audio_name)
+    if audio_path_new != audio_path_orig:
+        print(f"Renaming {audio_path_orig} -> {audio_path_new} ...")
+        os.rename(audio_path_orig, audio_path_new)
+    print("Extract Audio Done!")
+    new_audio_name = convert_to_ogg(storage_path, new_audio_name)
+
     head = []
     oni_contents = []
     hard_contents = []
@@ -115,17 +129,6 @@ def convert(source_path: str, target_path: str) -> None:
         head, easy_contents = osu2tja(easy_fp, "Easy", level, new_audio_name)
         easy_fp.close()
 
-    # extract audio
-    storage_path = path.join(target_path, title)
-    os.mkdir(storage_path)
-    osu_zip.extract(original_audio_name, storage_path)
-    audio_path_orig = path.join(storage_path, original_audio_name)
-    audio_path_new = path.join(storage_path, new_audio_name)
-    if audio_path_new != audio_path_orig:
-        print(f"Renaming {audio_path_orig} -> {audio_path_new} ...")
-        os.rename(audio_path_orig, audio_path_new)
-    print("Extract Audio Done!")
-    convert_to_ogg(audio_path_new)
     # saving tja
     with open(path.join(storage_path, title+".tja"), "w+") as f:
         f.write("\n".join(head))

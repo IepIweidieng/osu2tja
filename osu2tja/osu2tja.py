@@ -466,6 +466,20 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
             combo_cnt += 1
 
 
+def osu2tja_level(star_osu: float) -> float:
+    # 0 to 13 distribution, only a preliminary approximant
+    # osu! 0 -> Taiko 1 (OpenTaiko 0)
+    # osu! 6 -> Taiko 10 (OpenTaiko 10+)
+    # osu! 10 -> OpenTaiko 12+
+    min_ = 0.5
+    range_ = 12.9374
+    exp_base_ = 9.21907
+    offset_ = 1.08941
+    power_ = 0.514826
+    factor_ = range_ / (math.pi / 2)
+    return min_ + factor_ * math.atan(math.pow(exp_base_, math.pow(star_osu, power_) - offset_) / factor_)
+
+
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[List[str], List[str]]:
     global slider_velocity, timingpoints
     global balloons, tail_fix
@@ -543,7 +557,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             if vname == "SliderMultiplier":
                 slider_velocity = float(vval)
             elif vname == "OverallDifficulty":
-                difficulty = math.floor(float(vval))
+                difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
         elif curr_sec == "TimingPoints":
             prev_timing_point = timingpoints and timingpoints[-1] or None
             data = get_timing_point(line, prev_timing_point)
@@ -606,10 +620,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     tja_contents.append("")
     tja_contents.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
-    if difficulty != "":
-        level = difficulty+4
-    else:
-        level = 9
+    if level is None:
+        level = osu2tja_level(difficulty)
     tja_contents.append(f"LEVEL:{level}")  # TODO: GUESS LEVEL
 
     # don't write score init and score diff

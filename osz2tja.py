@@ -1,4 +1,4 @@
-from osu2tja.osu2tja import osu2tja, reset_global_variables
+from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level, reset_global_variables
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List
 from os import path
@@ -14,9 +14,11 @@ def extract_osu_file_info(file) -> Dict[str, object]:
         if line == "[Difficulty]":
             break
 
-        if line.startswith("Version:"):
+        if line.startswith(OSU_VER_STR_PREFIX) and "format_ver" not in result:
+            result["format_ver"] = int(line.split("v")[1].strip())
+        elif line.startswith("Version:"):
             result["version"] = line.split(":")[1].strip()
-        elif line.startswith("OverallDifficulty:"):
+        elif line.startswith("OverallDifficulty:"): # accuracy, not the real star rating
             result["difficulty"] = float(line.split(":")[1])
         elif line.startswith("Title:") and "title" not in result:
             result["title"] = line.split(":")[1].strip()
@@ -25,7 +27,7 @@ def extract_osu_file_info(file) -> Dict[str, object]:
         elif line.startswith("AudioFilename:"):
             result["audio"] = line.split(":")[1].strip()
 
-        if len(result.keys()) == 4:
+        if len(result.keys()) == 5:
             break
     return result
 
@@ -70,10 +72,11 @@ def convert(source_path: str, target_path: str) -> None:
 
     # interactive mode, show all difficulties to user
     print("====== Difficulties Selection ======")
-    print("Index\tDifficulty\tVersion")
+    print("Index\tOD / Est.star\tVersion")
     osu_infos.sort(key=lambda x: x["difficulty"], reverse=True)
     for i, osu_info in enumerate(osu_infos):
-        print(f"({i}):\t{osu_info['difficulty']}\t{osu_info['version']}")
+        taiko_level = osu2tja_level(osu_info['difficulty'])
+        print(f"({i}):\t{osu_info['difficulty']} / {taiko_level:0.3f}\t{osu_info['version']}")
 
     print()
     print("Please select difficulties(-1 if not available):")
@@ -81,6 +84,8 @@ def convert(source_path: str, target_path: str) -> None:
     diff_indexes = [-1, -1, -1, -1, -1]
     for diff in range(4, -1, -1):
         diff_indexes[diff] = int(input(f"{diff_names[diff]}:"))
+
+    use_est_taiko_level = (input("Use estimated Taiko star? [y/N] ").lower() == "y")
 
     # extract audio first
     storage_path = path.join(target_path, title)
@@ -103,7 +108,9 @@ def convert(source_path: str, target_path: str) -> None:
             with TextIOWrapper(
                     osu_zip.open(osu_infos[diff_index]["filename"]),
                     encoding="utf-8") as diff_fp:
-                level = int(osu_infos[diff_index]["difficulty"])
+                level = osu_infos[diff_index]["difficulty"]
+                if use_est_taiko_level:
+                    taiko_level = osu2tja_level(level)
                 head, diff_contents[diff] = osu2tja(diff_fp, diff_names[diff], level, new_audio_name)
 
     # saving tja

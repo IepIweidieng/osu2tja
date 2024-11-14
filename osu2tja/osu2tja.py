@@ -704,9 +704,9 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         return bpm != curr_bpm or measure != _measure or timing_point["redline"]
 
     # check if all notes align ok
-    for ho1, ho2 in zip(hitobjects[:-1], hitobjects[1:]):
-        if ho2[1] <= ho1[1]:
-            tja_contents.append(ho1)
+    for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
+        if ho1[1] >= ho2[1]:
+            print(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     while obj_idx < len(hitobjects):
         # get next object to process

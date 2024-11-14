@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from array import array
+from bisect import bisect_left
 from functools import reduce
+import itertools
 import sys
 import optparse
 import copy
@@ -467,6 +469,11 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 
 
+def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[float, int]) -> int:
+    delta = (offset1 - offset0) / t_unit
+    return int(round(delta))
+
+
 def write_bar_data(tm, bar_data, begin, end, tja_contents):
     global show_head_info
     global combo_cnt, tail_fix
@@ -475,60 +482,74 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
+    # ms per 1/96th note; quantize to 1/96th
     t_unit = 60.0 * 1000 / tm["bpm"] / 24
-    offset_list = [int(math.floor(begin))] + [datum[1] for datum in bar_data] + [int(math.floor(end))]
-    # print offset_list
-    delta_list = []
-    for offset1, offset2 in zip(offset_list[:-1], offset_list[1:]):
-        delta = (offset2-offset1)/t_unit
-        t_unit_cnt = int(round(delta))
-        delta_list.append(t_unit_cnt)
 
-    if abs(delta_list[-1]) < 1 and len(bar_data) > 0:
+    # ignore past-end notes
+    if len(bar_data) > 0 and get_dt_unit_cnt(t_unit, bar_data[-1][1], int(math.floor(end))) <= 0:
         tail_fix = True
         write_bar_data(tm, bar_data[:-1], begin, end, tja_contents)
         return
 
-    ret_str = ""
+    # ignore past-end commands
+    idx_cmd_limit = bisect_left(commands_within, int(math.floor(end)), key=lambda cmd: cmd[0])
 
-    # TODO: fix this!
-    if len(bar_data) == 0:
-        offset = begin
-        # Insert commands!
-        while commands_within and int(math.floor(offset)) >= int(math.floor(commands_within[0][0])):
+    # build offset data
+    offset_list = sorted(set(itertools.chain(
+        [int(math.floor(begin))],
+        (cmd[0] for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
+        (datum[1] for datum in bar_data),
+        [int(math.floor(end))],
+    )))
 
-            ret_str += "\n"
-            ret_str += make_cmd(*commands_within[0][1:])
-            ret_str += "\n"
+    # calculate beat division (no known efficient general solution exists (integer factor problem); do heuristics here)
+    delta_list = [get_dt_unit_cnt(t_unit, offset_list[i], offset_list[i + 1])
+        for i in range(len(offset_list) - 1)]
+    delta_list_non_zero = [d for d in delta_list if d != 0] # ignore sub-quantization intervals
+    delta_gcd = gcd_of_list(delta_list_non_zero) if len(delta_list_non_zero) != 0 else 1
 
-            commands_within = commands_within[1:]
+    # build notechart definition bar string
+    bar_strs: List[str] = []
+    idx_cmd = 0
+    idx_bar_data = 0
+    # floating number offset should match exactly here since they are in the list as-is
+    # use <= in case bad things happen
+    for offset, delta_n_symbols in zip(offset_list, delta_list): # in range(len(offset_list) - 1)
+        # Insert commands
+        while idx_cmd < len(commands_within) and commands_within[idx_cmd][0] <= offset:
+            bar_strs.append("\n")
+            bar_strs.append(make_cmd(*commands_within[idx_cmd][1:]))
+            bar_strs.append("\n")
+            idx_cmd += 1
 
-    delta_gcd = max(1, gcd_of_list(delta_list)) # in case the bar has zero length
-    ret_str += "0"*int(delta_list[0]/delta_gcd)
-    empty_t_unit = ["0"*int(x/delta_gcd-1) for x in delta_list[1:]]
+        if delta_n_symbols > 0:
+            # Insert a note (simultaneous notes are not supported)
+            note = ONP_NONE
+            while idx_bar_data < len(bar_data) and bar_data[idx_bar_data][1] <= offset:
+                note = bar_data[idx_bar_data][0]
+                idx_bar_data += 1
+            if note in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
+                combo_cnt += 1
+            bar_strs.append(note)
 
-    for empty_t_unit_cnt, (note, offset) in zip(empty_t_unit, bar_data):
-        # Insert commands!
-        while commands_within and int(math.floor(offset)) >= int(math.floor(commands_within[0][0])):
+            # Insert blanks (if needed)
+            bar_strs.append("0" * int(delta_n_symbols / delta_gcd - 1))
 
-            ret_str += "\n"
-            ret_str += make_cmd(*commands_within[0][1:])
-            ret_str += "\n"
+    # remove processed notechart objects
+    commands_within = commands_within[idx_cmd:]
+    # bar_data = bar_data[idx_bar_data:] # useless
 
-            commands_within = commands_within[1:]
-        ret_str += note + empty_t_unit_cnt
+    # bar-terminating symbol (notice that `,`-only bars are not generated in this function)
+    bar_strs.append(',')
+    bar_str = ''.join(bar_strs)
 
     head = "%4d %6d %.2f %2d " % (combo_cnt,
-                                  format_time(int(math.floor(begin))), delta_gcd/24.0, len(ret_str))
+                                  format_time(int(math.floor(begin))), delta_gcd/24.0, len(bar_str))
 
     if show_head_info:  # show debug info?
-        print(head + ret_str, file=sys.stderr)
+        print(head + bar_str, file=sys.stderr)
 
-    tja_contents.append(ret_str + ',')
-
-    for note, offset in bar_data:
-        if note in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
-            combo_cnt += 1
+    tja_contents.append(bar_str)
 
 
 def osu2tja_level(star_osu: float) -> float:

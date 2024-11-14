@@ -384,7 +384,7 @@ def get_note(str: str, od: float):
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
             else 5 + 2.5 * (od - 5) / 5 if od > 5
-            else 5)
+            else 5) * swell_hit_multiplier
         hits = int(max(1, (ret[-1][1] - ret[-2][1]) / 1000 * hit_multiplier))
         balloons.append(hits)
 

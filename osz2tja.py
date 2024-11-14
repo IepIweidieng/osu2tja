@@ -99,7 +99,10 @@ def convert(source_path: str, target_path: str) -> None:
     print("Extract Audio Done!")
     new_audio_name = convert_to_ogg(storage_path, new_audio_name)
 
-    head = []
+    head_meta: List[str] = []
+    head_sync_main: List[str] = []
+    head_syncs: List[List[str]] = [[], [], [], [], []]
+    head_diffs: List[List[str]] = [[], [], [], [], []]
     diff_contents: List[List[str]] = [[], [], [], [], []]
     for diff in range(4, -1, -1):
         if diff_indexes[diff] != -1:
@@ -111,15 +114,30 @@ def convert(source_path: str, target_path: str) -> None:
                 level = osu_infos[diff_index]["difficulty"]
                 if use_est_taiko_level:
                     taiko_level = osu2tja_level(level)
-                head, diff_contents[diff] = osu2tja(diff_fp, diff_names[diff], level, new_audio_name)
+                head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
+                    osu2tja(diff_fp, diff_names[diff], level, new_audio_name)
+                )
+                if len(head_sync_main) == 0:
+                    head_sync_main = head_syncs[diff]
+                    print(f"main sync headers: {head_sync_main}")
+                elif head_syncs[diff] != head_sync_main:
+                    print(f"Warning: Generated a different sync heaader for {diff_names[diff]}: {head_syncs[diff]}")
 
     # saving tja
     with open(path.join(storage_path, title+".tja"), "w+") as f:
-        f.write("\n".join(head))
+        f.write("\n".join(head_meta))
+        f.write("\n")
+        f.write("\n".join(head_sync_main))
+        f.write("\n")
         for diff in range(4, -1, -1):
             if diff_indexes[diff] != -1:
                 f.write("\n")
+                f.write("\n".join(head_diffs[diff]))
+                f.write("\n")
+                f.write("\n".join(head_syncs[diff]))
+                f.write("\n\n")
                 f.write("\n".join(diff_contents[diff]))
+                f.write("\n")
     print("Tja converted!")
     osu_zip.close()
 

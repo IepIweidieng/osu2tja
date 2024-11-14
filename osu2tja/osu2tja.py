@@ -73,7 +73,7 @@ def format_time(t):
 def get_base_timing_point(timing_points, t):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
-    if int(t) < timing_points[0]["offset"]:
+    if int(math.floor(t)) < timing_points[0]["offset"]:
         return copy.copy(timingpoints[0])
 
     base = timing_points[0]
@@ -197,8 +197,8 @@ def get_real_beat_cnt(tm, beat_cnt):
 # step 3: get fixed offset from fixed beat count and bpm
 
 
-def get_real_offset(int_offset):
-    int_offset = int(int_offset)
+def get_real_offset(int_offset: Union[int, float]) -> float:
+    int_offset = int(math.floor(int_offset))
 
     tm = get_base_red_timing_point(timingpoints, int_offset)
     tpb = 1.0 * T_MINUTE / tm["bpm"]
@@ -422,7 +422,7 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
 
 
 def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
-    if int(begin) == int(end) and len(bar_data) == 0 and len(commands_within) == 0:
+    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
     mspb = T_MINUTE / tm["bpm"]
@@ -437,7 +437,7 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     for beat_cnt, numerator, denominator in (measure_table if not guess_measure else []):
         if beat_cnt > min_beat_cnt and \
                 abs(beat_cnt - my_beat_cnt) < 1 / 384 and \
-                abs(int(begin + 1.0 * beat_cnt * mspb) - end) <= 25:
+                abs(int(math.floor(begin + 1.0 * beat_cnt * mspb)) - int(math.floor(end))) <= 25:
             break
     else:
         # Missing all, guess a measure here!
@@ -458,7 +458,7 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
 
     tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator, denominator))
     write_bar_data(tm, bar_data, begin, begin + beat_cnt * mspb, tja_contents)
-    delay_time = end - int(begin + beat_cnt * mspb)
+    delay_time = int(math.floor(end)) - int(math.floor(begin + beat_cnt * mspb))
     # Note: #DELAY value can be in any sign
 
     # jiro will ignore delays short than 0.001s
@@ -472,11 +472,11 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     global combo_cnt, tail_fix
     global commands_within
 
-    if int(begin) == int(end) and len(bar_data) == 0 and len(commands_within) == 0:
+    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
     t_unit = 60.0 * 1000 / tm["bpm"] / 24
-    offset_list = [int(begin)] + [datum[1] for datum in bar_data] + [int(end)]
+    offset_list = [int(math.floor(begin))] + [datum[1] for datum in bar_data] + [int(math.floor(end))]
     # print offset_list
     delta_list = []
     for offset1, offset2 in zip(offset_list[:-1], offset_list[1:]):
@@ -495,7 +495,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     if len(bar_data) == 0:
         offset = begin
         # Insert commands!
-        while commands_within and int(offset) >= int(commands_within[0][0]):
+        while commands_within and int(math.floor(offset)) >= int(math.floor(commands_within[0][0])):
 
             ret_str += "\n"
             ret_str += make_cmd(*commands_within[0][1:])
@@ -509,7 +509,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
 
     for empty_t_unit_cnt, (note, offset) in zip(empty_t_unit, bar_data):
         # Insert commands!
-        while commands_within and int(offset) >= int(commands_within[0][0]):
+        while commands_within and int(math.floor(offset)) >= int(math.floor(commands_within[0][0])):
 
             ret_str += "\n"
             ret_str += make_cmd(*commands_within[0][1:])
@@ -519,7 +519,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
         ret_str += note + empty_t_unit_cnt
 
     head = "%4d %6d %.2f %2d " % (combo_cnt,
-                                  format_time(int(begin)), delta_gcd/24.0, len(ret_str))
+                                  format_time(int(math.floor(begin))), delta_gcd/24.0, len(ret_str))
 
     if show_head_info:  # show debug info?
         print(head + ret_str, file=sys.stderr)
@@ -545,14 +545,18 @@ def osu2tja_level(star_osu: float) -> float:
     return min_ + factor_ * math.atan(math.pow(exp_base_, math.pow(star_osu, power_) - offset_) / factor_)
 
 
-def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[List[str], List[str]]:
+def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
+        List[str], List[str], List[str], List[str]
+    ]:
     global slider_multiplier, slider_tick_rate, timingpoints
     global balloons, tail_fix
     global osu_format_ver
     global commands_within
     global taiko_mode
 
-    tja_heads: List[str] = []
+    tja_heads_meta: List[str] = []
+    tja_heads_sync: List[str] = []
+    tja_heads_diff: List[str] = []
     tja_contents: List[str] = []
 
     # data structures to hold information
@@ -637,11 +641,32 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     assert len(hitobjects) > 0
 
-    # check if there is note before first timing point
-    if int(hitobjects[0][1]) < timingpoints[0]["offset"]:
-        new_tm_first = dict(timingpoints[0])
-        new_tm_first["offset"] = int(hitobjects[0][1])
-        timingpoints = [new_tm_first] + timingpoints
+    # The music starts at 0ms and the bar line starts too.
+    # add an initial timing point at whole beats non-after the music
+    if timingpoints[0]["offset"] > 0:
+        tm_first = timingpoints[0]
+        init_beats = int(math.ceil(tm_first["offset"] / tm_first["mspb"]))
+        (init_whole_bars, init_frac_bar_beats) = divmod(init_beats, tm_first["beats"])
+        new_tms = []
+
+        # timing point for the first beat, if not a whole bar
+        if init_frac_bar_beats != 0:
+            new_tm_first_frac = dict(tm_first)
+            new_tm_first_frac["offset"] = get_real_offset(
+                tm_first["offset"] - init_beats * tm_first["mspb"])
+            new_tm_first_frac["beats"] = init_frac_bar_beats
+            new_tms.append(new_tm_first_frac)
+
+        # timing point for the first whole bar, if any
+        if init_whole_bars != 0:
+            new_tm_first_whole = dict(tm_first)
+            new_tm_first_whole["offset"] = get_real_offset(
+                tm_first["offset"] - init_whole_bars * tm_first["beats"] * tm_first["mspb"])
+            new_tm_first_whole["beats"] = tm_first["beats"]
+            new_tms.append(new_tm_first_whole)
+
+        if len(new_tms) != 0:
+            timingpoints = new_tms + timingpoints
 
     # collect all #SCROLL #GOGOSTART #GOGOEND commands
     # these commands will not be broken by #BPMCHANGE or # MEASURE
@@ -658,7 +683,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         cur_ggt = tm["GGT"]
 
     BPM = timingpoints[0]["bpm"]
-    OFFSET = timingpoints[0]["offset"] / 1000.0
+    OFFSET = -timingpoints[0]["offset"] / 1000.0
     PREVIEW = preview
 
     scroll = timingpoints[0]["scroll"]
@@ -676,26 +701,26 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     bar_cnt = 1
-    tja_heads.append("TITLE:%s" % title)
+    tja_heads_meta.append("TITLE:%s" % title)
     if subtitle != "" and artist != "":
         subtitle = f"{artist} ｢{subtitle}｣より"
-    tja_heads.append("SUBTITLE:--%s" % (subtitle or artist))
-    tja_heads.append("WAVE:%s" % (audio_name or audio))
-    tja_heads.append("BPM:%.2f" % timingpoints[0]["bpm"])
-    tja_heads.append("OFFSET:-%.3f" % (timingpoints[0]["offset"] / 1000.0))
-    tja_heads.append("DEMOSTART:%.3f" % (preview / 1000.0))
+    tja_heads_meta.append("SUBTITLE:--%s" % (subtitle or artist))
+    tja_heads_meta.append("WAVE:%s" % (audio_name or audio))
 
-    tja_contents.append("")
-    tja_contents.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
+    tja_heads_meta.append("DEMOSTART:%.3f" % (preview / 1000.0))
+
+    tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])
+    tja_heads_sync.append("OFFSET:%.3f" % (-timingpoints[0]["offset"] / 1000.0))
+
+    tja_heads_diff.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
     if level is None:
         level = osu2tja_level(overall_difficulty)
-    tja_contents.append(f"LEVEL:{level}")  # TODO: GUESS LEVEL
+    tja_heads_diff.append(f"LEVEL:{level}")  # TODO: GUESS LEVEL
 
     # don't write score init and score diff
     # taiko jiro will calculate score automatically
-    tja_contents.append("BALLOON:%s" % ','.join(map(repr, balloons)))
+    tja_heads_diff.append("BALLOON:%s" % ','.join(map(repr, balloons)))
 
-    tja_contents.append("")
     tja_contents.append("#START")
 
     def is_new_measure(timing_point):
@@ -711,7 +736,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     while obj_idx < len(hitobjects):
         # get next object to process
         next_obj = hitobjects[obj_idx]
-        next_obj_offset = int(next_obj[1])
+        next_obj_offset = int(math.floor(next_obj[1]))
         next_obj_type = next_obj[0]
 
         # get next measure offset to compare
@@ -730,9 +755,9 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         # check if this object falls into this measure
         end = min(bar_offset_begin + bar_max_length, next_measure_offset)
 
-        if next_obj_offset >= int(end):
+        if next_obj_offset >= int(math.floor(end)):
             # write_a_measure()
-            if int(end) == int(bar_offset_begin + bar_max_length):
+            if int(math.floor(end)) == int(math.floor(bar_offset_begin + bar_max_length)):
                 tm = get_base_timing_point(timingpoints, bar_offset_begin)
                 write_bar_data(tm, bar_data, bar_offset_begin,
                                end, tja_contents)
@@ -740,7 +765,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 bar_cnt += 1
                 bar_offset_begin = get_real_offset(end)
                 bar_max_length = measure * time_per_beat
-            elif int(end) == next_measure_offset:  # collect an incomplete bar?
+            elif int(math.floor(end)) == int(math.floor(next_measure_offset)):  # collect an incomplete bar?
                 if tm_idx > 0: # not the start of the initial bar
                     write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
                                          bar_data, bar_offset_begin, end, tja_contents)
@@ -783,7 +808,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_contents.append("#END")
     tja_contents.append(WATER_MARK)
     tja_contents.append(f"//created by {creator}")
-    return tja_heads, tja_contents
+    return tja_heads_meta, tja_heads_sync, tja_heads_diff, tja_contents
 
 
 def main():

@@ -135,7 +135,7 @@ def convert(source_path: str, target_path: str) -> None:
                     head_sync_main = head_syncs[diff]
                     print(f"main sync headers: {head_sync_main}")
                 elif head_syncs[diff] != head_sync_main:
-                    print(f"Warning: Generated a different sync heaader for {diff_names[diff]}: {head_syncs[diff]}")
+                    print(f"Warning: Generated a different sync header for {diff_names[diff]}: {head_syncs[diff]}")
 
     # saving tja
     with open(path.join(storage_path, title_for_path+".tja"), "w+") as f:

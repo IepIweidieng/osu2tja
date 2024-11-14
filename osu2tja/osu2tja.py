@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from array import array
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from functools import reduce
 import itertools
 import sys
@@ -78,12 +78,8 @@ def get_base_timing_point(timing_points, t):
     if int(math.floor(t)) < timing_points[0]["offset"]:
         return copy.copy(timingpoints[0])
 
-    base = timing_points[0]
-    for timing_point in timing_points:
-        if timing_point["offset"] > t:
-            break
-        base = timing_point
-    return copy.copy(base)
+    idx_tm = bisect_right(timing_points, t, key=lambda tm: tm["offset"]) - 1
+    return copy.copy(timing_points[idx_tm])
 
 
 def get_base_red_timing_point(timing_points, t):

@@ -328,7 +328,7 @@ def should_convert_slider_to_hits(tm, curve_len: float, reverse_cnt: int) -> Tup
             taikoDuration, tickSpacing)
 
 
-def get_note(str: str):
+def get_note(str: str, od: float):
     global timing_point
     global taiko_mode
     ret = []
@@ -376,9 +376,12 @@ def get_note(str: str):
         ret.append((ONP_BALLOON, offset))
         ret.append((ONP_END, get_real_offset(int(ps[5]))))
         # how many hit will break a ballon
-        # TODO: according to length of the spinner
         global balloons
-        balloons.append(int((ret[-1][1]-ret[-2][1])/122))
+        hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
+            else 5 + 2.5 * (od - 5) / 5 if od > 5
+            else 5)
+        hits = int(max(1, (ret[-1][1] - ret[-2][1]) / 1000 * hit_multiplier))
+        balloons.append(hits)
 
     return ret
 
@@ -549,8 +552,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     global commands_within
     global taiko_mode
 
-    tja_heads = list()
-    tja_contents = list()
+    tja_heads: List[str] = []
+    tja_contents: List[str] = []
 
     # data structures to hold information
     audio = ""
@@ -621,14 +624,14 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             elif vname == "SliderTickRate":
                 slider_tick_rate = float(vval)
             elif vname == "OverallDifficulty":
-                difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
+                overall_difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
         elif curr_sec == "TimingPoints":
             prev_timing_point = timingpoints and timingpoints[-1] or None
             data = get_timing_point(line, prev_timing_point)
             if data:
                 timingpoints.append(data)
         elif curr_sec == "HitObjects":
-            data = get_note(line)
+            data = get_note(line, overall_difficulty)
             if data:
                 hitobjects.extend(data)
 
@@ -685,7 +688,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_contents.append("")
     tja_contents.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
     if level is None:
-        level = osu2tja_level(difficulty)
+        level = osu2tja_level(overall_difficulty)
     tja_contents.append(f"LEVEL:{level}")  # TODO: GUESS LEVEL
 
     # don't write score init and score diff

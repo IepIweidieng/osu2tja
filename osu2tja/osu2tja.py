@@ -127,22 +127,29 @@ def get_timing_point(str, prev_timing_point=None):
     ret = {}
     try:
         ret["offset"] = int(offset)  # time
-        if float(rawbpmv) > 0:	   # BPM change or SCROLL speed change
+        ret["GGT"] = is_ggt
+        if float(rawbpmv) > 0: # BPM change
             mspb = ret["mspb"] = float(rawbpmv)
             bpm = ret["bpm"] = 60 * 1000.0 / mspb
+            ret["beats"] = int(beats) # measure change
             ret["scroll"] = 1.0
             ret["redline"] = True
-        elif float(rawbpmv) < 0:
+        elif float(rawbpmv) < 0: # SCROLL speed change
             assert prev_timing_point is not None
-            ret["mspb"] = prev_timing_point.get("mspb", None)
-            ret["bpm"] = prev_timing_point.get("bpm", None)
+            if (prev_timing_point["offset"] == ret["offset"]
+                and prev_timing_point["redline"]
+                and prev_timing_point["GGT"] == is_ggt
+                ):
+                ret = prev_timing_point # merge uninherited (red) + inherited (green) timing points
+            else:
+                ret["mspb"] = prev_timing_point.get("mspb", None)
+                ret["bpm"] = prev_timing_point.get("bpm", None)
+                ret["beats"] = prev_timing_point.get("beats", None) # ignored for inherited timing points
+                ret["redline"] = False
+                ret["offset"] = get_real_offset(ret["offset"])
             ret["scroll"] = -100.0 / float(rawbpmv)
-            ret["redline"] = False
-            ret["offset"] = get_real_offset(ret["offset"])
         else:
             assert False
-        ret["beats"] = int(beats)  # measure change
-        ret["GGT"] = is_ggt
 
     except:
         print("Osu file Error, at [TimingPoints] section, please check", file=sys.stderr)

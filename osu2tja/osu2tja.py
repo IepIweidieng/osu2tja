@@ -535,7 +535,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     commands_within = commands_within[idx_cmd:]
     # bar_data = bar_data[idx_bar_data:] # useless
 
-    # bar-terminating symbol (notice that `,`-only bars are not generated in this function)
+    # bar-terminating symbol (1-symbol beat length if comes solely, otherwise zero length)
     bar_strs.append(',')
     bar_str = ''.join(bar_strs)
 

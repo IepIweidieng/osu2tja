@@ -20,14 +20,16 @@ def extract_osu_file_info(file) -> Dict[str, object]:
             result["version"] = line.split(":")[1].strip()
         elif line.startswith("OverallDifficulty:"): # accuracy, not the real star rating
             result["difficulty"] = float(line.split(":")[1])
-        elif line.startswith("Title:") and "title" not in result:
-            result["title"] = line.split(":")[1].strip()
+        elif line.startswith("Title:"):
+            result["title_ascii"] = line.split(":")[1].strip()
+            if "title" not in result:
+                result["title"] = result["title_ascii"]
         elif line.startswith("TitleUnicode:"):
             result["title"] = line.split(":")[1].strip()
         elif line.startswith("AudioFilename:"):
             result["audio"] = line.split(":")[1].strip()
 
-        if len(result.keys()) == 5:
+        if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio"]):
             break
     return result
 
@@ -49,6 +51,8 @@ def convert_to_ogg(audio_root: str, audio_name: str) -> str:
         print("Convert audio failed. Please verify whether ffmpeg has been properly installed. Continued.")
     return audio_name
 
+bad_chars_for_path = {'\\', '/', ':', '*', '?', '"', '<', '>', '|', '.', '{', '}'}
+
 
 def convert(source_path: str, target_path: str) -> None:
     if not is_zipfile(source_path):
@@ -66,8 +70,10 @@ def convert(source_path: str, target_path: str) -> None:
         osu_info["filename"] = filename
         osu_infos.append(osu_info)
     original_audio_name = osu_infos[0]["audio"]
-    title = osu_infos[0]["title"]
-    new_audio_name = title + \
+    title_for_path = ''.join((
+        ch if ch not in bad_chars_for_path else '_'
+        for ch in osu_infos[0]["title_ascii"]))
+    new_audio_name = title_for_path + \
         path.splitext(original_audio_name)[-1]
 
     # interactive mode, show all difficulties to user
@@ -88,7 +94,7 @@ def convert(source_path: str, target_path: str) -> None:
     use_est_taiko_level = (input("Use estimated Taiko star? [y/N] ").lower() == "y")
 
     # extract audio first
-    storage_path = path.join(target_path, title)
+    storage_path = path.join(target_path, title_for_path)
     os.makedirs(storage_path)
     osu_zip.extract(original_audio_name, storage_path)
     audio_path_orig = path.join(storage_path, original_audio_name)
@@ -124,7 +130,7 @@ def convert(source_path: str, target_path: str) -> None:
                     print(f"Warning: Generated a different sync heaader for {diff_names[diff]}: {head_syncs[diff]}")
 
     # saving tja
-    with open(path.join(storage_path, title+".tja"), "w+") as f:
+    with open(path.join(storage_path, title_for_path+".tja"), "w+") as f:
         f.write("\n".join(head_meta))
         f.write("\n")
         f.write("\n".join(head_sync_main))

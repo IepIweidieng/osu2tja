@@ -38,6 +38,14 @@ Please input "-1" if you want to disable a difficulty.
 
 After matching, osz2tja will generate .tja file and extract audio file to the output path, with a new-created folder named after title.
 
+### ffmpeg
+
+If ffmpeg is installed or placed under the same directory as `osz2tja.py`, osz2tja will automatically convert the audio file into `.ogg` format.
+
+Get ffmpeg here: <https://www.ffmpeg.org/download.html>
+
+After downloading, unzip it and copy `bin/ffmpeg.exe` into the same directory as `osz2tja.py`, and the conversion should now work.
+
 ## tja2osu
 
 Just simply input the following command:

@@ -38,6 +38,14 @@ Easy:
 
 匹配后osz2tja会生成.tja文件，并将音频文件解压到输出路径下以title命名的文件夹中。
 
+### ffmpeg
+
+若 ffmpeg 已安装或在 `osz2tja.py` 的所在目录下，osz2tja 会自动将音频文件转换为 `.ogg` 格式。
+
+在此下载 ffmpeg：<https://www.ffmpeg.org/download.html>
+
+下载后，解压井复制 `bin/ffmpeg.exe` 到 `osz2tja.py` 的所在目录即可。
+
 ## tja2osu
 
 只需简单地输入以下命令：

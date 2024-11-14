@@ -40,15 +40,23 @@ def convert_to_ogg(audio_root: str, audio_name: str) -> str:
     audio_path = os.path.join(audio_root, audio_name)
     audio_path_ogg = os.path.join(audio_root, audio_name_ogg)
 
-    if ext != ".ogg":
+    if ext.lower() != ".ogg":
         print(f"Converting {audio_path} -> {audio_path_ogg} ...")
-        proc = subprocess.run(["ffmpeg", "-i", audio_path, audio_path_ogg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if proc.returncode == 0:
-            os.remove(audio_path) # no longer needed
-            print("Convert Audio Done!")
-            return audio_name_ogg
+        for ffmpeg in ["ffmpeg", "./ffmpeg", "./ffmpeg.exe"]:
+            try:
+                proc = subprocess.run([ffmpeg, "-i", audio_path, audio_path_ogg, "-hide_banner", "-loglevel", "error"])
+                if proc.returncode == 0:
+                    os.remove(audio_path) # no longer needed
+                    print("Convert Audio Done!")
+                    return audio_name_ogg
+                print(proc.stderr)
+                print("Convert audio failed. Continued.")
+                break
+            except FileNotFoundError:
+                continue
+        else:
+            print("Cannot found ffmpeg. Will not convert to `.ogg`.")
 
-        print("Convert audio failed. Please verify whether ffmpeg has been properly installed. Continued.")
     return audio_name
 
 bad_chars_for_path = {'\\', '/', ':', '*', '?', '"', '<', '>', '|', '.', '{', '}'}

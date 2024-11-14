@@ -627,7 +627,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         if curr_sec == "General":
             if vname == "AudioFilename":
                 root, ext = os.path.splitext(vval)
-                if ext != ".ogg":
+                if ext.lower() not in [".ogg", ".mp3"]:
                     vval = root+".ogg"
                 audio = vval
             elif vname == "PreviewTime":

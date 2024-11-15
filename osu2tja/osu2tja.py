@@ -724,6 +724,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     bar_cnt = 1
+    tja_heads_meta.append(WATER_MARK)
     tja_heads_meta.append("TITLE:%s" % title)
     if subtitle != "" and artist != "":
         subtitle = f"{artist} ｢{subtitle}｣より"
@@ -834,8 +835,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                        bar_data, bar_offset_begin, end, tja_contents)
 
     tja_contents.append("#END")
-    tja_contents.append(WATER_MARK)
-    tja_contents.append(f"//created by {creator}")
     return tja_heads_meta, tja_heads_sync, tja_heads_diff, tja_contents
 
 

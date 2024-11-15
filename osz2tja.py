@@ -81,21 +81,22 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
             osu_info["filename"] = filename
             osu_infos.append(osu_info)
 
+        title = osu_infos[0]["title"]  # Use the title of the first map for naming
+        title_for_path = ''.join((
+            ch if ch not in bad_chars_for_path else '_'
+            for ch in osu_infos[0]["title_ascii"]))
+
         osu_infos.sort(key=lambda x: x["difficulty"])  # Sort from easiest to hardest
 
         n_diffs_max_per_tja = 5
         will_split_tja = (len(osu_infos) > n_diffs_max_per_tja)
 
-        for folder_num, start_idx in enumerate(range(0, len(osu_infos), n_diffs_max_per_tja)):
+        for idx_tja, start_idx in enumerate(range(0, len(osu_infos), n_diffs_max_per_tja)):
             # Get the subset of difficulties for this folder
             selected_infos = osu_infos[start_idx:start_idx + n_diffs_max_per_tja]
 
-            # Determine folder name
-            title = selected_infos[0]["title"]  # Use the title of the first map for naming
-            title_for_path = ''.join((
-                ch if ch not in bad_chars_for_path else '_'
-                for ch in selected_infos[0]["title_ascii"]))
-            folder_name = f"{title_for_path} - {folder_num + 1}" if will_split_tja else title_for_path
+            # 1 directory per .tja file for maximum compatibility
+            folder_name = f"{title_for_path} - {idx_tja + 1}" if will_split_tja else title_for_path
 
             # Extract audio first
             info = selected_infos[0]
@@ -121,7 +122,7 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
                 try:
                     reset_global_variables()
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
-                        level = int(info["difficulty"] + folder_num)  # Progressive scaling of stars
+                        level = int(info["difficulty"] + idx_tja)  # Progressive scaling of stars
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
                             osu2tja(diff_fp, diff, level, info["audio"])
                         )

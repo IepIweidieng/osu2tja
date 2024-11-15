@@ -8,9 +8,6 @@ import sys
 from io import TextIOWrapper
 import subprocess
 
-# Define a default MEASURE value
-MEASURE = "4/4"  # Assuming a default measure, change if needed
-
 def extract_osu_file_info(file) -> Dict[str, object]:
     result: Dict[str, object] = dict()
     for line in file:

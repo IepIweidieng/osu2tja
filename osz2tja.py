@@ -83,17 +83,19 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
 
         osu_infos.sort(key=lambda x: x["difficulty"])  # Sort from easiest to hardest
 
-        difficulties_per_folder = 5
-        for folder_num, start_idx in enumerate(range(0, len(osu_infos), difficulties_per_folder)):
+        n_diffs_max_per_tja = 5
+        will_split_tja = (len(osu_infos) > n_diffs_max_per_tja)
+
+        for folder_num, start_idx in enumerate(range(0, len(osu_infos), n_diffs_max_per_tja)):
             # Get the subset of difficulties for this folder
-            selected_infos = osu_infos[start_idx:start_idx + difficulties_per_folder]
+            selected_infos = osu_infos[start_idx:start_idx + n_diffs_max_per_tja]
 
             # Determine folder name
             title = selected_infos[0]["title"]  # Use the title of the first map for naming
             title_for_path = ''.join((
                 ch if ch not in bad_chars_for_path else '_'
                 for ch in selected_infos[0]["title_ascii"]))
-            folder_name = f"{title_for_path} - {folder_num + 1}"
+            folder_name = f"{title_for_path} - {folder_num + 1}" if will_split_tja else title_for_path
 
             # Extract audio first
             info = selected_infos[0]

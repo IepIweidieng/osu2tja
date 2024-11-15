@@ -736,6 +736,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])
     tja_heads_sync.append("OFFSET:%.3f" % (-timingpoints[0]["offset"] / 1000.0))
 
+    str_info_diff_orig = f"// osu! difficulty: {version}"
+    if not taiko_mode:
+        str_info_diff_orig += " (osu!std convert)"
+    tja_heads_diff.append(str_info_diff_orig)
     tja_heads_diff.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
     if level is None:
         level = osu2tja_level(overall_difficulty)

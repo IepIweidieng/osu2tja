@@ -1,7 +1,7 @@
 from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level, reset_global_variables
 from tja2osu.tja2osu_file_dvide import divide_tja  # Use divide_tja for tja2osz conversion
 from zipfile import ZipFile, is_zipfile
-from typing import Dict, List
+from typing import Dict, List, Literal
 from os import path
 import os
 import sys
@@ -190,12 +190,7 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str):
             except Exception as e:
                 print(f"Error converting {filename}: {e}")
 
-if __name__ == "__main__":
-    print("Select conversion mode:")
-    print("1. osz2tja (default)")
-    print("2. tja2osz (not implemented)")
-    choice = input("Enter 1 or 2: ")
-
+def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
     # Set default input and output folders
     input_folder = "Songs"
     output_folder = "Output"
@@ -209,10 +204,10 @@ if __name__ == "__main__":
     print(f"Input folder: {input_folder}")
     print(f"Output folder: {output_folder}")
 
-    if choice == "2":
+    if mode == "tja2osz":
         batch_convert_tja2osz(input_folder, output_folder)
     else:
         batch_convert_osz2tja(input_folder, output_folder)
 
-    input("\nPress enter to exit...")
-    sys.exit(0)
+if __name__ == "__main__":
+    osz2tja2osz_main('osz2tja')

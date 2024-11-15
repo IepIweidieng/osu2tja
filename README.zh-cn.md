@@ -10,33 +10,38 @@
 
 包含两支主要工具：osz2tja、tja2osu。
 
+## 執行环境要求
+
+- Python 3.x
+
 ## osz2tja
 
-只需简单地输入以下命令：
-```
-python osz2tja.py <源.osz文件名> <输出路径>
-```
+### 用法
 
-osz2tja会读取.osz内的所有.osu子谱面，并输出：
-```
-====== Difficulty Selection ======
-Index  Difficulty  Version
-(0):   8           xxxx(Insane)
-(1):   6           ddddd(Hard)
-(2):   4           ddsadf(Normal)
-(3):   2           xxxxx(Easy)
-Oni:
-Hard:
-Normal:
-Easy:
+```bash
+python osz2tja.py [input_folder] [output_folder]
 ```
 
-根据提示匹配OSU的难度版本和太鼓达人的难度。
+示例：
 
-例如，如果要将“xxxx(Insane)”版本与太鼓的魔王难度匹配，则在“Oni:”提示后输入“0”。
-如果您想禁用难度，请输入“-1”。
+```bash
+python osz2tja.py a_folder b_folder
+```
 
-匹配后osz2tja会生成.tja文件，并将音频文件解压到输出路径下以title命名的文件夹中。
+- `[input_folder]` 为 `.osz` 文件所在的位置。若省略，默认为 `Songs`。
+- `[output_folder]` 为转换后的 `.tja` 文件和音频文件的输出位置。若省略，默认为 `Output`。
+
+osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个文件夹。
+
+### 功能
+
+- **批量转换** `.osz` 谱面文件为 `.tja` 谱面文件。
+- 自动映射 osu! 难度（每个 `.tja` 最多 4 个）为太鼓的 **Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。
+- 支持**超过 4 个难度**的 Beatmap，会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。
+- **自动调整难度等级**：拆分的 `.tja` 之间的难度星级会加以调整，使高难度的等级较高。
+  > **不**一定会符合太鼓难度等级基准，因为 osu! 的难度等级范围比太鼓来得大。
+- **自定义文件夹支持**：可指定输入和输出文件夹。
+- **其他元数据**：生成的 `.tja` 文件包含谱面作者信息。
 
 ### ffmpeg
 

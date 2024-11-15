@@ -113,21 +113,23 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
             head_diffs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
             diff_contents: Dict[str, List[str]] = {diff: [] for diff in difficulties}
 
-            for i, info in enumerate(reversed(selected_infos)):  # Start from easiest, scale to hardest
+            # process in descending difficulties
+            # Note: `selected_infos` is in ascending OverallDifficulty
+            for diff, info in zip(difficulties, reversed(selected_infos)):
                 try:
                     reset_global_variables()
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
                         level = int(info["difficulty"] + folder_num)  # Progressive scaling of stars
-                        head_meta, head_syncs[difficulties[i]], head_diffs[difficulties[i]], diff_contents[difficulties[i]] = (
-                            osu2tja(diff_fp, difficulties[i], level, info["audio"])
+                        head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
+                            osu2tja(diff_fp, diff, level, info["audio"])
                         )
                         if len(head_sync_main) == 0:
-                            head_sync_main = head_syncs[difficulties[i]]
+                            head_sync_main = head_syncs[diff]
                             print(f"main sync headers: {head_sync_main}")
-                        elif head_syncs[difficulties[i]] != head_sync_main:
-                            print(f"Warning: Generated a different sync header for {difficulties[i]}: {head_syncs[difficulties[i]]}")
+                        elif head_syncs[diff] != head_sync_main:
+                            print(f"Warning: Generated a different sync header for {diff}: {head_syncs[diff]}")
                 except Exception as e:
-                    warning_message = f"Error processing difficulty {difficulties[i]}: {e}"
+                    warning_message = f"Error processing difficulty {diff}: {e}"
                     print(warning_message)
                     warnings.append(warning_message)  # Track warnings for non-fatal errors
 

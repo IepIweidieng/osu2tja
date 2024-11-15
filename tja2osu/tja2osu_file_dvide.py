@@ -29,7 +29,8 @@ def get_course_by_number(str_):
     elif num == 1: return "Normal"
     elif num == 2: return "Hard"
     elif num == 3: return "Oni"
-    else: return "Oni%d" % (num-3)
+    elif num == 4: return "Edit"
+    else: return "Edit%d" % (num-4)
 
 def get_comm_data(filename):
     assert isinstance(filename, str)

@@ -487,9 +487,8 @@ def handle_a_bar():
     elif tmr["hidefirst"]: # no longer hidden
         real_do_cmd((MEASURE, tmr["measure"])) # insert bar line
         real_do_cmd((BARLINEON,)) # unhide bar line
-    # check x.x measure, casue it's not compatible in osu
+    # convert x.x measure to incomplete measure
     if abs(round(tmr["measure"]) - tmr["measure"]) > 0.001:
-        print("unsupported measure", tmr["measure"], file=sys.stderr)
         bak = tmr["measure"]
         tmr["measure"] = max(1, math.ceil(round(bak, 3))) # a big enough measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja

@@ -1,4 +1,5 @@
 from importlib import reload
+import shutil
 import sys
 import os
 from typing import List
@@ -221,6 +222,13 @@ def tja2osus(tja_path: str, target_path: str="out") -> None:
         
         sys.stdout = old_stdout
         print("Generate:%s.osu" % fname, file=sys.stderr)
+
+    try:
+        path_wave_src = os.path.join(os.path.dirname(tja_path), WAVE)
+        path_wave_dest = os.path.join(dir_out, WAVE)
+        shutil.copyfile(path_wave_src, path_wave_dest)
+    except FileNotFoundError:
+        print(f"Audio file {path_wave_src} not found. Not copied.", file=sys.stderr)
 
 if __name__ == "__main__":
     assert len(sys.argv) > 1

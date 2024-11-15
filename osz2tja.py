@@ -1,3 +1,4 @@
+import shutil
 from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level, reset_global_variables
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
@@ -183,12 +184,18 @@ def batch_convert_osz2tja(input_folder: str, output_folder: str):
 
 def batch_convert_tja2osz(input_folder: str, output_folder: str):
     for filename in os.listdir(input_folder):
-        if filename.endswith(".tja"):
-            try:
-                tja2osus(path.join(input_folder, filename), output_folder)
-                print(f"Converted {filename} to OSZ")
-            except Exception as e:
-                print(f"Error converting {filename}: {e}")
+        fname, ext = os.path.splitext(filename)
+        if ext != ".tja":
+            continue
+        try:
+            tja2osus(path.join(input_folder, filename), output_folder)
+            print(f"Converted {filename} to OSUs")
+            dir_out = os.path.join(output_folder, fname)
+            shutil.make_archive(dir_out, 'zip', dir_out)
+            os.rename(f"{dir_out}.zip", f"{dir_out}.osz")
+            print(f"Converted {filename} to OSZ")
+        except Exception as e:
+            print(f"Error converting {filename}: {e}")
 
 def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
     # Set default input and output folders

@@ -83,15 +83,10 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
 
         osu_infos.sort(key=lambda x: x["difficulty"])  # Sort from easiest to hardest
 
-        # Calculate how many folders are needed (each folder supports up to 4 difficulties)
-        num_folders = (len(osu_infos) + 3) // 4  # Round up to the nearest number of folders
-        difficulties_per_folder = 4
-
-        for folder_num in range(num_folders):
+        difficulties_per_folder = 5
+        for folder_num, start_idx in enumerate(range(0, len(osu_infos), difficulties_per_folder)):
             # Get the subset of difficulties for this folder
-            start_idx = folder_num * difficulties_per_folder
-            end_idx = min(start_idx + difficulties_per_folder, len(osu_infos))
-            selected_infos = osu_infos[start_idx:end_idx]
+            selected_infos = osu_infos[start_idx:start_idx + difficulties_per_folder]
 
             # Determine folder name
             title = selected_infos[0]["title"]  # Use the title of the first map for naming
@@ -108,7 +103,9 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
             info["audio"] = convert_to_ogg(storage_path, info["audio"])
 
             # Adjust difficulties for this folder
-            difficulties = ["Oni", "Hard", "Normal", "Easy"][:len(selected_infos)]
+            difficulties = ["Edit", "Oni", "Hard", "Normal", "Easy"]
+            if len(selected_infos) <= 4:
+                difficulties = difficulties[1:1+len(selected_infos)]
 
             head_meta: List[str] = []
             head_sync_main: List[str] = []

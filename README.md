@@ -8,7 +8,7 @@ An .osu ⟷ .tja converter, for Python 3.
 
 `.tja` or TJA (unknown acronym, likely "Taiko (Tatsu)jin Another") is a Taiko chart format supported by many simulators, such as TaikoJiro, Taiko-san Daijiro, Malody, TJAPlayer3, and Project OutFox.
 
-It contains 2 major tools: osz2tja & tja2osu.
+It contains 2 major tools: osz2tja & tja2osz.
 
 ## Requirements
 
@@ -51,12 +51,26 @@ Get ffmpeg here: <https://www.ffmpeg.org/download.html>
 
 After downloading, unzip it and copy `bin/ffmpeg.exe` into the same directory as `osz2tja.py`, and the conversion should now work.
 
-## tja2osu
+## tja2osz
 
-Just simply input the following command:
-```
-python tja2osu/tja2osu_file_dvide.py <source .tja filename>
+### Usage
+
+```bash
+python tja2osz.py [input_folder] [output_folder]
 ```
 
-tja2osu will automatically separate all playable difficulties and branches into separate `.tja` files under the `tmp/` directory,
-and then generate the corresponding `.osu` files in the `out/` directory.
+Example:
+
+```bash
+python tja2osz.py a_folder b_folder
+```
+
+- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). Defaults to `Songs` if omitted.
+- `[output_folder]` is where the converted `.osu` files and audio files will be saved. Defaults to `Output` if omitted.
+
+tja2osz will create a folder in `[output_folder]` for each processed `.tja` file. This folder will contain converted `.osu` files and audio file. tja2osz will also create an `.osz` file in `[output_folder]` for these `.osu` files.
+
+### Features
+
+- **Batch conversion** of `.tja` files to `.osz` files.
+- **Custom folder support**: You can specify custom input and output folders.

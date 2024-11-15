@@ -8,7 +8,7 @@
 
 `.tja` 或 TJA (缩写意义不明，可能是“Taiko (Tatsu)jin Another”) 是受多种模拟器支持的太鼓谱面格式，例如太鼓次郎、太鼓大次郎、Malody、TJAPlayer3、Project OutFox。
 
-包含两支主要工具：osz2tja、tja2osu。
+包含两支主要工具：osz2tja、tja2osz。
 
 ## 執行环境要求
 
@@ -51,12 +51,26 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 
 下载后，解压井复制 `bin/ffmpeg.exe` 到 `osz2tja.py` 的所在目录即可。
 
-## tja2osu
+## tja2osz
 
-只需简单地输入以下命令：
-```
-python tja2osu/tja2osu_file_dvide.py <source .tja filename>
+### 用法
+
+```bash
+python tja2osz.py [input_folder] [output_folder]
 ```
 
-tja2osu 会自动分割可游玩的难度与谱面分歧为个別的 `.tja` 文件到 `tmp/` 目录下，
-并生成对应的 `.osu` 文件到 `out/` 目录下。
+示例：
+
+```bash
+python tja2osz.py a_folder b_folder
+```
+
+- `[input_folder]` 为 `.tja` 文件所在的位置（可在任意内部目录中）。若省略，默认为 `Songs`。
+- `[output_folder]` 为转换后的 `.osu` 文件和音频文件的输出位置。若省略，默认为 `Output`。
+
+tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一个文件夹，其中包含转换后的 `.osu` 文件和音频文件。并且 tja2osz 会在 `[output_folder]` 中为转换后的 `.osu` 文件创建 `.osz` 文件。
+
+### 功能
+
+- **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。
+- **自定义文件夹支持**：可指定输入和输出文件夹。

@@ -6,13 +6,22 @@
 
 `.osu` (osu! Beatmap) 是 osu! 游戏所使用的仅包含单一难度的谱面格式。`.osz` (osu! Beatmap Archive) 是 osu! 中单一歌曲所使用的包含多份 `.osu` 文件与资源的标准压缩格式。
 
-`.tja` 或 TJA (缩写意义不明，可能是“Taiko (Tatsu)jin Another”) 是受多种模拟器支持的太鼓谱面格式，例如太鼓次郎、太鼓大次郎、Malody、TJAPlayer3、Project OutFox。
+`.tja` 或 TJA (缩写意义不明，可能是“Taiko (Tatsu)jin Another”) 是受多种模拟器支持的太鼓谱面格式，例如太鼓次郎、太鼓大次郎、Malody、TJAPlayer3、OpenTaiko、Project OutFox。
 
 包含两支主要工具：osz2tja、tja2osz。
 
 ## 執行环境要求
 
 - Python 3.x
+- ffmpeg (选用，由 osz2tja 使用)
+
+### ffmpeg
+
+若 ffmpeg 已安装或在 `osz2tja.py` 的所在目录下，osz2tja 会自动将音频文件转换为 `.ogg` 格式。
+
+在此下载 ffmpeg：<https://www.ffmpeg.org/download.html>
+
+下载后，解压井复制 `bin/ffmpeg.exe` 到 `osz2tja.py` 的所在目录即可。
 
 ## osz2tja
 
@@ -35,21 +44,69 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 
 ### 功能
 
-- **批量转换** `.osz` 谱面文件为 `.tja` 谱面文件。
-- 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。
-- 支持**超过 5 个难度**的 Beatmap，会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。
-- **自动调整难度等级**：拆分的 `.tja` 之间的难度星级会加以调整，使高难度的等级较高。
-  > **不**一定会符合太鼓难度等级基准，因为 osu! 的难度等级范围比太鼓来得大。
-- **自定义文件夹支持**：可指定输入和输出文件夹。
-- **其他元数据**：生成的 `.tja` 文件包含谱面作者信息。
+- **批量转换** `.osz` 谱面文件为 `.tja` 谱面文件。（@MoshirMoshir）
+- 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个）
+- **超过 5 个难度**的 Beatmap 会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。（@MoshirMoshir；改进至必要时才加后缀）
+- 拆分的 `.tja` 之间的难度星数会加以调整，使高难度的星数较高。（@MoshirMoshir）
+  > **不**符合太鼓星数基准，因为是用 `OverallDifficulty:`（判定幅难度）估计星数。
+- **自动复制并转换**音频文件。（@SamLangTen；OGG 转换 —— @k2angel）
 
-### ffmpeg
+### 转换细节
 
-若 ffmpeg 已安装或在 `osz2tja.py` 的所在目录下，osz2tja 会自动将音频文件转换为 `.ogg` 格式。
-
-在此下载 ffmpeg：<https://www.ffmpeg.org/download.html>
-
-下载后，解压井复制 `bin/ffmpeg.exe` 到 `osz2tja.py` 的所在目录即可。
+- [x] 输入：osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
+- [x] 会忽略 TJA `//` 注释
+- TJA 标头
+  - 元数据标头
+    - [x] osu2tja 水印（移至 TJA 文件首行）
+    - [x] `TitleUnicode:`/`Title:` → `TITLE:`
+    - [x] `Source:` **和/或** `ArtistUnicode:`/`Artist:` → `SUBTITLE:`（@k2angel）
+    - [x] `AudioFilename:` → `WAVE:`，自动文件复制（@SamLangTen），OGG 转换（@k2angel）
+    - [x] `PreviewTime:` → `DEMOSTART:`
+    - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
+    - [ ] `Creator:` → `AUTHOR:` (Malody 用)（TODO）
+    - [ ] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（TODO）
+  - 美术标头
+    - [ ] 背景事件：文件名 → `PREIMAGE:`（TODO）
+    - [ ] 背景事件：文件名 → `BGIMAGE:`（TODO）
+    - [ ] 视频事件：文件名 → `BGMOVIE:`（TODO）
+    - [ ] 视频事件：起始时间 → `MOVIEOFFSET:`（TODO）
+    - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
+  - 音频同步标头
+    - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​​各难度可異（新功能）
+    - [x] 首拍时间 → `OFFSET:`（改进），​​各难度可異（新功能）
+      - `OFFSET:` 取音频开始为止最后一拍的开始时间，仿 osu!。delguoqing 版是取最早的音符或时间点。
+  - 难度标头
+    - [x] `Version:` & `Mode:` → TJA 注释（纯参考用）（新功能）
+    - [ ] `Version:` → `NOTEDESIGNER<n>:`（客串难度）（TODO）
+    - [ ] `Creator:` → `NOTEDESIGNER<n>:`（其他）（TODO）
+    - [x] 难度按 `OverallDifficulty:` 排序 → `COURSE:`（@SamLangTen；自动化 —— @MoshirMoshir；改进为含 `COURSE:Edit`）
+    - [x] `OverallDifficulty:` → `LEVEL:`（@SamLangTen）
+      - TODO：使用实际的 osu! 难度星数。
+    - [x] 转盘：时长 → `BALLOON:`（以官方公式改进以计入 `OverallDifficulty:`（可能仍会差 1、2 打））
+- TJA 命令
+  - [x] 非继承时间点：BPM → `#BPMCHANGE`
+  - [x] 非继承时间点：小节拍数 → `#MEASURE`
+  - [x] 不完整小节 → `#MEASURE` + 可能的 `#DELAY`（崩溃修正 —— @delguoqing；改进至毫秒精度）
+  - [x] 继承时间点：滑条速度变化 → `#SCROLL`（没限制范围）
+  - [x] 时间点：Kiai 时间 → `#GOGOSTART` & `#GOGOEND`
+  - [ ] 时间点：隐藏首个小节线 → `#BARLINEOFF` & `#BARLINEON`（TODO）
+- TJA 音符定义
+  - 乐理计时
+    - [x] 相对小节头尾的时间偏移 → 节拍等分数
+    - [x] 小节中音符间命令插入（改进、新功能）
+    - [ ] 毫秒精度（TODO）
+      - 目前全都会先量化成 96 分音符（1/24 拍）。
+  - 音符符号
+    - [x]（std 模式）短滑条转为圆圈（以官方算法改进）
+    - [x] 空白 → `0`（空白）
+    - [x] 圆圈，一般非 finish 音效 → `1`（小咚）
+    - [x] 圆圈，whistle/clap 非 finish 音效 → `2`（小咔）
+    - [x] 圆圈，一般 finish 音效 → `3`（大咚）
+    - [x] 圆圈，whistle/clap finish 音效 → `4`（大咔）
+    - [x] 滑条，非 finish 音效 → `5` + `8`（小条连打）
+    - [x] 滑条，finish 音效 → `6` + `8`（大条连打）
+    - [x] 转盘，**任意**音效 → `7` + `8`（一般气球连打）
+    - [ ] 转盘，finish 音效 → `9` + `8` (特殊气球连打)（TODO）
 
 ## tja2osz
 
@@ -72,5 +129,109 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 
 ### 功能
 
-- **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。
-- **自定义文件夹支持**：可指定输入和输出文件夹。
+- **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。（新功能）
+- 自动拆分各个难度与谱面分歧主路線为各自的 `.osu` 难度文件。
+- **自动复制并转换**音频文件。（新功能）
+
+### 转换细节
+
+- [x] 输出：osu file format v14（改进）
+- [x] 会忽略 TJA `//` 注释
+  - FIXME：拆分 TJA 时 `//` 注释不会禁用命令。
+- TJA 标头
+  - 元数据标头
+    - [x] osu2tja 水印（新功能）
+    - [x] `TITLE:` → `Title:`
+      - FIXME：编码检测时常出错
+    - [ ] `SUBTITLE:` → `Artist:`（TODO）（目前默认为 `unknown`）
+    - [ ] `MAKER:`/`AUTHOR:` → `Creator:`（TODO）（目前默认为 `unknown`）
+    - [x] `SUBTITLE:` → `Source:`（已修正）
+      - FIXME：编码检测时常出错
+    - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
+    - [x] `WAVE:` → `AudioFilename:`，自动文件复制（新功能）
+    - [x] ? → `AudioLeadIn:`（默认为 `0`）（改进）
+    - [x] `DEMOSTART:` → `PreviewTime:`（已修正）
+    - [x] ? → `CountDown:`（默认为 `0`（false））
+    - [x] ? → `SampleSet:`（默认为 `Normal`）
+    - [x] `StackLeniency:0.7`（无效果）
+    - [x] ? → `Mode:`（默认为 `1`（太鼓））
+    - [x] ? → `LetterboxInBreaks:`（默认为 `0`（false））（改进）
+    - [x] `SEVOL:` ÷ `SONGVOL:` → 时间点：音效音量（新功能）
+  - 美术标头
+    - [ ] `PREIMAGE:` → 背景事件：文件名（TODO）
+    - [ ] `BGIMAGE:` → 背景事件：文件名（TODO）
+    - [ ] `BGMOVIE:` → 视频事件：文件名（TODO）
+    - [ ] `MOVIEOFFSET:` → 视频事件：开始时间（TODO）
+    - [ ] TJAPlayer3-Extended 的 OBJ 命令 → 故事板事件（计划外）
+  - 音频同步标头
+    - [x] `BPM:` → 初始非继承时间点：BPM
+    - [x] `OFFSET:` → 初始非继承时间点：时间
+  - 难度标头
+    - [ ] `STYLE:` → `Version:`（TODO）
+    - [x] `COURSE:` → `Version:`
+    - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>`，`<notesdesigner>` 不为 `<maker>`/`<author>` 时（TODO）
+    - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:`（TODO）（默认为 `7`（大致为太鼓魔王 10 星入魂难度）（改进）））
+    - [x] `CircleSize:5`（无效果）
+    - [x] `ApproachRate:5`（无效果）
+    - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:`（TODO）（默认为 `8.333`（太鼓困难、魔王的良判定幅）（改进）
+    - [x] ？ → `SliderMultiplier:`（默认为 `1.47`（AC15~ 音符间距））
+    - [ ]（取众数）节拍等分数 → `SliderTickRate:`（TODO）（默认为 `4`（16 分音符））
+    - [ ] `HEADSCROLL:` → 初始继承时间点：滑条速度变化（TODO）
+- TJA 命令
+  - [ ] `#START` → 非继承时间点：高小节拍数 + 隐藏首个小节线 +（可选）不完整小节（TODO）
+  - [ ] `#START P<n>` → 拆分为玩家侧 TJA（TODO）
+    - FIXME：任一难度定义有多玩家侧谱面时，拆分的难度会标记错误。
+  - [x] `#END` → 非继承时间点：高小节拍数 + 隐藏首个小节线（新功能）
+  - [x] `#BRANCHSTART` → 分歧拆分段落开始
+    - TODO：检测并回避不可能的分歧路线
+  - [x] `#N`/`#E`/`#M` → 拆分为分歧 TJA
+    - FIXME：省略部分分歧分支会造成缺少小节的间题。
+  - [ ] `#BRANCHEND` → 分歧共通部分开始
+    - FIXME：`#BRANCHEND` 有被识别但被忽略。
+  - [x] `#BPMCHANGE`，正 → 非继承时间点：BPM
+  - [ ] `#BPMCHANGE`，负，正的 (小节长 ÷ BPM) → 非继承时间点：BPM 取绝对值（TODO）
+  - [x] `#MEASURE`，正整数拍数 → 非继承时间点：小节拍数（改进），小数參数（新功能）
+  - [x] `#MEASURE`，正非整数拍数 → 非继承时间点：小节拍数 + 不完整小节（改进），小数參数（新功能）
+  - [ ] 负的 (小节长 ÷ BPM) → 非完全递增时间序的谱面事件，依时间重新排序（TODO）
+  - [x] `#DELAY` → 移动谱面定义游标的时间
+    - FIXME：`#DELAY` 之后的小节线会显示错误，错到下个生成的非继承时间点。
+    - FIXME：使用大的负 `#DELAY` 时，生成的事件可能不会是正确递增时间序。
+  - [x] `#SCROLL`，正的 (scroll × BPM) → 继承时间点：滑条速度变化
+    - FIXME：用 BPM 变化绕过 osu! 滑条速度变化会锁在 0.01x 到 10x 之间的限制。
+  - [ ] 非正/复数的（scroll × BPM）→ 继承时间点：滑条速度变化取绝对值（TODO）
+  - [ ] `#SUDDEN`，有正停止时长 → 继承时间点：经调整的滑条速度变化（TODO）
+  - [x] `#GOGOSTART` & `#GOGOEND` → 时间点：Kiai 时间
+  - [x] `#BARLINEOFF` & `#BARLINEON` → 时间点：隐藏首个小节线（新功能）
+  - [ ] `#BARLINE` → 将小节拆分为（可能）不完整的小节（TODO）
+  - [ ] `#BARLINESCROLL` → 继承时间点：在每个小节线和小节线后首音符加上滑条速度变化；原本的小节头有音符时，拆分出隐藏首个小节线的 1 毫秒小节（TODO）
+- TJA 音符定义
+  - 乐理计时
+    - [x] 无音符符号的小节 (`,`) → 完整小节（新修正）
+    - [x] (小节长 ÷ 节拍等分数 ÷ 各等分 BPM) 总和 → 相对小节头的时间偏移 (修正了带 `#SCROLL` 的非整数拍小节的错误)
+    - [ ] 毫秒精度（TODO）
+      - 目前全都会先量化成 96 分音符（1/24 拍）。
+  - 音符符号
+    - [x] `0`（空白）→ 空白
+    - [x] `1`（小咚）→ 圆圈，默认音效
+    - [x] `2` (小咔) → 圆圈，clap 音效
+    - [ ] `F` (ad-lib) → = 小咚/咔？（TODO）
+    - [ ] `C`（炸弹/地雷）→ = 小咚/咔？空白？（TODO）
+    - [x] `3`（大咚）→ 圆圈，finish 音效
+    - [ ] `A`（牵手大咚）→ 圆圈，finish 音效（TODO）
+    - [x] `4`（大咔）→ 圆圈，clap finish 音效
+    - [ ] `B`（牵手大咔）→ 圆圈，clap finish 音效（TODO）
+    - [ ] `G`（咔咚）→ = 大咚/咔？（TODO）
+    - [x] `5`（小条连打头）→ 滑条，默认音效
+    - [ ] `I`（小/咔？条连打头）→ = 小条连打头？（TODO）
+    - [x] `6`（大条连打头）→ 滑条，finish 音效
+    - [ ] `H`（大/咚？条连打头）→ = 大条连打头？（TODO）
+    - [x] `7`（一般气球连打头）→ 转盘，默认音效
+    - [x] `9`（特殊气球连打头）→ 转盘，默认音效
+      - TODO：用 finish 音效表示差异
+    - [ ] `D`（计时弹气球连打头）→ = 一般气球连打？（TODO）
+    - [ ] 连打类音符头，未结尾的连打类音符后 → 空白（TODO）
+    - [x] `8`（显式连打尾），未结尾的连打类音符后 → 前一个滑条/转盘尾
+    - [ ] 击打类音符，未结尾的连打类音符后 → 前一个滑条/转盘強制结尾（TODO）
+    - [ ] `#END`（命令），未结尾的连打类音符后 → 前一个滑条/转盘強制结尾（TODO）
+    - [ ] `8`，单独出現 → 空白（TODO）
+    - [ ] 连打类音符，非正时长 → 空白（TODO）

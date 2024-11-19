@@ -16,19 +16,22 @@ def extract_osu_file_info(file) -> Dict[str, object]:
             break
 
         if line.startswith(OSU_VER_STR_PREFIX) and "format_ver" not in result:
-            result["format_ver"] = int(line.split("v")[1].strip())
-        elif line.startswith("Version:"):
-            result["version"] = line.split(":")[1].strip()
-        elif line.startswith("OverallDifficulty:"): # accuracy, not the real star rating
-            result["difficulty"] = float(line.split(":")[1])
-        elif line.startswith("Title:"):
-            result["title_ascii"] = line.split(":")[1].strip()
+            result["format_ver"] = int(line.partition(OSU_VER_STR_PREFIX)[2].strip())
+            continue
+
+        key, _, val = line.partition(":")
+        if key == "Version":
+            result["version"] = val.strip()
+        elif key == "OverallDifficulty": # accuracy, not the real star rating
+            result["difficulty"] = float(val)
+        elif key == "Title":
+            result["title_ascii"] = val.strip()
             if "title" not in result:
                 result["title"] = result["title_ascii"]
-        elif line.startswith("TitleUnicode:"):
-            result["title"] = line.split(":")[1].strip()
-        elif line.startswith("AudioFilename:"):
-            result["audio"] = line.split(":")[1].strip()
+        elif key == "TitleUnicode":
+            result["title"] = val.strip()
+        elif key == "AudioFilename":
+            result["audio"] = val.strip()
 
         if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio"]):
             break

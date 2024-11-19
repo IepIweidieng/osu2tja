@@ -576,14 +576,14 @@ def write_HitObjects():
 #            print("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
             pass
         if ho[0] == CIRCLE:
-            rtassert(lasting_note is None, "this is no science")
+            rtassert(lasting_note is None, "this is abnormal")
             print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0],
                     ho[1]))
         elif ho[0] == SLIDER:
-            rtassert(lasting_note is None, "this is no science")            
+            rtassert(lasting_note is None, "this is abnormal")
             lasting_note = ho
         elif ho[0] == SPINNER:
-            rtassert(lasting_note is None, "this is no science")            
+            rtassert(lasting_note is None, "this is abnormal")
             lasting_note = ho
         elif ho[0] == SLIDER_END:
             rtassert(lasting_note is not None and \
@@ -598,7 +598,7 @@ def write_HitObjects():
             lasting_note = None
         elif ho[0] == SPINNER_END:
             rtassert(lasting_note is not None and \
-                    lasting_note[0] == SPINNER, "this is no science")
+                    lasting_note[0] == SPINNER, "this is abnormal")
             ln = lasting_note
             print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
                     ln[0], ln[1], int(get_real_offset(ho[2]))))

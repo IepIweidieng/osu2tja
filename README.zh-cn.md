@@ -142,12 +142,10 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（新功能）
-    - [x] `TITLE:` → `Title:`
-      - FIXME：编码检测时常出错
+    - [x] `TITLE:` → `Title:`，支持带或不带 BOM 的 UTF-8（新功能）
     - [ ] `SUBTITLE:` → `Artist:`（TODO）（目前默认为 `unknown`）
     - [ ] `MAKER:`/`AUTHOR:` → `Creator:`（TODO）（目前默认为 `unknown`）
-    - [x] `SUBTITLE:` → `Source:`（已修正）
-      - FIXME：编码检测时常出错
+    - [x] `SUBTITLE:` → `Source:`（已修正），支持带或不带 BOM 的 UTF-8（新功能）
     - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:`（TODO）
     - [ ] `NOTESDESIGNER<n>:` → `Tags:`（为客串制谱者时）（TODO）

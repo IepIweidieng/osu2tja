@@ -142,12 +142,10 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (new)
-    - [x] `TITLE:` → `Title:`
-      - FIXME: The encoding detection is usually wrong
+    - [x] `TITLE:` → `Title:`, UTF-8 with(out) BOM support (new)
     - [ ] `SUBTITLE:` → `Artist:` (TODO) (Currently defaults to `unknown`)
     - [ ] `MAKER:`/`AUTHOR:` → `Creator:` (TODO) (Currently defaults to `unknown`)
-    - [x] `SUBTITLE:` → `Source:` (bug fixed)
-      - FIXME: The encoding detection is usually wrong
+    - [x] `SUBTITLE:` → `Source:` (bug fixed), UTF-8 with(out) BOM support (new)
     - [x] ? → `Tags:` (defaults to `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:` (TODO)
     - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)

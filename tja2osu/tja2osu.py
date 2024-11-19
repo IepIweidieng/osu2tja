@@ -1,9 +1,12 @@
 # $Id$
+import codecs
 import math
 import sys
 import copy
+from typing import Optional, OrderedDict, Tuple
 
 # jiro data
+ENCODING = None
 TITLE = "NO TITLE"
 SUBTITLE = "NO SUBTITLE"
 BPM = 0.0
@@ -53,24 +56,25 @@ BARLINEON = "BARLINEON"
 DELAY = "DELAY"
 SCROLL = "SCROLL"
 
+ENCODINGS_KNOWN = ["utf-8-sig", "gbk", "shift-jis", "big5"]
+
 # guess str
-def try_decode(bytes_):
-    ret = {}
-    for enc in ["utf-8-sig", "gbk", "shift-jis", "big5"]:
+def try_decode(bytes_: bytes, enc_guessed: Optional[str] = None) -> Tuple[Optional[str], str]:
+    ret = OrderedDict()
+    for enc in ([enc_guessed] if enc_guessed else []) + ENCODINGS_KNOWN:
         try:
-            ret[enc] = bytes_.decode("gbk")
-            print(enc, len(ret[enc]), file=sys.stderr)
-        except:
+            ret[enc] = bytes_.decode(enc)
+        except UnicodeError:
             pass
     
-    encoding, decoded = None, bytes_.decode("latin-1")
+    enc_guessed, decoded = None, bytes_.decode("latin-1")
     for enc, dec in ret.items():
-        if encoding is None or len(dec) < len(decoded):
-            encoding, decoded = enc, dec
-    return encoding, decoded
+        if enc_guessed is None or len(dec) < len(decoded):
+            enc_guessed, decoded = enc, dec
+    return enc_guessed, decoded
 
-def convert_str(bytes_):
-    _, decoded = try_decode(bytes_)
+def convert_str(bytes_: bytes, enc_guessed: Optional[str] = None) -> str:
+    _, decoded = try_decode(bytes_, enc_guessed)
     return decoded
 
 def check_unsupported(filename):
@@ -79,8 +83,8 @@ def check_unsupported(filename):
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
-    if fobj.peek(3) == "".encode("utf-8-sig"):
-        fobj.seek(3) # ignore UTF-8 BOM
+    if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
+        fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     END_cnt = 0
     for line in fobj:
         rtassert(("#"+BRANCH).decode() not in line, "don't support branch")
@@ -94,28 +98,29 @@ def rm_jiro_comment(str_):
     return str_[:i]
 
 def get_meta_data(filename):
-    global TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE, BPM
+    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE, BPM
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
-    if fobj.peek(3) == "".encode("utf-8-sig"):
-        fobj.seek(3) # ignore UTF-8 BOM
+    if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
+        ENCODING = "utf-8-sig"
+        fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     for line in fobj:
         line = line.strip()
         try: i = line.index(b":")
         except ValueError: continue
         vname = line[:i].strip()
         vval = line[i+1:].strip()
-        if vname == b"TITLE": TITLE = convert_str(vval)
-        elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval)
+        if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
+        elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
         elif vname == b"BPM": BPM = float(vval)
-        elif vname == b"WAVE": WAVE = convert_str(vval)
+        elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
         elif vname == b"OFFSET": OFFSET = float(vval)
         elif vname == b"DEMOSTART": DEMOSTART = float(vval)
         elif vname == b"SONGVOL": SONGVOL = float(vval)
         elif vname == b"SEVOL": SEVOL = float(vval)
-        elif vname == b"COURSE": COURSE = vval.decode("latin1")
+        elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
 
 def add_default_timing_point():
     global TimingPoints
@@ -178,8 +183,8 @@ def get_all(filename):
     global has_started, curr_time
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
-    if fobj.peek(3) == "".encode("utf-8-sig"):
-        fobj.seek(3) # ignore UTF-8 BOM
+    if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
+        fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
 
     has_started = False
     curr_time = -OFFSET * 1000

@@ -77,7 +77,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
   - Difficulty Headers
     - [x] `Version:` & `Mode:` → TJA comment (for reference only) (new)
-    - [ ] `Version:` → `NOTEDESIGNER<n>:` (for guest difficulties) (TODO)
+    - [ ] `Version:` → `NOTEDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)
     - [ ] `Creator:` → `NOTEDESIGNER<n>:` (otherwise) (TODO)
     - [x] Difficulties sorted by `OverallDifficulty:` → `COURSE:` (@SamLangTen; automated — @MoshirMoshir; improved to include `COURSE:Edit`)
     - [x] `OverallDifficulty:` → `LEVEL:` (@SamLangTen)
@@ -105,6 +105,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] Circle, whistle/clap finish hitsound → `4` (big Katsu)
     - [x] Slider, non-finish hitsound → `5` + `8` (regular bar drumroll)
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
+      - FIXME: Mid-slider BPM changes and slider velocity changes cause incorrect bar drumroll time duration.
     - [x] Spinner, **ANY** hitsound → `7` + `8` (regular balloon roll)
     - [ ] Spinner, finish hitsound → `9` + `8` (special balloon roll) (TODO)
 
@@ -148,6 +149,8 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] `SUBTITLE:` → `Source:` (bug fixed)
       - FIXME: The encoding detection is usually wrong
     - [x] ? → `Tags:` (defaults to `taiko jiro tja`)
+    - [ ] `GENRE:` → `Tags:` (TODO)
+    - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)
     - [x] `WAVE:` → `AudioFilename:`, with automatic file copy (new)
     - [x] ? → `AudioLeadIn:` (defaults to `0`) (improved)
     - [x] `DEMOSTART:` → `PreviewTime:` (bug fixed)
@@ -170,7 +173,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] `STYLE:` → `Version:` (TODO)
     - [x] `COURSE:` → `Version:`
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>` when `<notesdesigner>` isn't `<maker>`/`<author>` (TODO)
-    - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate` (TODO) (defaults to `7` (roughly Taiko Oni 10 full gauge) (improved))
+    - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:` (TODO) (defaults to `7` (roughly Taiko Oni 10 full gauge) (improved))
     - [x] `CircleSize:5` (no effects)
     - [x] `ApproachRate:5` (no effects)
     - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:` (TODO) (defaults to `8.333` (Taiko Hard & Oni GREAT/GOOD window) (improved))
@@ -207,6 +210,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - TJA Note Definition
   - Timing
     - [x] Measure with no note symbols (`,`) → Full measure (new bug fix)
+    - [x] Mid-bar `#BPMCHANGE`s
     - [x] Sum of (bar length ÷ beat division ÷ BPM at each division) → relative time offset to bar start (bug fixed for fractional-beat bars with `#SCROLL`)
     - [ ] ms-level timing accuracy (TODO)
       - Currently everything is pre-quantized to 1/96ths (1/24 beats).
@@ -225,6 +229,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] `I` (head of regular/Katsu? bar drumroll) → = head of regular bar drumroll? (TODO)
     - [x] `6` (head of big bar drumroll) → Slider, finish hitsound
     - [ ] `H` (head of big/Don? bar drumroll) → = head of big bar drumroll? (TODO)
+      - FIXME: Mid&ndash;bar-drumroll `#BPMCHANGE`s and `#SCROLL`s cause wrong slider length calculation and cause wrong time duration.
     - [x] `7` (head of regular balloon roll) → Spinner, default hitsound
     - [x] `9` (head of special balloon roll) → Spinner, default hitsound
       - TODO: use finish hitsound to mark difference

@@ -77,7 +77,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
       - `OFFSET:` 取音频开始为止最后一拍的开始时间，仿 osu!。delguoqing 版是取最早的音符或时间点。
   - 难度标头
     - [x] `Version:` & `Mode:` → TJA 注释（纯参考用）（新功能）
-    - [ ] `Version:` → `NOTEDESIGNER<n>:`（客串难度）（TODO）
+    - [ ] `Version:` → `NOTEDESIGNER<n>:`（客串制谱者的难度）（TODO）
     - [ ] `Creator:` → `NOTEDESIGNER<n>:`（其他）（TODO）
     - [x] 难度按 `OverallDifficulty:` 排序 → `COURSE:`（@SamLangTen；自动化 —— @MoshirMoshir；改进为含 `COURSE:Edit`）
     - [x] `OverallDifficulty:` → `LEVEL:`（@SamLangTen）
@@ -105,6 +105,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] 圆圈，whistle/clap finish 音效 → `4`（大咔）
     - [x] 滑条，非 finish 音效 → `5` + `8`（小条连打）
     - [x] 滑条，finish 音效 → `6` + `8`（大条连打）
+      - FIXME：滑条內的 BPM 变化与滑条速度变化会造成长条连打时长不正确。
     - [x] 转盘，**任意**音效 → `7` + `8`（一般气球连打）
     - [ ] 转盘，finish 音效 → `9` + `8` (特殊气球连打)（TODO）
 
@@ -148,6 +149,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `SUBTITLE:` → `Source:`（已修正）
       - FIXME：编码检测时常出错
     - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
+    - [ ] `GENRE:` → `Tags:`（TODO）
+    - [ ] `NOTESDESIGNER<n>:` → `Tags:`（为客串制谱者时）（TODO）
     - [x] `WAVE:` → `AudioFilename:`，自动文件复制（新功能）
     - [x] ? → `AudioLeadIn:`（默认为 `0`）（改进）
     - [x] `DEMOSTART:` → `PreviewTime:`（已修正）
@@ -207,6 +210,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - TJA 音符定义
   - 乐理计时
     - [x] 无音符符号的小节 (`,`) → 完整小节（新修正）
+    - [x] 小节中间的 `#BPMCHANGE`
     - [x] (小节长 ÷ 节拍等分数 ÷ 各等分 BPM) 总和 → 相对小节头的时间偏移 (修正了带 `#SCROLL` 的非整数拍小节的错误)
     - [ ] 毫秒精度（TODO）
       - 目前全都会先量化成 96 分音符（1/24 拍）。
@@ -225,6 +229,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [ ] `I`（小/咔？条连打头）→ = 小条连打头？（TODO）
     - [x] `6`（大条连打头）→ 滑条，finish 音效
     - [ ] `H`（大/咚？条连打头）→ = 大条连打头？（TODO）
+      - FIXME：长条连打內的 `#BPMCHANGE` 与 `#SCROLL` 会造成滑条长度计算错误，使时长不正确。
     - [x] `7`（一般气球连打头）→ 转盘，默认音效
     - [x] `9`（特殊气球连打头）→ 转盘，默认音效
       - TODO：用 finish 音效表示差异

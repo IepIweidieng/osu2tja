@@ -269,85 +269,20 @@ def real_do_cmd(cmd):
     
     # handel timing point change command    
     if cmd[0] == BPMCHANGE:
-        tm = get_last_red_tm()
-        if int(curr_time) == tm["offset"]:
-            tm["bpm"] = cmd[1]
-        else:
-            new_tm = create_new_tm()
-            new_tm["redline"] = True
-            new_tm["bpm"] = cmd[1]
-            TimingPoints.append(new_tm)
-            curr_time = int(new_tm["offset"])
-
-            tmg = get_last_green_tm()
-            last_scroll = tmg and tmg["scroll"] or 1.0
-            if last_scroll != 1.0:
-                real_do_cmd((SCROLL, last_scroll))
+        get_or_create_curr_red_tm()["bpm"] = cmd[1]
     elif cmd[0] == MEASURE:
         assert len(bar_data) == 0, "can't change measure within a bar"
-        tm = get_last_red_tm()
-        if int(curr_time) == tm["offset"]:
-            tm["measure"] = cmd[1]
-        else:
-            new_tm = create_new_tm()
-            new_tm["redline"] = True
-            new_tm["measure"] = cmd[1]
-            TimingPoints.append(new_tm)
-            curr_time = int(new_tm["offset"])            
-
-            tmg = get_last_green_tm()
-            last_scroll = tmg and tmg["scroll"] or 1.0
-            if last_scroll != 1.0:
-                real_do_cmd((SCROLL, last_scroll))
+        get_or_create_curr_red_tm()["measure"] = cmd[1]
     elif cmd[0] == SCROLL:
-        tm = get_last_green_tm()
-        if tm and int(curr_time) == tm["offset"]:
-            tm["scroll"] = cmd[1]
-        else:
-            new_tm = create_new_tm()
-            new_tm["redline"] = False
-            new_tm["scroll"] = cmd[1]
-            TimingPoints.append(new_tm)
+        get_or_create_curr_tm()["scroll"] = cmd[1]
     elif cmd[0] == GOGOSTART:
-        tm = get_last_tm()
-        if int(curr_time) == tm["offset"]:
-            tm["GGT"] = True
-        else:
-            new_tm = create_new_tm()
-            new_tm["redline"] = False
-            new_tm["GGT"] = True
-            TimingPoints.append(new_tm)                 
+        get_or_create_curr_tm()["GGT"] = True
     elif cmd[0] == GOGOEND:
-        tm = get_last_tm()
-        if int(curr_time) == tm["offset"]:
-            tm["GGT"] = False
-        else:
-            new_tm = create_new_tm()
-            new_tm["redline"] = False
-            new_tm["GGT"] = False
-            TimingPoints.append(new_tm)        
+        get_or_create_curr_tm()["GGT"] = False
     elif cmd[0] == BARLINEOFF:
-        tm = get_last_tm()
-        tmr = get_last_red_tm()
-        for t in [tm, tmr]:
-            if int(curr_time) == t["offset"]:
-                t["hidefirst"] = True
-        if tm == tmr: # not a red + green timing point pair
-            new_tm = create_new_tm()
-            new_tm["redline"] = False
-            new_tm["hidefirst"] = True
-            TimingPoints.append(new_tm)
+        get_or_create_curr_tm()["hidefirst"] = True
     elif cmd[0] == BARLINEON:
-        tm = get_last_tm()
-        tmr = get_last_red_tm()
-        for t in [tm, tmr]:
-            if int(curr_time) == t["offset"]:
-                t["hidefirst"] = False
-        if tm == tmr: # not a red + green timing point pair
-            new_tm = create_new_tm()
-            new_tm["redline"] = False
-            new_tm["hidefirst"] = False
-            TimingPoints.append(new_tm)
+        get_or_create_curr_tm()["hidefirst"] = False
     else:
         assert False, "unknown or unsupported command"
 
@@ -363,12 +298,6 @@ def add_a_note(snd, offset):
 
 def get_last_tm():
     return TimingPoints[-1]
-
-def get_last_green_tm():
-    for i in range(len(TimingPoints)-1, -1, -1):
-        if not TimingPoints[i]["redline"]:
-            return TimingPoints[i]
-    return None
 
 def get_last_red_tm():
     for i in range(len(TimingPoints)-1, -1, -1):
@@ -402,21 +331,33 @@ def get_red_tm_at(t):
    
 def create_new_tm():
     last_tm = get_last_tm()
-    last_green_tm = get_last_green_tm()
     last_red_tm = get_last_red_tm()
     
     tm = {}
     tm["offset"] = int(curr_time)
 #    print("GREATE NEW TM", tm["offset"], file=sys.stderr)
-    tm["redline"] = None
-    tm["scroll"] = last_green_tm and last_green_tm["scroll"] or 1.0 
+    tm["redline"] = False # can upgrade to red + green later
+    tm["scroll"] = last_tm and last_tm["scroll"] or 1.0
     tm["measure"] = last_tm["measure"]
     tm["GGT"] = last_tm["GGT"]
     tm["hidefirst"] = last_tm["hidefirst"]
     tm["bpm"] = last_red_tm["bpm"]
     
     return tm
-    
+
+def get_or_create_curr_tm():
+    tm = get_last_tm()
+    if int(curr_time) != tm["offset"]:
+        tm = create_new_tm()
+        TimingPoints.append(tm)
+    return tm
+
+def get_or_create_curr_red_tm():
+    global curr_time
+    tm = get_or_create_curr_tm()
+    curr_time = int(tm["offset"])
+    tm["redline"] = True
+    return tm
 
 def get_t_unit(tm, tot_note):
     #print(tm["bpm"], tot_note, file=sys.stderr)
@@ -555,13 +496,17 @@ def write_Difficulty():
 
 def write_TimingPoints():
     print("[TimingPoints]")
-    sevol_scaled = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
+    volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
     for tm in TimingPoints:
-        if tm["redline"]: str = 60000.0/tm["bpm"]
-        else: str = -100/tm["scroll"]
-        print("%d,%f,%d,1,0,%d,%d,%d" % (int(tm["offset"]), str, \
-            int(round(tm["measure"])), sevol_scaled,
-            tm["redline"], tm["GGT"] + 8 * tm["hidefirst"]))
+        time = int(tm["offset"])
+        meter = int(round(tm["measure"]))
+        fx = tm["GGT"] + 8 * tm["hidefirst"]
+        if tm["redline"]:
+            beat_dur = 60000.0 / tm["bpm"]
+            print(f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}")
+        if not tm["redline"] or tm["scroll"] != 1.0:
+            beat_dur = -100 / tm["scroll"]
+            print(f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}")
         tm["offset"] = int(tm["offset"])
     print("")
 

@@ -99,16 +99,11 @@ def get_section_name(str):
     return ""
 
 
-def get_var(str):
+def get_var(str: str) -> Tuple[str, str]:
     if str is None:
         return "", ""
-    try:
-        idx = str.index(':')
-        var_name = str[:idx].strip()
-        var_value = str[idx+1:].strip()
-    except:
-        return "", ""
-    return var_name, var_value
+    var_name, _, var_value = str.partition(':')
+    return var_name.strip(), var_value.strip()
 
 
 def get_timing_point(str, prev_timing_point=None):
@@ -605,9 +600,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         # check osu file format version
         if osu_ver_str == "":
             osu_ver_str = line
-            osu_format_ver_pos = line.index(
-                OSU_VER_STR_PREFIX) + len(OSU_VER_STR_PREFIX)
-            osu_format_ver = int(osu_ver_str[osu_format_ver_pos:])
+            osu_format_ver = int(line.partition(OSU_VER_STR_PREFIX)[2])
             if osu_format_ver not in OSU_VER_SUPPORT:
                 str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
                 print(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",

@@ -91,11 +91,9 @@ def check_unsupported(filename):
         END_cnt += (("#"+END).decode() in line)
         rtassert(END_cnt <= 1, "don't support multiple fumen.")
 
-def rm_jiro_comment(str_):
+def rm_jiro_comment(str_: str) -> str:
     assert isinstance(str_, str)
-    try: i = str_.index('//')
-    except : return str_
-    return str_[:i]
+    return str_.partition('//')[0]
 
 def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE, BPM
@@ -108,10 +106,9 @@ def get_meta_data(filename):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     for line in fobj:
         line = line.strip()
-        try: i = line.index(b":")
-        except ValueError: continue
-        vname = line[:i].strip()
-        vval = line[i+1:].strip()
+        vname, _, vval = line.partition(b":")
+        vname = vname.strip()
+        vval = vval.strip()
         if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
         elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
         elif vname == b"BPM": BPM = float(vval)
@@ -229,20 +226,17 @@ def get_real_offset(int_offset):
         
     return ret     
    
-def handle_cmd(line):
+def handle_cmd(line: str) -> None:
     cmd = None
     if ("#"+BPMCHANGE) in line:
-        i = line.index('#'+BPMCHANGE)
-        bpm = float(line[i+1+len('#'+BPMCHANGE):].strip())
+        bpm = float(line.partition('#'+BPMCHANGE)[2][1:].strip())
         cmd = (BPMCHANGE, bpm)
     elif ("#"+MEASURE) in line:
-        i = line.index('#'+MEASURE)
-        arg_str = line[i+1+len('#'+MEASURE):].strip()
+        arg_str = line.partition('#'+MEASURE)[2][1:].strip()
         arg1, arg2 = arg_str.split('/')
         cmd = (MEASURE, 4.0*float(arg1.strip()) / float(arg2.strip()))
     elif ("#"+SCROLL) in line:
-        i = line.index('#'+SCROLL)
-        arg_str = line[i+1+len('#'+SCROLL):].strip()
+        arg_str = line.partition('#'+SCROLL)[2][1:].strip()
         cmd = (SCROLL, float(arg_str))        
     elif ("#"+GOGOSTART) in line:
         cmd = (GOGOSTART,)
@@ -253,8 +247,7 @@ def handle_cmd(line):
     elif ("#"+BARLINEON) in line:
         cmd = (BARLINEON,)
     elif ("#"+DELAY) in line:
-        i = line.index('#'+DELAY)
-        arg_str = line[i+1+len('#'+DELAY):].strip()        
+        arg_str = line.partition('#'+DELAY)[2][1:].strip()
         cmd = (DELAY, float(arg_str))
     else:
         return

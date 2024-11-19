@@ -45,10 +45,9 @@ def get_comm_data(filename: str) -> List[str]:
     course_list: List[str] = []
     for line in fobj:
         line = line.strip()
-        try: i = line.index(b":")
-        except ValueError: continue
-        vname = line[:i].strip()
-        vval = line[i+1:].strip()
+        vname, _, vval = line.partition(b":")
+        vname = vname.strip()
+        vval = vval.strip()
         if vname == b"TITLE": TITLE = vval
         elif vname == b"SUBTITLE": SUBTITLE = vval
         elif vname == b"BPM": BPM = vval
@@ -155,10 +154,9 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
             which = None
         else:
             _line = line.strip()
-            try: i = _line.index(b":")
-            except ValueError: continue
-            vname = _line[:i].strip()
-            vval = _line[i+1:].strip()
+            vname, _, vval = _line.partition(b":")
+            vname = vname.strip()
+            vval = vval.strip()
             if vname == b"COURSE":
                 vval_str = vval
                 branch_data[0].append(b"COURSE:" + vval_str + b"(Kurouto)")

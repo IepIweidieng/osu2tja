@@ -429,7 +429,7 @@ def handle_a_bar():
     # convert x.x measure to incomplete measure
     if abs(round(tmr["measure"]) - tmr["measure"]) > 0.001:
         bak = tmr["measure"]
-        tmr["measure"] = max(1, math.ceil(round(bak, 3))) # a big enough measure for osu
+        tmr["measure"] = math.ceil(round(bak, 3)) # a big enough measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
 
 def handle_note(line):
@@ -499,7 +499,7 @@ def write_TimingPoints():
     volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
     for tm in TimingPoints:
         time = int(tm["offset"])
-        meter = int(round(tm["measure"]))
+        meter = max(1, int(round(tm["measure"])))
         fx = tm["GGT"] + 8 * tm["hidefirst"]
         if tm["redline"]:
             beat_dur = 60000.0 / tm["bpm"]

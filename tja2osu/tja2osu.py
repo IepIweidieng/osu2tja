@@ -1,4 +1,5 @@
 # $Id$
+from bisect import bisect_right
 import codecs
 import math
 import sys
@@ -33,6 +34,7 @@ Mode = 1
 LetterboxInBreaks = 0
 PreviewTime = -1
 TimingPoints = []
+TimingPointsRed = []
 HitObjects = []
 HPDrainRate = 7
 CircleSize = 5
@@ -120,7 +122,6 @@ def get_meta_data(filename):
         elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
 
 def add_default_timing_point():
-    global TimingPoints
     tm = {}
     tm["offset"] = -OFFSET * 1000.0
     tm["redline"] = True
@@ -131,6 +132,7 @@ def add_default_timing_point():
     tm["bpm"] = BPM
 
     TimingPoints.append(tm)
+    TimingPointsRed.append(tm)
 
 CIRCLE = 1
 SLIDER = 2
@@ -300,64 +302,52 @@ def get_last_tm():
     return TimingPoints[-1]
 
 def get_last_red_tm():
-    for i in range(len(TimingPoints)-1, -1, -1):
-        if TimingPoints[i]["redline"]:
-            return TimingPoints[i]
-    assert False
+    return TimingPointsRed[-1]
         
 def get_tm_at(t):
     assert len(TimingPoints) > 0, "Need at least one timing point"
-    if int(t) < TimingPoints[0]["offset"]:
-        return TimingPoints[0]
-    ret_tm = TimingPoints[0]
-    for tm in TimingPoints:
-        if tm["offset"] > t:
-            break
-        ret_tm = tm
-    return ret_tm
+    return TimingPoints[max(0, bisect_right(TimingPoints, t, key=lambda tm: tm["offset"]) - 1)]
 
 def get_red_tm_at(t):
-    assert len(TimingPoints) > 0
-    assert TimingPoints[0]["redline"]
-    if int(t) < TimingPoints[0]["offset"]:
-        return TimingPoints[0]
-    ret_tm = TimingPoints[0]
-    for tm in TimingPoints:
-        if tm["offset"] > int(t):
-            break
-        if tm["redline"]:
-            ret_tm = tm
-    return ret_tm
+    assert len(TimingPointsRed) > 0, "Need at least one uninherited timing point"
+    return TimingPointsRed[max(0, bisect_right(TimingPointsRed, int(t), key=lambda tm: tm["offset"]) - 1)]
    
-def create_new_tm():
+def create_new_tm(has_red: bool = False):
+    global curr_time
+
     last_tm = get_last_tm()
     last_red_tm = get_last_red_tm()
     
     tm = {}
     tm["offset"] = int(curr_time)
 #    print("GREATE NEW TM", tm["offset"], file=sys.stderr)
-    tm["redline"] = False # can upgrade to red + green later
+    tm["redline"] = has_red # can upgrade to red + green later if not having red
     tm["scroll"] = last_tm and last_tm["scroll"] or 1.0
     tm["measure"] = last_tm["measure"]
     tm["GGT"] = last_tm["GGT"]
     tm["hidefirst"] = last_tm["hidefirst"]
     tm["bpm"] = last_red_tm["bpm"]
     
+    TimingPoints.append(tm)
+    if has_red:
+        TimingPointsRed.append(tm)
+        curr_time = int(tm["offset"])
+
     return tm
 
-def get_or_create_curr_tm():
+def get_or_create_curr_tm(need_red: bool = False):
+    global curr_time
     tm = get_last_tm()
     if int(curr_time) != tm["offset"]:
-        tm = create_new_tm()
-        TimingPoints.append(tm)
+        tm = create_new_tm(need_red)
+    elif need_red and not tm["redline"]: # needs to upgrade to red + green
+        tm["redline"] = True
+        TimingPointsRed.append(tm)
+        curr_time = int(tm["offset"])
     return tm
 
 def get_or_create_curr_red_tm():
-    global curr_time
-    tm = get_or_create_curr_tm()
-    curr_time = int(tm["offset"])
-    tm["redline"] = True
-    return tm
+    return get_or_create_curr_tm(True)
 
 def get_t_unit(tm, tot_note):
     #print(tm["bpm"], tot_note, file=sys.stderr)

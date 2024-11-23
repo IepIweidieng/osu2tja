@@ -47,6 +47,8 @@ def convert_to_ogg(audio_root: str, audio_name: str) -> str:
     audio_path_ogg = os.path.join(audio_root, audio_name_ogg)
 
     if ext.lower() != ".ogg":
+        if os.path.exists(audio_path_ogg):
+            return audio_name_ogg
         print(f"Converting {audio_path} -> {audio_path_ogg} ...")
         for ffmpeg in ["ffmpeg", "./ffmpeg", "./ffmpeg.exe"]:
             try:

@@ -1,4 +1,5 @@
 # $Id$
+import argparse
 from bisect import bisect_right
 import codecs
 import math
@@ -561,10 +562,16 @@ def rtassert(b, str=""):
         print(str, file=sys.stderr)
         exit()
 
-def get_help_str():
-    return "HELP STRING"
-
 if __name__ == "__main__":
-    rtassert(len(sys.argv) >= 2, "need a filename\n" +get_help_str())
-    debug_mode = (len(sys.argv) >= 3 and ("debug" in sys.argv))
-    tja2osu(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description='Convert a single-notechart branch-less .tja file to .osu format and print the result.',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("filename",
+        help="source .tja file. Allows only 1 notechart definition (`#START` to `#END`) and no branch commands.")
+    parser.add_argument("options", nargs="*", choices=["debug", []], metavar="{debug}",
+        help="extra options (deprecated usage). Can also be specified as --<option> ")
+    parser.add_argument("-d", "--debug", action="store_true",
+        help="display extra info")
+    args = parser.parse_args()
+    debug_mode = args.debug or ("debug" in args.options)
+    tja2osu(args.filename)

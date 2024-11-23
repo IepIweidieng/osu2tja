@@ -1,9 +1,11 @@
+import argparse
 import codecs
 from importlib import reload
 from pyexpat.errors import codes
 import shutil
 import sys
 import os
+import textwrap
 from typing import List
 
 try:
@@ -233,5 +235,13 @@ def tja2osus(tja_path: str, target_path: str="out") -> None:
         print(f"Audio file {path_wave_src} not found. Not copied.", file=sys.stderr)
 
 if __name__ == "__main__":
-    assert len(sys.argv) > 1
-    tja2osus(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description=textwrap.dedent('''\
+        Convert a general .tja file to multiple .osu files and copy the audio to "out/<song_folder>/".
+        Intermediate single-notechart branch-less .tja files are written to "tmp/<song_folder>/"
+        '''),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("filename",
+        help="source .tja file. Allows multiple notechart definitions and branch commands.")
+    args = parser.parse_args()
+    tja2osus(args.filename)

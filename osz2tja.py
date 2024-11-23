@@ -1,4 +1,6 @@
+import argparse
 import shutil
+import textwrap
 from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level, reset_global_variables
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
@@ -203,23 +205,28 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str):
                 print(f"Error converting {fpath_rel}: {e}")
 
 def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
-    # Set default input and output folders
-    input_folder = "Songs"
-    output_folder = "Output"
+    ext_in = '.tja' if mode == 'tja2osz' else '.osz'
+    ext_out = '.osu' if mode == 'tja2osz' else '.tja'
+    parser = argparse.ArgumentParser(
+        description=textwrap.dedent(f'''\
+        Convert {ext_in} files to {ext_out} files and copy the audio to "<output_folder>/<song_folder>/".
+        {'.osz files are also created in "<output_folder>/".' if mode == 'tja2osz' else ''}
+        '''),
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('input_folder', nargs='?', default='Songs',
+        help=f'where your {ext_in} files are located (default: Songs)')
+    parser.add_argument('output_folder', nargs='?', default='Output',
+        help=f'where the converted {ext_out} files will be saved (default: Output)')
+    args = parser.parse_args()
 
-    # Check for command-line arguments
-    if len(sys.argv) > 1:
-        input_folder = sys.argv[1]  # Override input folder if provided
-    if len(sys.argv) > 2:
-        output_folder = sys.argv[2]  # Override output folder if provided
-
-    print(f"Input folder: {input_folder}")
-    print(f"Output folder: {output_folder}")
+    print(f"Input folder: {args.input_folder}")
+    print(f"Output folder: {args.output_folder}")
 
     if mode == "tja2osz":
-        batch_convert_tja2osz(input_folder, output_folder)
+        batch_convert_tja2osz(args.input_folder, args.output_folder)
     else:
-        batch_convert_osz2tja(input_folder, output_folder)
+        batch_convert_osz2tja(args.input_folder, args.output_folder)
 
 if __name__ == "__main__":
     osz2tja2osz_main('osz2tja')

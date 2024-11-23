@@ -4,7 +4,7 @@ from bisect import bisect_left, bisect_right
 from functools import reduce
 import itertools
 import sys
-import optparse
+import argparse
 import copy
 import codecs
 from fractions import Fraction
@@ -832,31 +832,32 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
 
 def main():
-    parser = optparse.OptionParser()
-    parser.add_option("-d", "--debug", action="store_const",
-                      const=True, dest="debug", default=False)
-    parser.add_option("-g", "--guess", action="store_const",
-                      const=True, dest="guess_measure", default=False)
-    (options, args) = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description='Convert an .osu file to .tja format and print the result.',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("filename", help="source .osu file")
+    parser.add_argument("-d", "--debug", action="store_true",
+        help="display extra info")
+    parser.add_argument("-g", "--guess-measure", "--guess", action="store_true",
+        help="force skipping predefined integer ratio look-up for bar length")
+    args = parser.parse_args()
 
     global show_head_info, guess_measure
-    show_head_info = options.debug
-    guess_measure = options.guess_measure
-
-    filename = args[0]
+    show_head_info = args.debug
+    guess_measure = args.guess_measure
 
     # check filename
-    if not filename.lower().endswith(".osu"):
-        print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % filename, file=sys.stderr)
+    if not args.filename.lower().endswith(".osu"):
+        print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % args.filename, file=sys.stderr)
         return
 
     # try to open file
     try:
-        fp = codecs.open(filename, "r", "utf8")
+        fp = codecs.open(args.filename, "r", "utf8")
         head_meta, head_sync, head_diff, diff_content = osu2tja(fp, 3, 9, None) # defaulted course and level
         head_sync_main = head_sync
     except IOError:
-        print("Can't open file `%s`" % filename, file=sys.stderr)
+        print("Can't open file `%s`" % args.filename, file=sys.stderr)
         return
 
     # print results

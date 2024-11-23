@@ -853,10 +853,20 @@ def main():
     # try to open file
     try:
         fp = codecs.open(filename, "r", "utf8")
-        osu2tja(fp, 3, 9, None) # defaulted course and level
+        head_meta, head_sync, head_diff, diff_content = osu2tja(fp, 3, 9, None) # defaulted course and level
+        head_sync_main = head_sync
     except IOError:
-       print("Can't open file `%s`" % filename, file=sys.stderr)
-       return
+        print("Can't open file `%s`" % filename, file=sys.stderr)
+        return
+
+    # print results
+    print("\n".join(head_meta))
+    print("\n".join(head_sync_main))
+    print()
+    print("\n".join(head_diff))
+    print("\n".join(head_sync))
+    print("\n")
+    print("\n".join(diff_content))
 
 
 if __name__ == "__main__":

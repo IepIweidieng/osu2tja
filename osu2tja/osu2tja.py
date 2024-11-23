@@ -567,6 +567,11 @@ MS_OSU_MUSIC_OFFSET = 15
 <https://github.com/ppy/osu/issues/24625>
 """
 
+MS_OSU_PRE_V5_MUSIC_OFFSET = -24
+"""Ranked osu! beatmaps before format v5 had additional early music / late chart sync.
+<https://github.com/ppy/osu/discussions/26133>
+"""
+
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
         List[str], List[str], List[str], List[str]
     ]:
@@ -703,7 +708,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         cur_ggt = tm["GGT"]
 
     BPM = timingpoints[0]["bpm"]
-    OFFSET = (-timingpoints[0]["offset"] - MS_OSU_MUSIC_OFFSET) / 1000.0
+    ms_osu_total_offset = MS_OSU_MUSIC_OFFSET
+    if osu_format_ver < 5:
+        ms_osu_total_offset += MS_OSU_PRE_V5_MUSIC_OFFSET
+    OFFSET = (-timingpoints[0]["offset"] - ms_osu_total_offset) / 1000.0
     PREVIEW = preview
 
     scroll = timingpoints[0]["scroll"]

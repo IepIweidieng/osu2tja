@@ -73,9 +73,9 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
     - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), for each difficulty (new)
-    - [x] initial beat time position → `OFFSET:` (improved), for each difficulty (new), with -15ms music offset correction (new)
+    - [x] initial beat time position → `OFFSET:` (improved), for each difficulty (new), with -15ms music offset correction (extra +24ms for format v4 and earlier) (new)
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
-      - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons.
+      - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons. Ranked format v4 and earlier beatmaps have additional -24ms music offset (-9ms in total).
   - Difficulty Headers
     - [x] `Version:` & `Mode:` → TJA comment (for reference only) (new)
     - [ ] `Version:` → `NOTEDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)

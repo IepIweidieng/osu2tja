@@ -564,15 +564,7 @@ def osu2tja_level(star_osu: float) -> float:
 
 MS_OSU_MUSIC_OFFSET = 15
 """Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
-The usual buffer delay is 20-24ms on WASAPI.
-General/osu!'s old audio engine: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard
-  (|t_music_played = t_music_notated ~ (dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
-Ranked osu! beatmaps were sync under 25% play speed using the osu!'s old audio engine.
-Ranked osu! beatmap sync: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 0.75 * dt_buffer
-  (|t_music_played = t_music_notated ~ (0.25 * dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
-0.75 * dt_buffer = 15-18ms. osu!'s new audio engine has low latency and uses a fixed chart delay to keep the sync.
-osu!'s new audio engine (low latency): t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 15ms
-  (|t_music_played ~= t_music_heard ~ (15ms) |t_music_notated ... |t_hitfx_notated ~= t_hitfx_heard)
+<https://github.com/ppy/osu/issues/24625>
 """
 
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[

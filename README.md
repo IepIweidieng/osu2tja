@@ -73,8 +73,9 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
     - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), for each difficulty (new)
-    - [x] initial beat time position → `OFFSET:` (improved), for each difficulty (new)
+    - [x] initial beat time position → `OFFSET:` (improved), for each difficulty (new), with -15ms music offset correction (new)
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
+      - Ranked osu! beatmaps have +15ms music offset than perfect sync. The historical reason is that old beatmaps were synced at 25% play speed in osu!'s old audio engine, which made music sound earlier than hitsounds by 75% of the audio buffer delay (usually around 20ms).
   - Difficulty Headers
     - [x] `Version:` & `Mode:` → TJA comment (for reference only) (new)
     - [ ] `Version:` → `NOTEDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)
@@ -166,7 +167,8 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)
   - Sync Headers
     - [x] `BPM:` → initial uninherited timing point: BPM
-    - [x] `OFFSET:` → initial uninherited timing point: time
+    - [x] `OFFSET:` → initial uninherited timing point: time, with +15ms music offset correction (new)
+      - Ranked osu! beatmaps have +15ms music offset than perfect sync. The historical reason is that old beatmaps were synced at 25% play speed in osu!'s old audio engine, which made music sound earlier than hitsounds by 75% of the audio buffer delay (usually around 20ms).
   - Difficulty Headers
     - [ ] `STYLE:` → `Version:` (TODO)
     - [x] `COURSE:` → `Version:`

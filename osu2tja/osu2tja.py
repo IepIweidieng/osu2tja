@@ -562,6 +562,18 @@ def osu2tja_level(star_osu: float) -> float:
     factor_ = range_ / (math.pi / 2)
     return min_ + factor_ * math.atan(math.pow(exp_base_, math.pow(star_osu, power_) - offset_) / factor_)
 
+MS_OSU_MUSIC_OFFSET = 15
+"""Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
+The usual buffer delay is 20-24ms on WASAPI.
+General/osu!'s old audio engine: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard
+  (|t_music_played = t_music_notated ~ (dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
+Ranked osu! beatmaps were sync under 25% play speed using the osu!'s old audio engine.
+Ranked osu! beatmap sync: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 0.75 * dt_buffer
+  (|t_music_played = t_music_notated ~ (0.25 * dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
+0.75 * dt_buffer = 15-18ms. osu!'s new audio engine has low latency and uses a fixed chart delay to keep the sync.
+osu!'s new audio engine (low latency): t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 15ms
+  (|t_music_played ~= t_music_heard ~ (15ms) |t_music_notated ... |t_hitfx_notated ~= t_hitfx_heard)
+"""
 
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
         List[str], List[str], List[str], List[str]
@@ -699,7 +711,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         cur_ggt = tm["GGT"]
 
     BPM = timingpoints[0]["bpm"]
-    OFFSET = -timingpoints[0]["offset"] / 1000.0
+    OFFSET = (-timingpoints[0]["offset"] - MS_OSU_MUSIC_OFFSET) / 1000.0
     PREVIEW = preview
 
     scroll = timingpoints[0]["scroll"]
@@ -728,7 +740,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads_meta.append("DEMOSTART:%.3f" % (preview / 1000.0))
 
     tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])
-    tja_heads_sync.append("OFFSET:%.3f" % (-timingpoints[0]["offset"] / 1000.0))
+    tja_heads_sync.append("OFFSET:%.3f" % OFFSET)
 
     str_info_diff_orig = f"// osu! difficulty: {version}"
     if not taiko_mode:

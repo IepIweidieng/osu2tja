@@ -122,9 +122,24 @@ def get_meta_data(filename):
         elif vname == b"SEVOL": SEVOL = float(vval)
         elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
 
+MS_OSU_MUSIC_OFFSET = 15
+"""Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
+The usual buffer delay is 20-24ms on WASAPI.
+General/osu!'s old audio engine: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard
+  (|t_music_played = t_music_notated ~ (dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
+Ranked osu! beatmaps were sync under 25% play speed using the osu!'s old audio engine.
+Ranked osu! beatmap sync: t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 0.75 * dt_buffer
+  (|t_music_played = t_music_notated ~ (0.25 * dt_buffer) |t_music_heard ... |t_hitfx_notated ~ (dt_buffer) |t_hitfx_heard)
+0.75 * dt_buffer = 15-18ms. osu!'s new audio engine has low latency and uses a fixed chart delay to keep the sync.
+osu!'s new audio engine (low latency): t_hitfx_notated - t_music_notated = t_hitfx_heard - t_music_heard - 15ms
+  (|t_music_played ~= t_music_heard ~ (15ms) |t_music_notated ... |t_hitfx_notated ~= t_hitfx_heard)
+"""
+
 def add_default_timing_point():
+    global curr_time
+
     tm = {}
-    tm["offset"] = -OFFSET * 1000.0
+    tm["offset"] = -(OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET)
     tm["redline"] = True
     tm["scroll"] = 1.0
     tm["measure"] = 4.0
@@ -134,6 +149,8 @@ def add_default_timing_point():
 
     TimingPoints.append(tm)
     TimingPointsRed.append(tm)
+
+    curr_time = tm["offset"]
 
 CIRCLE = 1
 SLIDER = 2
@@ -187,7 +204,6 @@ def get_all(filename):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
 
     has_started = False
-    curr_time = -OFFSET * 1000
     add_default_timing_point()
     for line in fobj:
         line = line.decode("latin-1").strip()
@@ -362,7 +378,7 @@ def handle_a_bar():
     #debug
     global last_debug
     if last_debug is None:
-        last_debug = -OFFSET * 1000
+        last_debug = TimingPoints[0]["offset"]
     #debug
 
     tot_note = 0

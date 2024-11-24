@@ -711,8 +711,11 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 timingpoints.append(data)
         elif curr_sec == "HitObjects":
             data = get_note(line, overall_difficulty)
-            if data:
-                hitobjects.extend(data)
+            idx_last = 0
+            for obj in data:
+                # fix out-of-order objects for converted osu!mania holds
+                idx_last = bisect_right(hitobjects, obj[1], lo=idx_last, key=lambda x: x[1])
+                hitobjects.insert(idx_last, obj)
 
     assert len(hitobjects) > 0
 

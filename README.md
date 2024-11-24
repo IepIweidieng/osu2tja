@@ -183,7 +183,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] `CircleSize:5` (no effects)
     - [x] `ApproachRate:5` (no effects)
     - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:` (TODO) (defaults to `8.333` (Taiko Hard & Oni GREAT/GOOD window) (improved))
-    - [x] ? → `SliderMultiplier:` (defaults to `1.47` (AC15&ndash; note spacing))
+    - [x] ? → `SliderMultiplier:` (defaults to `1.44` (AC15&ndash; note spacing))
     - [ ] (Mostly-used) beat division → `SliderTickRate:` (TODO) (defaults to `4` (1/16th))
     - [ ] `HEADSCROLL:` → initial inherited timing point: Slider velocity change (TODO)
 - TJA Commands

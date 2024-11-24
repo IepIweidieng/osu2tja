@@ -184,7 +184,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `CircleSize:5`（无效果）
     - [x] `ApproachRate:5`（无效果）
     - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:`（TODO）（默认为 `8.333`（太鼓困难、魔王的良判定幅）（改进）
-    - [x] ？ → `SliderMultiplier:`（默认为 `1.47`（AC15~ 音符间距））
+    - [x] ？ → `SliderMultiplier:`（默认为 `1.44`（AC15~ 音符间距））
     - [ ]（取众数）节拍等分数 → `SliderTickRate:`（TODO）（默认为 `4`（16 分音符））
     - [ ] `HEADSCROLL:` → 初始继承时间点：滑条速度变化（TODO）
 - TJA 命令

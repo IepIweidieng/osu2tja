@@ -116,8 +116,12 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
                 # Extract audio first
                 storage_path = path.join(target_path, folder_name)
                 os.makedirs(storage_path, exist_ok=True)
-                osu_zip.extract(song_audio, storage_path)
-                song_audio_tja = convert_to_ogg(storage_path, song_audio)
+                try:
+                    osu_zip.extract(song_audio, storage_path)
+                    song_audio_tja = convert_to_ogg(storage_path, song_audio)
+                except KeyError:
+                    print(f"Warning: song audio `{song_audio}` not found. Neither copied nor converted.")
+                    song_audio_tja = song_audio
 
                 # Adjust difficulties for this folder
                 difficulties = ["Edit", "Oni", "Hard", "Normal", "Easy"]

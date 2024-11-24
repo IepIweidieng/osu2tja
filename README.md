@@ -47,8 +47,6 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 - **Batch conversion** of `.osz` files to `.tja` files. (@MoshirMoshir)
 - Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5)
 - Beatmaps with **more than 5 difficulties** are split into multiple `.tja` files (e.g., `title - 1`, `title - 2`). (@MoshirMoshir; improved to suffix only when necessary)
-- Difficulty stars are adjusted between split `.tja` files to keep higher stars for higher difficulties. (@MoshirMoshir)
-  > **NOT** accurate to the Taiko star ratings as the `OverallDifficulty:` (timing window strictness) is currently used for estimation.
 - **Automatically copy and convert** the audio file. (@SamLangTen; OGG conversion — @k2angel)
 
 ### Conversion Details

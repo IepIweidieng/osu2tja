@@ -47,8 +47,6 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 - **批量转换** `.osz` 谱面文件为 `.tja` 谱面文件。（@MoshirMoshir）
 - 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个）
 - **超过 5 个难度**的 Beatmap 会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。（@MoshirMoshir；改进至必要时才加后缀）
-- 拆分的 `.tja` 之间的难度星数会加以调整，使高难度的星数较高。（@MoshirMoshir）
-  > **不**符合太鼓星数基准，因为是用 `OverallDifficulty:`（判定幅难度）估计星数。
 - **自动复制并转换**音频文件。（@SamLangTen；OGG 转换 —— @k2angel）
 
 ### 转换细节

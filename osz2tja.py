@@ -130,7 +130,7 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
                 try:
                     reset_global_variables()
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
-                        level = int(info["difficulty"] + idx_tja)  # Progressive scaling of stars
+                        level = int(info["difficulty"])
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
                             osu2tja(diff_fp, diff, level, info["audio"])
                         )

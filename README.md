@@ -101,6 +101,8 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
       - Currently everything is pre-quantized to 1/96ths (1/24 beats).
   - Note Symbols
     - [x] (std mode) short slider to circles (improved using the official algorithm)
+    - [x] (mania mode) hold to circles (new)
+      - TODO: Hold to bar drumroll with note overlapping handling.
     - [x] Empty → `0` (blank)
     - [x] Circle, normal non-finish hitsound → `1` (regular Don)
     - [x] Circle, whistle/clap non-finish hitsound → `2` (regular Katsu)

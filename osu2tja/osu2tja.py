@@ -47,6 +47,7 @@ OSU_NOTE_CIRCLE = 1 << 0
 OSU_NOTE_SLIDER = 1 << 1
 OSU_NOTE_NC = 1 << 2
 OSU_NOTE_SPINNER = 1 << 3
+OSU_NOTE_HOLD = 1 << 7
 
 # osu hitsound consts
 HITSND_NORMAL = 1 << 0
@@ -392,6 +393,21 @@ def get_note(str: str, od: float):
             else:
                 ret.append((ONP_RENDA, offset))
             ret.append((ONP_END, offset + taiko_duration))
+
+    elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
+        tmr = get_base_red_timing_point(timingpoints, offset)
+        offset_end = int(ps[5].split(':', 1)[0])
+        taiko_duration = offset_end - offset
+        tick_spacing = min(tmr["mspb"] / slider_tick_rate, float(taiko_duration))
+        j = offset
+        while j <= offset + taiko_duration + tick_spacing / 8:
+            point_offset = get_real_offset(j)
+            ret.append((get_donkatsu_by_sound(sound), point_offset))
+
+            j += tick_spacing
+
+            if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
+                break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
         ret.append((ONP_BALLOON, offset))

@@ -180,6 +180,7 @@ timingpoints = []
 balloons = []
 slider_multiplier = None
 slider_tick_rate = None
+column_count = 1
 tail_fix = False
 gamemode_idx: int = GAMEMODE_STD
 osu_format_ver = 0
@@ -192,12 +193,13 @@ guess_measure = False
 
 
 def reset_global_variables():
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, tail_fix, gamemode_idx, osu_format_ver, commands_within
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
     global show_head_info, combo_cnt, guess_measure
     timingpoints = []
     balloons = []
     slider_multiplier = None
     slider_tick_rate = None
+    column_count = 1
     tail_fix = False
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
@@ -246,9 +248,14 @@ def get_slider_sound(str):
         return [int(x) for x in ps[8].split('|')]
 
 
-def get_donkatsu_by_sound(sound: int):
-    is_katsu = bool(sound & (HITSND_CLAP | HITSND_WHISTLE))
+def get_hitnote_type(sound: int, column: int):
     is_dai = bool(sound & HITSND_FINISH)
+    if column_count <= 1: # Purely keysounded
+        is_katsu = bool(sound & (HITSND_CLAP | HITSND_WHISTLE))
+    else: # Donkey Konga (KD) / Taiko (KDDK) layout
+        n_cols_ka_l = int(math.ceil(column_count / 4))
+        n_cols_ka_r = int(column_count / 4)
+        is_katsu = (column < n_cols_ka_l or column_count - 1 - column < n_cols_ka_r)
     return ((ONP_KATSU_DAI if is_katsu else ONP_DON_DAI) if is_dai
         else ONP_KATSU if is_katsu else ONP_DON)
 
@@ -361,12 +368,15 @@ def get_note(str: str, od: float):
     if len(ps) < 5:
         return ret
 
+    column = (min(max(math.floor(float(ps[0]) * column_count / 512), 0), column_count - 1)
+        if gamemode_idx == GAMEMODE_MANIA
+        else 0)
     type = int(ps[3])
     sound = int(ps[4])
     offset = get_real_offset(float(ps[2]))
 
     if type & OSU_NOTE_CIRCLE:  # circle
-        ret.append((get_donkatsu_by_sound(sound), offset))
+        ret.append((get_hitnote_type(sound, column), offset))
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
         tm = get_base_timing_point(timingpoints, offset)
         curve_len = float(ps[7])
@@ -380,7 +390,7 @@ def get_note(str: str, od: float):
             j = offset
             while j <= offset + taiko_duration + tick_spacing / 8:
                 point_offset = get_real_offset(j)
-                ret.append((get_donkatsu_by_sound(slider_sounds[i]), point_offset))
+                ret.append((get_hitnote_type(slider_sounds[i], column), point_offset))
 
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
@@ -402,7 +412,7 @@ def get_note(str: str, od: float):
         j = offset
         while j <= offset + taiko_duration + tick_spacing / 8:
             point_offset = get_real_offset(j)
-            ret.append((get_donkatsu_by_sound(sound), point_offset))
+            ret.append((get_hitnote_type(sound, column), point_offset))
 
             j += tick_spacing
 
@@ -612,7 +622,7 @@ MS_OSU_PRE_V5_MUSIC_OFFSET = -24
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
         List[str], List[str], List[str], List[str]
     ]:
-    global slider_multiplier, slider_tick_rate, timingpoints
+    global slider_multiplier, slider_tick_rate, column_count, timingpoints
     global balloons, tail_fix
     global osu_format_ver
     global commands_within
@@ -685,7 +695,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             elif vname in ("Artist", "ArtistUnicode"):
                 artist = vval or artist
         elif curr_sec == "Difficulty":
-            if vname == "SliderMultiplier":
+            if vname == "CircleSize":
+                if gamemode_idx == GAMEMODE_MANIA:
+                    column_count = int(vval)
+            elif vname == "SliderMultiplier":
                 slider_multiplier = float(vval)
             elif vname == "SliderTickRate":
                 slider_tick_rate = float(vval)

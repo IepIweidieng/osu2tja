@@ -103,11 +103,13 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] (std mode) short slider to circles (improved using the official algorithm)
     - [x] (mania mode) hold to circles (new)
       - TODO: Hold to bar drumroll with note overlapping handling.
+    - [x] (mania mode, > 1 keys) convert Don/Katsu by column position instead of hitsound (new)
+      - Layout: KD(D), KDDK, KKDD(DD)K, KKDDDDKK, KKKDDDD(DD)KK, KKKDDDDDDKKK, KKKKDDDDDD(DD)KKK, ...
     - [x] Empty → `0` (blank)
-    - [x] Circle, normal non-finish hitsound → `1` (regular Don)
-    - [x] Circle, whistle/clap non-finish hitsound → `2` (regular Katsu)
-    - [x] Circle, normal finish hitsound → `3` (big Don)
-    - [x] Circle, whistle/clap finish hitsound → `4` (big Katsu)
+    - [x] Circle, normal or Don column, non-finish hitsound → `1` (regular Don)
+    - [x] Circle, whistle/clap or Katsu column, non-finish hitsound → `2` (regular Katsu)
+    - [x] Circle, normal or Don column, finish hitsound → `3` (big Don)
+    - [x] Circle, whistle/clap or Katsu column, finish hitsound → `4` (big Katsu)
     - [x] Slider, non-finish hitsound → `5` + `8` (regular bar drumroll)
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
       - FIXME: Mid-slider BPM changes and slider velocity changes cause incorrect bar drumroll time duration.

@@ -101,14 +101,16 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [ ] 毫秒精度（TODO）
       - 目前全都会先量化成 96 分音符（1/24 拍）。
   - 音符符号
-    - [x]（std 模式）短滑条转为圆圈（以官方算法改进）
+    - [x] （std 模式）短滑条转为圆圈（以官方算法改进）
     - [x] （mania 模式）长键转为圆圈（新功能）
       - TODO：长键转为长条连打，并处理重叠音符。
+    - [x] （mania 模式，> 1 轨）依轨道位置而不依音效决定咚／咔（新功能）
+      - 轨道配置（D = 咚、K = 咔）：KD(D)、KDDK、KKDD(DD)K、KKDDDDKK、KKKDDDD(DD)KK、KKKDDDDDDKKK、KKKKDDDDDD(DD)KKK、……
     - [x] 空白 → `0`（空白）
-    - [x] 圆圈，一般非 finish 音效 → `1`（小咚）
-    - [x] 圆圈，whistle/clap 非 finish 音效 → `2`（小咔）
-    - [x] 圆圈，一般 finish 音效 → `3`（大咚）
-    - [x] 圆圈，whistle/clap finish 音效 → `4`（大咔）
+    - [x] 圆圈，一般或咚轨道，非 finish 音效 → `1`（小咚）
+    - [x] 圆圈，whistle/clap 或咔轨道，非 finish 音效 → `2`（小咔）
+    - [x] 圆圈，一般或咚轨道，finish 音效 → `3`（大咚）
+    - [x] 圆圈，whistle/clap 或咔轨道，finish 音效 → `4`（大咔）
     - [x] 滑条，非 finish 音效 → `5` + `8`（小条连打）
     - [x] 滑条，finish 音效 → `6` + `8`（大条连打）
       - FIXME：滑条內的 BPM 变化与滑条速度变化会造成长条连打时长不正确。

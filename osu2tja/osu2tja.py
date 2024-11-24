@@ -748,16 +748,22 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     # collect all #SCROLL #GOGOSTART #GOGOEND commands
     # these commands will not be broken by #BPMCHANGE or # MEASURE
+    assert slider_multiplier is not None
+    sv_err_max = 0.00025
+    # Ranked osu!taiko beatmaps uses SV 1.40. tja2osu uses SV 1.44. Allows up-to SV 1.47.
+    base_scroll = (1.0 if 1.40 - sv_err_max <= slider_multiplier <= 1.47 + sv_err_max
+        else slider_multiplier / 1.40)
     cur_scroll = 1.0
     cur_ggt = False
     for tm in timingpoints:
-        if tm["scroll"] != cur_scroll:
+        scroll = tm["scroll"] * base_scroll
+        if scroll != cur_scroll:
             commands_within.append(
-                (tm["offset"], FMT_SCROLLCHANGE, tm["scroll"]))
+                (tm["offset"], FMT_SCROLLCHANGE, scroll))
         if tm["GGT"] != cur_ggt:
             commands_within.append((tm["offset"],
                                     tm["GGT"] and FMT_GOGOSTART or FMT_GOGOEND))
-        cur_scroll = tm["scroll"]
+        cur_scroll = scroll
         cur_ggt = tm["GGT"]
 
     BPM = timingpoints[0]["bpm"]

@@ -91,6 +91,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
   - [x] 非继承时间点：BPM → `#BPMCHANGE`
   - [x] 非继承时间点：小节拍数 → `#MEASURE`
   - [x] 不完整小节 → `#MEASURE` + 可能的 `#DELAY`（崩溃修正 —— @delguoqing；改进至毫秒精度）
+  - [x] `SliderMultiplier:` → 整个谱面的基本 `#SCROLL` 倍率（新功能）
   - [x] 继承时间点：滑条速度变化 → `#SCROLL`（没限制范围）
   - [x] 时间点：Kiai 时间 → `#GOGOSTART` & `#GOGOEND`
   - [ ] 时间点：隐藏首个小节线 → `#BARLINEOFF` & `#BARLINEON`（TODO）

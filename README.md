@@ -90,6 +90,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
   - [x] Uninherited timing point: BPM → `#BPMCHANGE`
   - [x] Uninherited timing point: Beats per bar → `#MEASURE`
   - [x] Incomplete bar → `#MEASURE` + optional `#DELAY` (crash fixed — @delguoqing; improved to ms-level accuracy)
+  - [x] `SliderMultiplier:` → Base `#SCROLL` multiplier for whole chart (new)
   - [x] Inherited timing point: Slider velocity change → `#SCROLL` (uncapped range)
   - [x] Timing point: Kiai time → `#GOGOSTART` & `#GOGOEND`
   - [ ] Timing point: Omit first bar line → `#BARLINEOFF` & `#BARLINEON` (TODO)

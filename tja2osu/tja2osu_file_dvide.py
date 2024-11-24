@@ -212,18 +212,13 @@ def tja2osus(tja_path: str, target_path: str="out") -> None:
 
     dir_out = os.path.join(target_path, dirname_dest)
     os.makedirs(dir_out, exist_ok=True)
-    old_stdout = sys.stdout
     for fname_tja in all_file_list:
         fname, ext = os.path.splitext(fname_tja)
         piece = fname.rsplit(None, 1)
         fname = piece[0] + "[" + piece[1] + "]"
         fout = open(os.path.join(dir_out, f"{fname}.osu"), "w")
-        sys.stdout = fout
-        module = reload(tja2osu)
-        tja2osu.tja2osu(os.path.join(dir_tmp, fname_tja))
+        tja2osu.tja2osu(os.path.join(dir_tmp, fname_tja), fout)
         fout.close()
-        
-        sys.stdout = old_stdout
         print("Generate:%s.osu" % fname, file=sys.stderr)
 
     try:

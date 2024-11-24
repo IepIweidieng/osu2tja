@@ -5,7 +5,7 @@ import codecs
 import math
 import sys
 import copy
-from typing import Optional, OrderedDict, Tuple
+from typing import Optional, OrderedDict, TextIO, Tuple
 
 # jiro data
 ENCODING = None
@@ -439,62 +439,62 @@ def handle_note(line):
         elif ch == ",":
             handle_a_bar()
 
-def write_fmt_ver_str():
-    print("osu file format v14")
-    print("")
+def write_fmt_ver_str(fout: TextIO) -> None:
+    print("osu file format v14", file=fout)
+    print("", file=fout)
 
-def write_General():
+def write_General(fout: TextIO) -> None:
     global Title, Source, AudioFilename, PreviewTime
     Title = TITLE
     Source = SUBTITLE
     AudioFilename = WAVE
     PreviewTime = DEMOSTART * 1000
 
-    print("[General]")
-    print("AudioFilename: %s" % (AudioFilename,))
-    print("AudioLeadIn: %d" % (round(AudioLeadIn)),)
-    print("PreviewTime: %d" % (round(PreviewTime)),)
-    print("CountDown: %d" % (CountDown,))
-    print("SampleSet: %s" % (SampleSet,))
-    print("StackLeniency: %s" % (repr(StackLeniency),))
-    print("Mode: %d" % (Mode,))
-    print("LetterboxInBreaks: %d" % (LetterboxInBreaks,))
-    print("")
+    print("[General]", file=fout)
+    print("AudioFilename: %s" % (AudioFilename,), file=fout)
+    print("AudioLeadIn: %d" % (round(AudioLeadIn)), file=fout)
+    print("PreviewTime: %d" % (round(PreviewTime)), file=fout)
+    print("CountDown: %d" % (CountDown,), file=fout)
+    print("SampleSet: %s" % (SampleSet,), file=fout)
+    print("StackLeniency: %s" % (repr(StackLeniency),), file=fout)
+    print("Mode: %d" % (Mode,), file=fout)
+    print("LetterboxInBreaks: %d" % (LetterboxInBreaks,), file=fout)
+    print("", file=fout)
 
 # no use, but required by osu
-def write_Editor():
-    print("[Editor]")
-    print("DistanceSpacing: 0.8")
-    print("BeatDivisor: 4")
-    print("GridSize: 4")
-    print("")
+def write_Editor(fout: TextIO) -> None:
+    print("[Editor]", file=fout)
+    print("DistanceSpacing: 0.8", file=fout)
+    print("BeatDivisor: 4", file=fout)
+    print("GridSize: 4", file=fout)
+    print("", file=fout)
 
-def write_Metadata():
+def write_Metadata(fout: TextIO) -> None:
     global Title, Source, AudioFilename, PreviewTime, Version
     Title = TITLE
     Source = SUBTITLE    
     Version = COURSE
-    print("[Metadata]")
-    print("Title:%s" % (Title,))
-    print("Artist:%s" % (Artist,))
-    print("Creator:%s" % (Creator,))
-    print("Version:%s" % (Version,))
-    print("Source:%s" % (Source,))
-    print("Tags:%s" % (Tags,))
-    print("")
+    print("[Metadata]", file=fout)
+    print("Title:%s" % (Title,), file=fout)
+    print("Artist:%s" % (Artist,), file=fout)
+    print("Creator:%s" % (Creator,), file=fout)
+    print("Version:%s" % (Version,), file=fout)
+    print("Source:%s" % (Source,), file=fout)
+    print("Tags:%s" % (Tags,), file=fout)
+    print("", file=fout)
 
-def write_Difficulty():
-    print("[Difficulty]")
-    print("HPDrainRate:%s" % (repr(HPDrainRate),))
-    print("CircleSize:%s" % (repr(CircleSize),))
-    print("OverallDifficulty:%s" % (repr(OverallDifficulty),))
-    print("ApproachRate:%s" % (repr(ApproachRate),))
-    print("SliderMultiplier:%s" % (repr(SliderMultiplier),))
-    print("SliderTickRate:%s" % (repr(SliderTickRate),))
-    print("")
+def write_Difficulty(fout: TextIO) -> None:
+    print("[Difficulty]", file=fout)
+    print("HPDrainRate:%s" % (repr(HPDrainRate),), file=fout)
+    print("CircleSize:%s" % (repr(CircleSize),), file=fout)
+    print("OverallDifficulty:%s" % (repr(OverallDifficulty),), file=fout)
+    print("ApproachRate:%s" % (repr(ApproachRate),), file=fout)
+    print("SliderMultiplier:%s" % (repr(SliderMultiplier),), file=fout)
+    print("SliderTickRate:%s" % (repr(SliderTickRate),), file=fout)
+    print("", file=fout)
 
-def write_TimingPoints():
-    print("[TimingPoints]")
+def write_TimingPoints(fout: TextIO) -> None:
+    print("[TimingPoints]", file=fout)
     volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
     for tm in TimingPoints:
         time = int(tm["offset"])
@@ -502,15 +502,15 @@ def write_TimingPoints():
         fx = tm["GGT"] + 8 * tm["hidefirst"]
         if tm["redline"]:
             beat_dur = 60000.0 / tm["bpm"]
-            print(f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}")
+            print(f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}", file=fout)
         if not tm["redline"] or tm["scroll"] != 1.0:
             beat_dur = -100 / tm["scroll"]
-            print(f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}")
+            print(f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}", file=fout)
         tm["offset"] = int(tm["offset"])
-    print("")
+    print("", file=fout)
 
-def write_HitObjects():
-    print("[HitObjects]")
+def write_HitObjects(fout: TextIO) -> None:
+    print("[HitObjects]", file=fout)
     lasting_note = None
     for ho in HitObjects:
         beg_offset = get_real_offset(ho[2])
@@ -519,8 +519,8 @@ def write_HitObjects():
             pass
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is abnormal")
-            print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0],
-                    ho[1]))
+            print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1]),
+                file=fout)
         elif ho[0] == SLIDER:
             rtassert(lasting_note is None, "this is abnormal")
             lasting_note = ho
@@ -536,33 +536,35 @@ def write_HitObjects():
             curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
             print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
                     int(get_real_offset(ln[2])), ln[0], ln[1], \
-                    int(CircleX+curve_len), CircleY, 1, curve_len))
+                    int(CircleX+curve_len), CircleY, 1, curve_len),
+                file=fout)
             lasting_note = None
         elif ho[0] == SPINNER_END:
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SPINNER, "this is abnormal")
             ln = lasting_note
             print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
-                    ln[0], ln[1], int(get_real_offset(ho[2]))))
+                    ln[0], ln[1], int(get_real_offset(ho[2]))),
+                file=fout)
             lasting_note = None
-    print("")
+    print("", file=fout)
 
-def tja2osu(filename):
+def tja2osu(filename: str, fout: TextIO) -> None:
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     check_unsupported(filename)
 
     # real work
     get_meta_data(filename)
-    write_fmt_ver_str()
-    write_General()
-    write_Editor()
-    write_Metadata()
-    write_Difficulty()
+    write_fmt_ver_str(fout)
+    write_General(fout)
+    write_Editor(fout)
+    write_Metadata(fout)
+    write_Difficulty(fout)
     get_all(filename)
     if not debug_mode:
-        write_TimingPoints()
-        write_HitObjects()
+        write_TimingPoints(fout)
+        write_HitObjects(fout)
 
 
 def rtassert(b, str=""):
@@ -582,4 +584,4 @@ if __name__ == "__main__":
         help="display extra info")
     args = parser.parse_args()
     debug_mode = args.debug or ("debug" in args.options)
-    tja2osu(args.filename)
+    tja2osu(args.filename, sys.stdout)

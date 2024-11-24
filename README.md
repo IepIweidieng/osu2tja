@@ -139,7 +139,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 ### Features
 
 - **Batch conversion** of `.tja` files to `.osz` files. (new)
-- Automatically split each TJA difficulty and each main branch route as a separate `.osu` difficulty file.
+- Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file.
 - **Automatically copy** the audio file (new)
 
 ### Conversion Details
@@ -177,8 +177,8 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] `OFFSET:` → initial uninherited timing point: time, with +15ms music offset correction (new)
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons.
   - Difficulty Headers
-    - [ ] `STYLE:` → `Version:` (TODO)
-    - [x] `COURSE:` → `Version:`
+    - [x] `STYLE:` → `Version:` (new)
+    - [x] `COURSE:` → `Version:` (defaults to `Oni`) (improved)
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>` when `<notesdesigner>` isn't `<maker>`/`<author>` (TODO)
     - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:` (TODO) (defaults to `7` (roughly Taiko Oni 10 full gauge) (improved))
     - [x] `CircleSize:5` (no effects)
@@ -189,8 +189,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] `HEADSCROLL:` → initial inherited timing point: Slider velocity change (TODO)
 - TJA Commands
   - [ ] `#START` → Uninherited timing point: Large beats per bar + omit first bar line + (optional) incomplete bar (TODO)
-  - [ ] `#START P<n>` → Split into player-side TJA (TODO)
-    - FIXME: When a multiple&ndash;player-side chart set has been defined for any difficulty, wrong difficulties will be notated for split difficulties.
+  - [x] `#START P<n>` → `#START` in player-side TJA (new)
   - [x] `#END` → Uninherited timing point: Large beats per bar + omit first bar line (new)
   - [x] `#BRANCHSTART` → Begin branch-split section
     - TODO: detect and avoid impossible branch routes

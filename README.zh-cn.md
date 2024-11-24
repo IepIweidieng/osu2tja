@@ -140,7 +140,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 ### 功能
 
 - **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。（新功能）
-- 自动拆分各个难度与谱面分歧主路線为各自的 `.osu` 难度文件。
+- 自动拆分各个难度、玩家侧、谱面分歧主路線为各自的 `.osu` 难度文件。
 - **自动复制并转换**音频文件。（新功能）
 
 ### 转换细节
@@ -178,8 +178,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `OFFSET:` → 初始非继承时间点：时间，+15 毫秒音乐误差修正（新功能）
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。
   - 难度标头
-    - [ ] `STYLE:` → `Version:`（TODO）
-    - [x] `COURSE:` → `Version:`
+    - [x] `STYLE:` → `Version:`（新功能）
+    - [x] `COURSE:` → `Version:`（默认为 `Oni`）（改进）
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>`，`<notesdesigner>` 不为 `<maker>`/`<author>` 时（TODO）
     - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:`（TODO）（默认为 `7`（大致为太鼓魔王 10 星入魂难度）（改进）））
     - [x] `CircleSize:5`（无效果）
@@ -190,8 +190,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [ ] `HEADSCROLL:` → 初始继承时间点：滑条速度变化（TODO）
 - TJA 命令
   - [ ] `#START` → 非继承时间点：高小节拍数 + 隐藏首个小节线 +（可选）不完整小节（TODO）
-  - [ ] `#START P<n>` → 拆分为玩家侧 TJA（TODO）
-    - FIXME：任一难度定义有多玩家侧谱面时，拆分的难度会标记错误。
+  - [x] `#START P<n>` → 玩家侧 TJA 中的 `#START`（新功能）
   - [x] `#END` → 非继承时间点：高小节拍数 + 隐藏首个小节线（新功能）
   - [x] `#BRANCHSTART` → 分歧拆分段落开始
     - TODO：检测并回避不可能的分歧路线

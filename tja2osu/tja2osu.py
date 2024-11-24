@@ -5,6 +5,8 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from common.utils import print_with_pended
+
 import argparse
 from bisect import bisect_right
 import codecs
@@ -220,7 +222,7 @@ def get_all(filename):
         else: handle_note(line)
 
 def get_real_offset(int_offset):
-#    print("INTOffset", int_offset, file=sys.stderr)
+#    print_with_pended("INTOffset", int_offset, file=sys.stderr)
     tm = get_red_tm_at(int_offset)
     tpb = 60000 / tm["bpm"]
     int_delta = abs(int_offset - tm["offset"])
@@ -232,7 +234,7 @@ def get_real_offset(int_offset):
     ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
     
     if int(ret) in ():
-        print(tm, file=sys.stderr)
+        print_with_pended(tm, file=sys.stderr)
         print(t_unit_cnt, file=sys.stderr)
         print("DELAT = ", int_delta, file=sys.stderr)
         print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24, file=sys.stderr)
@@ -277,7 +279,7 @@ def handle_cmd(line: str) -> None:
 def real_do_cmd(cmd):
     global curr_time
 
-#    print("handle cmd", cmd, file=sys.stderr)
+#    print_with_pended("handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
     if cmd[0] == DELAY:
@@ -311,7 +313,7 @@ def add_a_note(snd, offset):
         lasting_note = get_osu_type(snd)
     if get_osu_type(snd) in (SLIDER_END, SPINNER_END):
         lasting_note = None
-#    print(HitObjects[-1], file=sys.stderr)
+#    print_with_pended(HitObjects[-1], file=sys.stderr)
 
 def get_last_tm():
     return TimingPoints[-1]
@@ -335,7 +337,7 @@ def create_new_tm(has_red: bool = False):
     
     tm = {}
     tm["offset"] = int(curr_time)
-#    print("GREATE NEW TM", tm["offset"], file=sys.stderr)
+#    print_with_pended("GREATE NEW TM", tm["offset"], file=sys.stderr)
     tm["redline"] = has_red # can upgrade to red + green later if not having red
     tm["scroll"] = last_tm and last_tm["scroll"] or 1.0
     tm["measure"] = last_tm["measure"]
@@ -365,7 +367,7 @@ def get_or_create_curr_red_tm():
     return get_or_create_curr_tm(True)
 
 def get_t_unit(tm, tot_note):
-    #print(tm["bpm"], tot_note, file=sys.stderr)
+    #print_with_pended(tm["bpm"], tot_note, file=sys.stderr)
     return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
 
 debug_mode = False
@@ -383,7 +385,7 @@ def handle_a_bar():
     for data in bar_data:
         if isinstance(data, str):
             tot_note += 1
-    #print("TOT_NOTE", tot_note, file=sys.stderr)
+    #print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
     
     if False and debug_mode:
         pure_data = filter(lambda x:x[0].isdigit(), bar_data)
@@ -393,7 +395,7 @@ def handle_a_bar():
 
         p2= "%.4f %.2f" % (get_last_red_tm()["bpm"], \
                 get_t_unit(get_last_red_tm(), tot_note) * tot_note)
-        print(p1, file=sys.stderr)
+        print_with_pended(p1, file=sys.stderr)
 
     #debug
     last_debug = curr_time
@@ -414,14 +416,14 @@ def handle_a_bar():
                     continue
                 add_a_note(data, curr_time)
                 if print_each_note:
-                    print(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note), get_t_unit(get_last_red_tm(), tot_note), file=sys.stderr)
+                    print_with_pended(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note), get_t_unit(get_last_red_tm(), tot_note), file=sys.stderr)
                 curr_time += get_t_unit(get_last_red_tm(), tot_note)           
             else: #cmd
                 real_do_cmd(data)
     bar_data = [] 
     
     if print_each_note:
-        print("after bar, curr_time= %f", curr_time, file=sys.stderr)
+        print_with_pended("after bar, curr_time= %f", curr_time, file=sys.stderr)
     # handle bar line visibility
     tmr = get_last_red_tm()
     tm = get_last_tm()
@@ -521,7 +523,7 @@ def write_HitObjects(fout: TextIO) -> None:
     for ho in HitObjects:
         beg_offset = get_real_offset(ho[2])
         if int(beg_offset) != int(ho[2]):
-#            print("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
+#            print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
             pass
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is abnormal")
@@ -575,7 +577,7 @@ def tja2osu(filename: str, fout: TextIO) -> None:
 
 def rtassert(b, str=""):
     if not b:
-        print(str, file=sys.stderr)
+        print_with_pended(str, file=sys.stderr)
         exit()
 
 if __name__ == "__main__":

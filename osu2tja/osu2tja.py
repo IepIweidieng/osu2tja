@@ -5,6 +5,8 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from common.utils import print_with_pended
+
 from array import array
 from bisect import bisect_left, bisect_right
 from functools import reduce
@@ -153,7 +155,7 @@ def get_timing_point(str, prev_timing_point=None):
             assert False
 
     except:
-        print("Osu file Error, at [TimingPoints] section, please check", file=sys.stderr)
+        print_with_pended("Osu file Error, at [TimingPoints] section, please check", file=sys.stderr)
         return {}
 
     return ret
@@ -550,7 +552,7 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
                                   format_time(int(math.floor(begin))), delta_gcd/24.0, len(bar_str))
 
     if show_head_info:  # show debug info?
-        print(head + bar_str, file=sys.stderr)
+        print_with_pended(head + bar_str, file=sys.stderr)
 
     tja_contents.append(bar_str)
 
@@ -618,7 +620,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             osu_format_ver = int(line.partition(OSU_VER_STR_PREFIX)[2])
             if osu_format_ver not in OSU_VER_SUPPORT:
                 str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
-                print(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
+                print_with_pended(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
                       file=sys.stderr)
 
         # new section? Update section name.
@@ -771,7 +773,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
         if ho1[1] >= ho2[1]:
-            print(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
+            print_with_pended(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     while obj_idx < len(hitobjects):
         # get next object to process

@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# sys.path hack
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from array import array
 from bisect import bisect_left, bisect_right
 from functools import reduce

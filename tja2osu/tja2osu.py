@@ -16,7 +16,8 @@ import copy
 from typing import Optional, OrderedDict, TextIO, Tuple
 
 def reset_global_variables() -> None:
-    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE
+    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
+    global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE
     # jiro data
     ENCODING = None
     TITLE = "NO TITLE"
@@ -25,6 +26,9 @@ def reset_global_variables() -> None:
     WAVE = "NO WAVE FILE"
     OFFSET = 0.0
     DEMOSTART = 0.0
+    MAKER = None
+    AUTHOR = None
+    CREATOR = None
     SONGVOL = 100.0
     SEVOL = 100.0
     COURSE = "Oni"
@@ -123,7 +127,7 @@ def rm_jiro_comment(str_: str) -> str:
     return str_.partition('//')[0]
 
 def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE, BPM
+    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
@@ -142,9 +146,14 @@ def get_meta_data(filename):
         elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
         elif vname == b"OFFSET": OFFSET = float(vval)
         elif vname == b"DEMOSTART": DEMOSTART = float(vval)
+        elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
+        elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
         elif vname == b"SONGVOL": SONGVOL = float(vval)
         elif vname == b"SEVOL": SEVOL = float(vval)
         elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
+        else: # try metadata in comments
+            creator = line.partition(b"//created by ")[2].strip()
+            if creator: CREATOR = convert_str(creator, ENCODING)
 
 MS_OSU_MUSIC_OFFSET = 15
 """Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
@@ -487,9 +496,10 @@ def write_Editor(fout: TextIO) -> None:
     print("", file=fout)
 
 def write_Metadata(fout: TextIO) -> None:
-    global Title, Source, AudioFilename, PreviewTime, Version
+    global Title, Source, Creator, AudioFilename, PreviewTime, Version
     Title = TITLE
     Source = SUBTITLE    
+    Creator = MAKER or AUTHOR or CREATOR or Creator
     Version = COURSE
     print("[Metadata]", file=fout)
     print("Title:%s" % (Title,), file=fout)

@@ -66,7 +66,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] `AudioFilename:` → `WAVE:`，自动文件复制（@SamLangTen），OGG 转换（@k2angel）
     - [x] `PreviewTime:` → `DEMOSTART:`
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
-    - [ ] `Creator:` → `AUTHOR:` (Malody 用)（TODO）
+    - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
     - [ ] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（TODO）
   - 美术标头
     - [ ] 背景事件：文件名 → `PREIMAGE:`（TODO）
@@ -153,7 +153,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] osu2tja 水印（新功能）
     - [x] `TITLE:` → `Title:`，支持带或不带 BOM 的 UTF-8（新功能）
     - [ ] `SUBTITLE:` → `Artist:`（TODO）（目前默认为 `unknown`）
-    - [ ] `MAKER:`/`AUTHOR:` → `Creator:`（TODO）（目前默认为 `unknown`）
+    - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:`（新功能）（默认为 `unknown`）
     - [x] `SUBTITLE:` → `Source:`（已修正），支持带或不带 BOM 的 UTF-8（新功能）
     - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:`（TODO）

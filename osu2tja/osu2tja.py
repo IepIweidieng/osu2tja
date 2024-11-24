@@ -794,7 +794,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         subtitle = f"{artist} ｢{subtitle}｣より"
     tja_heads_meta.append("SUBTITLE:--%s" % (subtitle or artist))
     tja_heads_meta.append("WAVE:%s" % (audio_name or audio))
-    tja_heads_meta.append("MAKER:%s" % creator)
+    tja_heads_meta.append("MAKER:%s" % creator) # for TJAP2fPC-based sims
+    tja_heads_meta.append("AUTHOR:%s" % creator) # for Malody
 
     tja_heads_meta.append("DEMOSTART:%.3f" % (preview / 1000.0))
 

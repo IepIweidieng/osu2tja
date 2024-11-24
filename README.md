@@ -65,7 +65,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] `AudioFilename:` → `WAVE:`, with automatic file copy (@SamLangTen), with OGG conversion (@k2angel)
     - [x] `PreviewTime:` → `DEMOSTART:`
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
-    - [ ] `Creator:` → `AUTHOR:` (for Malody) (TODO)
+    - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
     - [ ] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (TODO)
   - Decoration Headers
     - [ ] Background event: filename → `PREIMAGE:` (TODO)
@@ -152,7 +152,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] osu2tja watermark (new)
     - [x] `TITLE:` → `Title:`, UTF-8 with(out) BOM support (new)
     - [ ] `SUBTITLE:` → `Artist:` (TODO) (Currently defaults to `unknown`)
-    - [ ] `MAKER:`/`AUTHOR:` → `Creator:` (TODO) (Currently defaults to `unknown`)
+    - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:` (new) (defaults to `unknown`)
     - [x] `SUBTITLE:` → `Source:` (bug fixed), UTF-8 with(out) BOM support (new)
     - [x] ? → `Tags:` (defaults to `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:` (TODO)

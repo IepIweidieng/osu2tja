@@ -15,44 +15,60 @@ import sys
 import copy
 from typing import Optional, OrderedDict, TextIO, Tuple
 
-# jiro data
-ENCODING = None
-TITLE = "NO TITLE"
-SUBTITLE = "NO SUBTITLE"
-BPM = 0.0
-WAVE = "NO WAVE FILE"
-OFFSET = 0.0
-DEMOSTART = 0.0
-SONGVOL = 100.0
-SEVOL = 100.0
-COURSE = "Oni"
+def reset_global_variables() -> None:
+    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, SONGVOL, SEVOL, COURSE
+    # jiro data
+    ENCODING = None
+    TITLE = "NO TITLE"
+    SUBTITLE = "NO SUBTITLE"
+    BPM = 0.0
+    WAVE = "NO WAVE FILE"
+    OFFSET = 0.0
+    DEMOSTART = 0.0
+    SONGVOL = 100.0
+    SEVOL = 100.0
+    COURSE = "Oni"
 
-# osu data
-AudioFilename = ""
-Title = ""
-Source = ""
-Tags = "taiko jiro tja"
-Artist = "unknown"
-Creator = "unknown"
-Version = "Oni"
-AudioLeadIn = 0
-CountDown = 0
-SampleSet = "Normal"
-StackLeniency = 0.7
-Mode = 1
-LetterboxInBreaks = 0
-PreviewTime = -1
-TimingPoints = []
-TimingPointsRed = []
-HitObjects = []
-HPDrainRate = 7
-CircleSize = 5
-OverallDifficulty = 8.333
-ApproachRate = 5
-SliderMultiplier = 1.44
-SliderTickRate = 4
-CircleX = 256
-CircleY = 192
+    global AudioFilename, Title, Source, Tags, Artist, Artist, Creator, Version
+    global AudioLeadIn, CountDown, SampleSet, StackLeniency, Mode, LetterboxInBreaks, PreviewTime
+    global TimingPoints, TimingPointsRed, HitObjects
+    global HPDrainRate, CircleSize, OverallDifficulty, ApproachRate, SliderMultiplier, SliderTickRate, CircleX, CircleY
+    # osu data
+    AudioFilename = ""
+    Title = ""
+    Source = ""
+    Tags = "taiko jiro tja"
+    Artist = "unknown"
+    Creator = "unknown"
+    Version = "Oni"
+    AudioLeadIn = 0
+    CountDown = 0
+    SampleSet = "Normal"
+    StackLeniency = 0.7
+    Mode = 1
+    LetterboxInBreaks = 0
+    PreviewTime = -1
+    TimingPoints = []
+    TimingPointsRed = []
+    HitObjects = []
+    HPDrainRate = 7
+    CircleSize = 5
+    OverallDifficulty = 8.333
+    ApproachRate = 5
+    SliderMultiplier = 1.44
+    SliderTickRate = 4
+    CircleX = 256
+    CircleY = 192
+
+    global has_started, curr_time, bar_data, lasting_note
+    has_started = False
+    curr_time = 0.0
+    bar_data = []
+    lasting_note = None
+
+    global debug_mode, last_debug
+    debug_mode = False
+    last_debug = None
 
 # const_data
 BRANCH = "BRANCH"
@@ -190,11 +206,6 @@ def get_osu_sound(snd):
     elif snd == 9: return EMPTY
     else: assert False
 
-
-has_started = False 
-curr_time = 0.0
-bar_data = []
-lasting_note = None
 
 def get_all(filename):
     global has_started, curr_time
@@ -370,8 +381,6 @@ def get_t_unit(tm, tot_note):
     #print_with_pended(tm["bpm"], tot_note, file=sys.stderr)
     return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
 
-debug_mode = False
-last_debug = None
 def handle_a_bar():
     global bar_data, curr_time
     
@@ -558,6 +567,7 @@ def write_HitObjects(fout: TextIO) -> None:
     print("", file=fout)
 
 def tja2osu(filename: str, fout: TextIO) -> None:
+    reset_global_variables()
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     check_unsupported(filename)

@@ -81,86 +81,92 @@ def convert_osz2tja(source_path: str, target_path: str) -> None:
         if not osu_files:
             raise ValueError(f"No .osu files found in {source_path}")
 
-        osu_infos = list()
+        osu_infos_by_song: Dict[str, List] = {}
         for filename in osu_files:
             fp = TextIOWrapper(osu_zip.open(filename, "r"), encoding="utf-8")
             osu_info = extract_osu_file_info(fp)
             fp.close()
             osu_info["filename"] = filename
-            osu_infos.append(osu_info)
+            assert type(osu_info["audio"]) == str
+            osu_infos_by_song.setdefault(osu_info["audio"], []).append(osu_info)
 
-        title = osu_infos[0]["title"]  # Use the title of the first map for naming
+        osu_info_first = next(iter(osu_infos_by_song.values()))[0]
+        title = osu_info_first["title"] # Use the title of the first map for naming
         title_for_path = ''.join((
             ch if ch not in bad_chars_for_path else '_'
-            for ch in osu_infos[0]["title_ascii"]))
-
-        osu_infos.sort(key=lambda x: x["difficulty"])  # Sort from easiest to hardest
+            for ch in osu_info_first["title_ascii"]))
 
         n_diffs_max_per_tja = 5
-        will_split_tja = (len(osu_infos) > n_diffs_max_per_tja)
+        will_split_tja = (
+            len(osu_infos_by_song.keys()) > 1
+            or any((len(infos) > n_diffs_max_per_tja for infos in osu_infos_by_song.values()))
+        )
 
-        for idx_tja, start_idx in enumerate(range(0, len(osu_infos), n_diffs_max_per_tja)):
-            # Get the subset of difficulties for this folder
-            selected_infos = osu_infos[start_idx:start_idx + n_diffs_max_per_tja]
+        n_tjas = 0
+        for song_audio, osu_infos in osu_infos_by_song.items():
+            osu_infos.sort(key=lambda x: x["difficulty"])
+            for start_idx in range(0, len(osu_infos), n_diffs_max_per_tja):
+                # Get the subset of difficulties for this folder
+                selected_infos = osu_infos[start_idx:start_idx + n_diffs_max_per_tja]
 
-            # 1 directory per .tja file for maximum compatibility
-            folder_name = f"{title_for_path} - {idx_tja + 1}" if will_split_tja else title_for_path
+                # 1 directory per .tja file for maximum compatibility
+                n_tjas += 1
+                folder_name = f"{title_for_path} - {n_tjas}" if will_split_tja else title_for_path
 
-            # Extract audio first
-            info = selected_infos[0]
-            storage_path = path.join(target_path, folder_name)
-            os.makedirs(storage_path, exist_ok=True)
-            osu_zip.extract(info["audio"], storage_path)
-            info["audio"] = convert_to_ogg(storage_path, info["audio"])
+                # Extract audio first
+                storage_path = path.join(target_path, folder_name)
+                os.makedirs(storage_path, exist_ok=True)
+                osu_zip.extract(song_audio, storage_path)
+                song_audio_tja = convert_to_ogg(storage_path, song_audio)
 
-            # Adjust difficulties for this folder
-            difficulties = ["Edit", "Oni", "Hard", "Normal", "Easy"]
-            if len(selected_infos) <= 4:
-                difficulties = difficulties[1:1+len(selected_infos)]
+                # Adjust difficulties for this folder
+                difficulties = ["Edit", "Oni", "Hard", "Normal", "Easy"]
+                if len(selected_infos) <= 4:
+                    difficulties = difficulties[1:1+len(selected_infos)]
 
-            head_meta: List[str] = []
-            head_sync_main: List[str] = []
-            head_syncs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
-            head_diffs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
-            diff_contents: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+                head_meta: List[str] = []
+                head_sync_main: List[str] = []
+                head_syncs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+                head_diffs: Dict[str, List[str]] = {diff: [] for diff in difficulties}
+                diff_contents: Dict[str, List[str]] = {diff: [] for diff in difficulties}
 
-            # process in descending difficulties
-            # Note: `selected_infos` is in ascending OverallDifficulty
-            for diff, info in zip(difficulties, reversed(selected_infos)):
-                try:
-                    reset_global_variables()
-                    with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
-                        level = int(info["difficulty"])
-                        head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
-                            osu2tja(diff_fp, diff, level, info["audio"])
-                        )
-                        if len(head_sync_main) == 0:
-                            head_sync_main = head_syncs[diff]
-                            print(f"main sync headers: {head_sync_main}")
-                        elif head_syncs[diff] != head_sync_main:
-                            print(f"Warning: Generated a different sync header for {diff}: {head_syncs[diff]}")
-                except Exception as e:
-                    warning_message = f"Error processing difficulty {diff}: {e}"
-                    print(warning_message)
-                    warnings.append(warning_message)  # Track warnings for non-fatal errors
+                # process in descending difficulties
+                # Note: `selected_infos` is in ascending OverallDifficulty
+                for diff, info in zip(difficulties, reversed(selected_infos)):
+                    try:
+                        reset_global_variables()
+                        with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
+                            level = int(info["difficulty"])
+                            head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
+                                osu2tja(diff_fp, diff, level, song_audio_tja)
+                            )
+                            if len(head_sync_main) == 0:
+                                head_sync_main = head_syncs[diff]
+                                print(f"main sync headers: {head_sync_main}")
+                            elif head_syncs[diff] != head_sync_main:
+                                print(f"Warning: Generated a different sync header for {diff}: {head_syncs[diff]}")
+                    except Exception as e:
+                        warning_message = f"Error processing difficulty {diff}: {e}"
+                        print(warning_message)
+                        warnings.append(warning_message)  # Track warnings for non-fatal errors
 
-            # Save .tja file
-            with open(path.join(storage_path, f"{folder_name}.tja"), "w+") as f:
-                f.write("\n".join(head_meta))
-                f.write("\n")
-                f.write("\n".join(head_sync_main))
-                f.write("\n")
-                for diff in difficulties:
-                    if diff_contents[diff]:
-                        f.write("\n")
-                        f.write("\n".join(head_diffs[diff]))
-                        f.write("\n")
-                        f.write("\n".join(head_syncs[diff]))
-                        f.write("\n\n")
-                        f.write("\n".join(diff_contents[diff]))
-                        f.write("\n")
+                # Save .tja file
+                with open(path.join(storage_path, f"{folder_name}.tja"), "w+") as f:
+                    f.write("\n".join(head_meta))
+                    f.write("\n")
+                    f.write("\n".join(head_sync_main))
+                    f.write("\n")
+                    for diff in difficulties:
+                        if diff_contents[diff]:
+                            f.write("\n")
+                            f.write("\n".join(head_diffs[diff]))
+                            f.write("\n")
+                            f.write("\n".join(head_syncs[diff]))
+                            f.write("\n\n")
+                            f.write("\n".join(diff_contents[diff]))
+                            f.write("\n")
 
-            print(f"Converted {folder_name} to TJA")
+                print(f"Converted {folder_name} to TJA")
 
         osu_zip.close()
 

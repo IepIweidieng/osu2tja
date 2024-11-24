@@ -53,7 +53,11 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 ### 转换细节
 
 - [x] 输入：osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
-- [x] 会忽略 TJA `//` 注释
+- 输入：
+  - osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
+  - taiko 模式
+  - std、mania（改进）、ctb 模式转谱
+  - 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（移至 TJA 文件首行）

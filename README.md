@@ -52,8 +52,11 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 
 ### Conversion Details
 
-- [x] Input: osu file format v4&ndash;14 (those tested; warns and continues to process for other versions) (improved)
-- [x] TJA `//` comment ignoring
+- Input:
+  - [x] osu file format v4&ndash;14 (those tested; warns and continues to process for other versions) (improved)
+  - [x] taiko mode
+  - [x] std, mania (improved), & ctb mode conversion
+  - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (moved to the first line of the TJA file)

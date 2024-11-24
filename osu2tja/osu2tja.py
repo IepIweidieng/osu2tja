@@ -121,7 +121,7 @@ def get_timing_point(str, prev_timing_point=None):
     # fill a timing point dict
     ret = {}
     try:
-        ret["offset"] = int(offset)  # time
+        ret["offset"] = float(offset)  # time
         ret["GGT"] = is_ggt
         if float(rawbpmv) > 0: # BPM change
             mspb = ret["mspb"] = float(rawbpmv)
@@ -341,7 +341,7 @@ def get_note(str: str, od: float):
 
     type = int(ps[3])
     sound = int(ps[4])
-    offset = get_real_offset(int(ps[2]))
+    offset = get_real_offset(float(ps[2]))
 
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append((get_donkatsu_by_sound(sound), offset))

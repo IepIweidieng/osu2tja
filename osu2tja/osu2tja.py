@@ -262,6 +262,7 @@ def get_hitnote_type(sound: int, column: int):
 
 # https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Taiko/Beatmaps/TaikoBeatmapConverter.cs
 
+VELOCITY_MULTIPLIER = 1.4
 """
 <summary>
 A speed multiplier applied globally to osu!taiko.
@@ -273,21 +274,20 @@ This must be used everywhere slider length or beat length is used in taiko.
 Of note, this has never been exposed to the end user, and is considered a hidden internal multiplier.
 </remarks>
 """
-VELOCITY_MULTIPLIER = 1.4
 
+swell_hit_multiplier = 1.65
 """
 <summary>
 Because swells are easier in taiko than spinners are in osu!,
 legacy taiko multiplies a factor when converting the number of required hits.
 </summary>
 """
-swell_hit_multiplier = 1.65
 
+osu_base_scoring_distance: float = 100
 """<summary>
 Base osu! slider scoring distance.
 </summary>
 """
-osu_base_scoring_distance: float = 100
 
 
 def get_precision_adjusted_beat_length(sliderVelocity: float, timingControlPoint) -> float:

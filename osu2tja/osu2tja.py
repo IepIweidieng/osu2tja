@@ -357,14 +357,14 @@ def should_convert_slider_to_hits(tm, curve_len: float, reverse_cnt: int) -> Tup
             taikoDuration, tickSpacing)
 
 
-def get_note(str: str, od: float):
+def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
     global timing_point
     global gamemode_idx
-    ret = []
+    ret: List[Tuple[str, float, int]] = []
 
-    if str is None:
+    if str_ is None:
         return ret
-    ps = str.split(',')
+    ps = str_.split(',')
     if len(ps) < 5:
         return ret
 
@@ -376,21 +376,21 @@ def get_note(str: str, od: float):
     offset = get_real_offset(float(ps[2]))
 
     if type & OSU_NOTE_CIRCLE:  # circle
-        ret.append((get_hitnote_type(sound, column), offset))
+        ret.append((get_hitnote_type(sound, column), offset, column))
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
         tm = get_base_timing_point(timingpoints, offset)
         curve_len = float(ps[7])
         reverse_cnt = int(ps[6])
         (should_convert, taiko_duration, tick_spacing) = should_convert_slider_to_hits(tm, curve_len, reverse_cnt)
 
-        assert reverse_cnt + 1 == len(get_slider_sound(str))
+        assert reverse_cnt + 1 == len(get_slider_sound(str_))
         if should_convert:
-            slider_sounds = get_slider_sound(str)
+            slider_sounds = get_slider_sound(str_)
             i = 0
             j = offset
             while j <= offset + taiko_duration + tick_spacing / 8:
                 point_offset = get_real_offset(j)
-                ret.append((get_hitnote_type(slider_sounds[i], column), point_offset))
+                ret.append((get_hitnote_type(slider_sounds[i], column), point_offset, column))
 
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
@@ -399,10 +399,10 @@ def get_note(str: str, od: float):
                     break
         else:
             if sound & HITSND_FINISH:
-                ret.append((ONP_RENDA_DAI, offset))
+                ret.append((ONP_RENDA_DAI, offset, column))
             else:
-                ret.append((ONP_RENDA, offset))
-            ret.append((ONP_END, offset + taiko_duration))
+                ret.append((ONP_RENDA, offset, column))
+            ret.append((ONP_END, offset + taiko_duration, column))
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_base_red_timing_point(timingpoints, offset)
@@ -412,7 +412,7 @@ def get_note(str: str, od: float):
         j = offset
         while j <= offset + taiko_duration + tick_spacing / 8:
             point_offset = get_real_offset(j)
-            ret.append((get_hitnote_type(sound, column), point_offset))
+            ret.append((get_hitnote_type(sound, column), point_offset, column))
 
             j += tick_spacing
 
@@ -420,8 +420,8 @@ def get_note(str: str, od: float):
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
-        ret.append((ONP_BALLOON, offset))
-        ret.append((ONP_END, get_real_offset(int(ps[5]))))
+        ret.append((ONP_BALLOON, offset, column))
+        ret.append((ONP_END, get_real_offset(int(ps[5])), column))
         # how many hit will break a ballon
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
@@ -641,7 +641,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     artist = ""
     version = ""
     preview = 0
-    hitobjects = []
+    hitobjects: List[Tuple[str, float, int]] = []
 
     # state vars
     osu_ver_str = ""
@@ -815,7 +815,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
-        if ho1[1] >= ho2[1]:
+        # allows simultaneous notes in different columns
+        if ho1[1] > ho2[1] or (ho1[1] == ho2[1] and ho1[2] == ho2[2]):
             print_with_pended(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     while obj_idx < len(hitobjects):
@@ -868,7 +869,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 if tail_fix:
                     tail_fix = False
                     obj_idx -= 1
-                    new_obj = (hitobjects[obj_idx][0], bar_offset_begin)
+                    new_obj = (hitobjects[obj_idx][0], bar_offset_begin, hitobjects[obj_idx][2])
                     hitobjects[obj_idx] = new_obj
 
                 # add new commands

@@ -13,9 +13,9 @@ import codecs
 import math
 import sys
 import copy
-from typing import List, Optional, OrderedDict, TextIO, Tuple
+from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple
 
-chart_resources: List[Tuple[str, str]] # [('type', 'filename'), ...]
+chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def reset_global_variables() -> None:
     global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
@@ -72,7 +72,7 @@ def reset_global_variables() -> None:
     CircleY = 192
 
     global chart_resources
-    chart_resources = []
+    chart_resources = {}
 
     global has_started, curr_time, bar_data, lasting_note
     has_started = False
@@ -490,7 +490,7 @@ def write_General(fout: TextIO) -> None:
     Source = SUBTITLE
     if WAVE:
         AudioFilename = WAVE
-        chart_resources.append(('song audio', WAVE))
+        chart_resources[WAVE] = 'song audio'
     else:
         AudioFilename = ""
     PreviewTime = DEMOSTART * 1000
@@ -547,11 +547,11 @@ def write_Events(fout: TextIO) -> None:
     bg = BGIMAGE or PREIMAGE
     if bg:
         print(f'0,0,"{bg}",0,0', file=fout)
-        chart_resources.append(('background image', bg))
+        chart_resources[bg] = 'background image'
     if BGMOVIE:
         offset = int(round(MOVIEOFFSET * 1000))
         print(f'Video,{offset},"{BGMOVIE}",0,0', file=fout)
-        chart_resources.append(('background video', BGMOVIE))
+        chart_resources[BGMOVIE] = 'background video'
 
     print("//Break Periods", file=fout)
     print("//Storyboard Layer 0 (Background)", file=fout)
@@ -618,7 +618,7 @@ def write_HitObjects(fout: TextIO) -> None:
             lasting_note = None
     print("", file=fout)
 
-def tja2osu(filename: str, fout: TextIO) -> List[Tuple[str, str]]:
+def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     reset_global_variables()
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")

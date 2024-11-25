@@ -233,7 +233,7 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
     print_unpend()
     print(f"\rSplitting `{fpath_tja}` into `{'`, `'.join(all_file_list)}` done!")
 
-    resources: List[Tuple[str, str]] = []
+    resources: Dict[str, str] = {}
 
     dir_out = os.path.join(target_path, dirname_dest)
     os.makedirs(dir_out, exist_ok=True)
@@ -247,7 +247,8 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         print(f"Converting `{fpath_tja_i}` to `{fname_osu_i}` ...", end="", flush=True)
         print_pend()
         try:
-            resources.extend(tja2osu.tja2osu(fpath_tja_i, fout))
+            rescs = tja2osu.tja2osu(fpath_tja_i, fout)
+            resources.update(rescs)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
             print(f"Error processing {diff} difficulty of `{fpath_tja_i}`. Continued.", file=sys.stderr)
@@ -255,7 +256,7 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         print_unpend()
         print(f"\rConverting `{fpath_tja_i}` to `{fname_osu_i}` done!")
 
-    for rtype, rfname in resources:
+    for rfname, rtype in resources.items():
         rfpath_src = os.path.join(os.path.dirname(fpath_tja), rfname)
         rfpath_desk = os.path.join(dir_out, rfname)
         try:

@@ -40,14 +40,6 @@ def get_style(str_: bytes) -> Optional[int]:
         return 2
     return None
 
-def parse_tja_header(line: bytes) -> Tuple[Optional[bytes], bytes]:
-    vname, delim, vval = line.partition(b":")
-    vname = vname.strip()
-    vval = vval.strip()
-    if delim == b":" and vname.isalnum(): # probably a header
-        return vname, vval
-    return None, b""
-
 def divide_diff(path_tja: str, dir_out: str) -> List[str]:
     assert isinstance(path_tja, str)
     fname_base, ext = os.path.splitext(os.path.basename(path_tja))
@@ -106,7 +98,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
         if started:
             diff_data.append(line)
         else:
-            vname, vval = parse_tja_header(line_no_comment)
+            vname, vval = tja2osu.parse_tja_header(line_no_comment)
             if vname == b"COURSE":
                 assert vval is not None
                 course = get_course_by_number(vval)
@@ -159,9 +151,7 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
         elif b"#BRANCHEND" in line_no_comment:
             which = None
         else:
-            vname, _, vval = line_no_comment.partition(b":")
-            vname = vname.strip()
-            vval = vval.strip()
+            vname, vval = tja2osu.parse_tja_header(line_no_comment)
             if vname == b"COURSE":
                 vval_str = vval
                 branch_data[0].append(b"COURSE:" + vval_str + b"(Kurouto)")

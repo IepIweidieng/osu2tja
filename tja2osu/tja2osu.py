@@ -12,7 +12,7 @@ from bisect import bisect_right
 import codecs
 import math
 import sys
-from typing import Dict, Optional, OrderedDict, TextIO, Tuple
+from typing import Dict, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
@@ -139,6 +139,16 @@ def rm_jiro_comment(str_: str) -> str:
     assert isinstance(str_, str)
     return str_.partition('//')[0]
 
+Str = TypeVar('Str', str, bytes)
+def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
+    delim = cast(Str, b":" if type(line) == bytes else ":")
+    vname, delim_got, vval = line.partition(delim)
+    vname = vname.strip()
+    vval = vval.strip()
+    if delim_got == delim and vname.isalnum(): # probably a header
+        return vname, vval
+    return None, type(line)()
+
 def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
@@ -150,10 +160,7 @@ def get_meta_data(filename):
         ENCODING = "utf-8-sig"
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     for line in fobj:
-        line = line.strip()
-        vname, _, vval = line.partition(b":")
-        vname = vname.strip()
-        vval = vval.strip()
+        vname, vval = parse_tja_header(line)
         if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
         elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
         elif vname == b"BPM": BPM = float(vval)

@@ -493,7 +493,7 @@ def write_General(fout: TextIO) -> None:
         chart_resources[WAVE] = 'song audio'
     else:
         AudioFilename = ""
-    PreviewTime = DEMOSTART * 1000
+    PreviewTime = DEMOSTART * 1000 - MS_OSU_MUSIC_OFFSET
 
     print("[General]", file=fout)
     print("AudioFilename: %s" % (AudioFilename,), file=fout)
@@ -549,7 +549,7 @@ def write_Events(fout: TextIO) -> None:
         print(f'0,0,"{bg}",0,0', file=fout)
         chart_resources[bg] = 'background image'
     if BGMOVIE:
-        offset = int(round(MOVIEOFFSET * 1000))
+        offset = int(round(MOVIEOFFSET * 1000)) - MS_OSU_MUSIC_OFFSET
         print(f'Video,{offset},"{BGMOVIE}",0,0', file=fout)
         chart_resources[BGMOVIE] = 'background video'
 

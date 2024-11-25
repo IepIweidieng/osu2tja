@@ -64,7 +64,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
     - [x] `Source:` **和/或** `ArtistUnicode:`/`Artist:` → `SUBTITLE:`（@k2angel）
     - [x] `AudioFilename:` → `WAVE:`，自动文件复制（@SamLangTen），OGG 转换（@k2angel）
-    - [x] `PreviewTime:` → `DEMOSTART:`
+    - [x] `PreviewTime:` → `DEMOSTART:`，（新功能）经 osu! 校准误差修正
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
     - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
     - [ ] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（TODO）
@@ -72,7 +72,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] 首个置中背景事件：文件名 → `PREIMAGE:`（新功能）
     - [ ] ~~首个置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
     - [x] 首个置中视频事件：文件名 → `BGMOVIE:`（新功能）
-    - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`（新功能）
+    - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
     - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
   - 音频同步标头
     - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​​各难度可異（新功能）
@@ -159,7 +159,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [ ] `NOTESDESIGNER<n>:` → `Tags:`（为客串制谱者时）（TODO）
     - [x] `WAVE:` → `AudioFilename:`，自动文件复制（新功能）
     - [x] ? → `AudioLeadIn:`（默认为 `0`）（改进）
-    - [x] `DEMOSTART:` → `PreviewTime:`（已修正）
+    - [x] `DEMOSTART:` → `PreviewTime:`（已修正），（新功能）经 osu! 校准误差修正
     - [x] ? → `CountDown:`（默认为 `0`（false））
     - [x] ? → `SampleSet:`（默认为 `Normal`）
     - [x] `StackLeniency:0.7`（无效果）
@@ -169,7 +169,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - 美术标头
     - [x] `BGIMAGE:`/`PREIMAGE:` → 背景事件：文件名，自动文件复制（新功能）
     - [x] `BGMOVIE:` → 视频事件：文件名，自动文件复制（新功能）
-    - [x] `MOVIEOFFSET:` → 视频事件：开始时间（新功能）
+    - [x] `MOVIEOFFSET:` → 视频事件：开始时间，经 osu! 校准误差修正（新功能）
     - [ ] TJAPlayer3-Extended 的 OBJ 命令 → 故事板事件（计划外）
   - 音频同步标头
     - [x] `BPM:` → 初始非继承时间点：BPM

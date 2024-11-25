@@ -817,7 +817,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     if osu_format_ver < 5:
         ms_osu_total_offset += MS_OSU_PRE_V5_MUSIC_OFFSET
     OFFSET = (-timingpoints[0]["offset"] - ms_osu_total_offset) / 1000.0
-    PREVIEW = preview
+    DEMOSTART = (preview + ms_osu_total_offset) / 1000.0
+    MOVIEOFFSET = (movieoffset + ms_osu_total_offset) / 1000.0
 
     scroll = timingpoints[0]["scroll"]
     tm_idx = 0  # current timing point index
@@ -843,14 +844,14 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads_meta.append("MAKER:%s" % creator) # for TJAP2fPC-based sims
     tja_heads_meta.append("AUTHOR:%s" % creator) # for Malody
 
-    tja_heads_meta.append("DEMOSTART:%.3f" % (preview / 1000.0))
+    tja_heads_meta.append("DEMOSTART:%.3f" % DEMOSTART)
 
     if preimage:
         tja_heads_meta.append("PREIMAGE:%s" % preimage)
         chart_resources[preimage] = 'preview image'
     if bgmovie:
         tja_heads_meta.append("BGMOVIE:%s" % bgmovie)
-        tja_heads_meta.append("MOVIEOFFSET:%.3f" % movieoffset)
+        tja_heads_meta.append("MOVIEOFFSET:%.3f" % MOVIEOFFSET)
         chart_resources[bgmovie] = 'background video'
 
     tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])

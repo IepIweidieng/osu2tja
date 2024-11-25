@@ -63,7 +63,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
     - [x] `Source:` **AND/OR** `ArtistUnicode:`/`Artist:` → `SUBTITLE:` (@k2angel)
     - [x] `AudioFilename:` → `WAVE:`, with automatic file copy (@SamLangTen), with OGG conversion (@k2angel)
-    - [x] `PreviewTime:` → `DEMOSTART:`
+    - [x] `PreviewTime:` → `DEMOSTART:`, (new) with osu! music offset correction
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
     - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
     - [ ] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (TODO)
@@ -71,7 +71,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] First centered background event: filename → `PREIMAGE:` (new)
     - [ ] ~~First centered background event: filename → `BGIMAGE:`~~ (not planned)
     - [x] First centered video event: filename → `BGMOVIE:` (new)
-    - [x] First centered video event: start time → `MOVIEOFFSET:` (new)
+    - [x] First centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
     - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), for each difficulty (new)
@@ -158,7 +158,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)
     - [x] `WAVE:` → `AudioFilename:`, with automatic file copy (new)
     - [x] ? → `AudioLeadIn:` (defaults to `0`) (improved)
-    - [x] `DEMOSTART:` → `PreviewTime:` (bug fixed)
+    - [x] `DEMOSTART:` → `PreviewTime:` (bug fixed), (new) with osu! offset correction
     - [x] ? → `CountDown:` (defaults to `0` (false))
     - [x] ? → `SampleSet:` (defaults to `Normal`)
     - [x] `StackLeniency:0.7` (no effects)
@@ -168,7 +168,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
   - Decoration Headers
     - [x] `BGIMAGE:`/`PREIMAGE:` → Background event: filename, with automatic file copy (new)
     - [x] `BGMOVIE:` → Video event: filename, with automatic file copy (new)
-    - [x] `MOVIEOFFSET:` → Video event: start time (new)
+    - [x] `MOVIEOFFSET:` → Video event: start time, with osu! offset correction (new)
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)
   - Sync Headers
     - [x] `BPM:` → initial uninherited timing point: BPM

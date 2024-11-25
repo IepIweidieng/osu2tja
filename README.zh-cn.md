@@ -153,8 +153,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - [x] 编码：无 BOM 的 UTF-8
   - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。
 - [x] 输入（`.tja`）编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
-- [x] 会忽略 TJA `//` 注释
-  - FIXME：拆分 TJA 时 `//` 注释不会禁用命令。
+- [x] 会忽略 TJA `//` 注释，（已修正）拆分 TJA 时亦然
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（新功能）

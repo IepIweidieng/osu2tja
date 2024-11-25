@@ -151,8 +151,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
   - [x] Encoding: UTF-8 (without BOM)
   - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.
 - [x] Input (`.tja`) encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
-- [x] TJA `//` comment ignoring
-  - FIXME: `//` comments do not disable commands when splitting TJAs.
+- [x] TJA `//` comment ignoring, (fixed) including when when splitting TJAs
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (new)

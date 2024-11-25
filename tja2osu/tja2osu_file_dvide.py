@@ -100,9 +100,12 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
         bom = fobj.read(len(codecs.BOM_UTF8)) # extract UTF-8 BOM
     for line in fobj:
         line = line.rstrip(b"\r\n")
-        if not started and b"#START" in line:
+        line_no_comment, comment_delim, comment = line.partition(b"//")
+        if not started and b"#START" in line_no_comment:
             started = True
-            _, line, side_str = line.partition(b"#START")
+            _, line, side_str = line_no_comment.partition(b"#START")
+            if comment_delim:
+                line += b" " + comment_delim + comment # rebuild line
             side_str = side_str.strip()
             if side_str.startswith(b"P") and side_str[1:].isdigit():
                 player_side = int(side_str[1:]) - 1
@@ -111,7 +114,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
         if started:
             diff_data.append(line)
         else:
-            vname, vval = parse_tja_header(line)
+            vname, vval = parse_tja_header(line_no_comment)
             if vname == b"COURSE":
                 assert vval is not None
                 course = get_course_by_number(vval)
@@ -119,7 +122,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
                 style = get_style(vval) or style
             else:
                 common_data.append(line)
-        if started and b"#END" in line:
+        if started and b"#END" in line_no_comment:
             write_chartdef()
             started = False
     fobj.close()
@@ -148,23 +151,23 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
     has_branch = False
     for line in fobj:
         line = line.strip()
-        if b"#BRANCHSTART" in line:
+        line_no_comment, _, _ = line.partition(b"//")
+        if b"#BRANCHSTART" in line_no_comment:
             has_branch = True
             continue
-        if b"#BRANCHEND" in line \
-            or b"#SECTION" in line:
+        if b"#BRANCHEND" in line_no_comment \
+            or b"#SECTION" in line_no_comment:
             continue
-        if b"#E" in line:
+        if b"#E" in line_no_comment:
             which = "E"
-        elif b"#N" in line:
+        elif b"#N" in line_no_comment:
             which = "N"
-        elif (b"#M" in line) and (b"#MEASURE" not in line):
+        elif (b"#M" in line_no_comment) and (b"#MEASURE" not in line_no_comment):
             which = "M"
-        elif b"#BRANCHEND" in line:
+        elif b"#BRANCHEND" in line_no_comment:
             which = None
         else:
-            _line = line.strip()
-            vname, _, vval = _line.partition(b":")
+            vname, _, vval = line_no_comment.partition(b":")
             vname = vname.strip()
             vval = vval.strip()
             if vname == b"COURSE":

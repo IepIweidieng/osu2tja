@@ -48,7 +48,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 - 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个）
 - **超过 5 个难度**的 Beatmap 会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。（@MoshirMoshir；改进至必要时才加后缀）
 - **有多个音乐文件**的 Beatmaps（不可上架，但可見于部分社区喜爱（Loved）谱面）也会拆为多份 `.tja`。（新功能）
-- **自动复制**谱面所使用的音频文件（@SamLangTen；**自动 OGG 转换** —— @k2angel）、背景图片、与其它文件。（新功能）
+- **自动复制**谱面所使用的音频文件（@SamLangTen；**自动 OGG 转换** —— @k2angel）、（新功能）以及背景图片、与其它文件。
 
 ### 转换细节
 
@@ -56,14 +56,14 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 - 输入：
   - osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
   - taiko 模式
-  - std、mania（改进）、catch 模式转谱
+  - std、（改进）mania、catch 模式转谱
   - 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（移至 TJA 文件首行）
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
     - [x] `Source:` **和/或** `ArtistUnicode:`/`Artist:` → `SUBTITLE:`（@k2angel）
-    - [x] `AudioFilename:` → `WAVE:`，自动文件复制（@SamLangTen），OGG 转换（@k2angel）
+    - [x] `AudioFilename:` → `WAVE:`，（@SamLangTen）自动文件复制，（@k2angel）OGG 转换
     - [x] `PreviewTime:` → `DEMOSTART:`，（新功能）经 osu! 校准误差修正
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
     - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
@@ -75,8 +75,8 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
     - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
   - 音频同步标头
-    - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​​各难度可異（新功能）
-    - [x] 首拍时间 → `OFFSET:`（改进），​​各难度可異（新功能），-15 毫秒音乐误差修正（format v4 与更早版本再额外 +24 毫秒）（新功能）
+    - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​（新功能）​各难度可異
+    - [x] 首拍时间 → `OFFSET:`（改进），（新功能）​​各难度可異，（新功能）-15 毫秒音乐误差修正（format v4 与更早版本再额外 +24 毫秒）
       - `OFFSET:` 取音乐开始为止最后一拍的开始时间，仿 osu!。delguoqing 版是取最早的音符或时间点。
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。使用 format v4 与更早版本的上架谱面有额外的 -24 毫秒音乐误差（共 -9 毫秒）。
   - 难度标头
@@ -150,14 +150,14 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（新功能）
-    - [x] `TITLE:` → `Title:`，支持带或不带 BOM 的 UTF-8（新功能）
+    - [x] `TITLE:` → `Title:`，（新功能）支持带或不带 BOM 的 UTF-8
     - [ ] `SUBTITLE:` → `Artist:`（TODO）（目前默认为 `unknown`）
     - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:`（新功能）（默认为 `unknown`）
-    - [x] `SUBTITLE:` → `Source:`（已修正），支持带或不带 BOM 的 UTF-8（新功能）
+    - [x] `SUBTITLE:` → `Source:`（已修正），（新功能）支持带或不带 BOM 的 UTF-8
     - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:`（TODO）
     - [ ] `NOTESDESIGNER<n>:` → `Tags:`（为客串制谱者时）（TODO）
-    - [x] `WAVE:` → `AudioFilename:`，自动文件复制（新功能）
+    - [x] `WAVE:` → `AudioFilename:`，（新功能）自动文件复制
     - [x] ? → `AudioLeadIn:`（默认为 `0`）（改进）
     - [x] `DEMOSTART:` → `PreviewTime:`（已修正），（新功能）经 osu! 校准误差修正
     - [x] ? → `CountDown:`（默认为 `0`（false））
@@ -173,7 +173,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [ ] TJAPlayer3-Extended 的 OBJ 命令 → 故事板事件（计划外）
   - 音频同步标头
     - [x] `BPM:` → 初始非继承时间点：BPM
-    - [x] `OFFSET:` → 初始非继承时间点：时间，+15 毫秒音乐误差修正（新功能）
+    - [x] `OFFSET:` → 初始非继承时间点：时间，（新功能）+15 毫秒音乐误差修正
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。
   - 难度标头
     - [x] `STYLE:` → `Version:`（新功能）
@@ -198,8 +198,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - FIXME：`#BRANCHEND` 有被识别但被忽略。
   - [x] `#BPMCHANGE`，正 → 非继承时间点：BPM
   - [ ] `#BPMCHANGE`，负，正的 (小节长 ÷ BPM) → 非继承时间点：BPM 取绝对值（TODO）
-  - [x] `#MEASURE`，正整数拍数 → 非继承时间点：小节拍数（改进），小数參数（新功能）
-  - [x] `#MEASURE`，正非整数拍数 → 非继承时间点：小节拍数 + 不完整小节（改进），小数參数（新功能）
+  - [x] `#MEASURE`，正整数拍数 → 非继承时间点：小节拍数（改进），（新功能）小数參数
+  - [x] `#MEASURE`，正非整数拍数 → 非继承时间点：小节拍数 + 不完整小节（改进），（新功能）小数參数
   - [ ] 负的 (小节长 ÷ BPM) → 非完全递增时间序的谱面事件，依时间重新排序（TODO）
   - [x] `#DELAY` → 移动谱面定义游标的时间
     - FIXME：`#DELAY` 之后的小节线会显示错误，错到下个生成的非继承时间点。

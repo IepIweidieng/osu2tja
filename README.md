@@ -48,21 +48,21 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 - Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5)
 - Beatmaps with **more than 5 difficulties** are split into multiple `.tja` files (e.g., `title - 1`, `title - 2`). (@MoshirMoshir; improved to suffix only when necessary)
 - Beatmaps with **multiple song audio files** (unrankable but seen in loved beatmaps) are also split into multiple `.tja` files. (new)
-- **Automatically copy** song audio (@SamLangTen; **automatic OGG conversion** — @k2angel), background image, and other files used by the chart. (new)
+- **Automatically copy** song audio files (@SamLangTen; **automatic OGG conversion** — @k2angel), (new) as well as background image and other files used by the chart.
 
 ### Conversion Details
 
 - Input:
   - [x] osu file format v4&ndash;14 (those tested; warns and continues to process for other versions) (improved)
   - [x] taiko mode
-  - [x] std, mania (improved), & catch mode conversion
+  - [x] std, (improved) mania, & catch mode conversion
   - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (moved to the first line of the TJA file)
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
     - [x] `Source:` **AND/OR** `ArtistUnicode:`/`Artist:` → `SUBTITLE:` (@k2angel)
-    - [x] `AudioFilename:` → `WAVE:`, with automatic file copy (@SamLangTen), with OGG conversion (@k2angel)
+    - [x] `AudioFilename:` → `WAVE:`, (@SamLangTen) with automatic file copy, (@k2angel) with OGG conversion
     - [x] `PreviewTime:` → `DEMOSTART:`, (new) with osu! music offset correction
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
     - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
@@ -74,8 +74,8 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] First centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
-    - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), for each difficulty (new)
-    - [x] initial beat time position → `OFFSET:` (improved), for each difficulty (new), with -15ms music offset correction (extra +24ms for format v4 and earlier) (new)
+    - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), (new) for each difficulty
+    - [x] initial beat time position → `OFFSET:` (improved), (new) for each difficulty, (new) with -15ms music offset correction (extra +24ms for format v4 and earlier)
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons. Ranked format v4 and earlier beatmaps have additional -24ms music offset (-9ms in total).
   - Difficulty Headers
@@ -149,14 +149,14 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (new)
-    - [x] `TITLE:` → `Title:`, UTF-8 with(out) BOM support (new)
+    - [x] `TITLE:` → `Title:`, (new) UTF-8 with(out) BOM support
     - [ ] `SUBTITLE:` → `Artist:` (TODO) (Currently defaults to `unknown`)
     - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:` (new) (defaults to `unknown`)
-    - [x] `SUBTITLE:` → `Source:` (bug fixed), UTF-8 with(out) BOM support (new)
+    - [x] `SUBTITLE:` → `Source:` (bug fixed), (new) UTF-8 with(out) BOM support
     - [x] ? → `Tags:` (defaults to `taiko jiro tja`)
     - [ ] `GENRE:` → `Tags:` (TODO)
     - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)
-    - [x] `WAVE:` → `AudioFilename:`, with automatic file copy (new)
+    - [x] `WAVE:` → `AudioFilename:`, (new) with automatic file copy
     - [x] ? → `AudioLeadIn:` (defaults to `0`) (improved)
     - [x] `DEMOSTART:` → `PreviewTime:` (bug fixed), (new) with osu! offset correction
     - [x] ? → `CountDown:` (defaults to `0` (false))
@@ -172,7 +172,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)
   - Sync Headers
     - [x] `BPM:` → initial uninherited timing point: BPM
-    - [x] `OFFSET:` → initial uninherited timing point: time, with +15ms music offset correction (new)
+    - [x] `OFFSET:` → initial uninherited timing point: time, (new) with +15ms music offset correction
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons.
   - Difficulty Headers
     - [x] `STYLE:` → `Version:` (new)
@@ -197,8 +197,8 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - FIXME: `#BRANCHEND` is recognized but ignored.
   - [x] `#BPMCHANGE`, positive → Uninherited timing point: BPM
   - [ ] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (TODO)
-  - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), float values (new)
-  - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), float values (new)
+  - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values
+  - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values
   - [ ] Negative (bar length ÷ BPM) → Notechart events are not in completely increasing time order, re-sorted by time (TODO)
   - [x] `#DELAY` → move time of definition cursor
     - FIXME: The bar line after `#DELAY` will be wrongly displayed until the next uninherited timing point generated.

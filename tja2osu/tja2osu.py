@@ -81,9 +81,10 @@ def init_globals() -> None:
     lasting_note = None
 
 def init_debug_globals() -> None:
-    global debug_mode, last_debug
+    global debug_mode, last_debug, print_each_note
     debug_mode = False
     last_debug = None
+    print_each_note = False #(int(curr_time) == 112814)
 
 init_debug_globals()
 
@@ -260,7 +261,8 @@ def get_all(filename):
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
 def get_real_offset(int_offset):
-#    print_with_pended("INTOffset", int_offset, file=sys.stderr)
+    if debug_mode:
+        print_with_pended("INTOffset", int_offset, file=sys.stderr)
     tm = get_red_tm_at(int_offset)
     tpb = 60000 / tm["bpm"]
     int_delta = abs(int_offset - tm["offset"])
@@ -271,10 +273,10 @@ def get_real_offset(int_offset):
     beat_cnt = t_unit_cnt / 24
     ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
     
-    if int(ret) in ():
+    if debug_mode:
         print_with_pended(tm, file=sys.stderr)
         print(t_unit_cnt, file=sys.stderr)
-        print("DELAT = ", int_delta, file=sys.stderr)
+        print("DELTA = ", int_delta, file=sys.stderr)
         print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24, file=sys.stderr)
         print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
         print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
@@ -317,7 +319,8 @@ def handle_cmd(line: str) -> None:
 def real_do_cmd(cmd):
     global curr_time
 
-#    print_with_pended("handle cmd", cmd, file=sys.stderr)
+    if debug_mode:
+        print_with_pended("handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
     if cmd[0] == DELAY:
@@ -351,7 +354,8 @@ def add_a_note(snd, offset):
         lasting_note = get_osu_type(snd)
     if get_osu_type(snd) in (SLIDER_END, SPINNER_END):
         lasting_note = None
-#    print_with_pended(HitObjects[-1], file=sys.stderr)
+    if debug_mode:
+        print_with_pended(HitObjects[-1], file=sys.stderr)
 
 def get_last_tm():
     return TimingPoints[-1]
@@ -375,7 +379,8 @@ def create_new_tm(has_red: bool = False):
     
     tm = {}
     tm["offset"] = int(curr_time)
-#    print_with_pended("GREATE NEW TM", tm["offset"], file=sys.stderr)
+    if debug_mode:
+        print_with_pended("CREATE NEW TM", tm["offset"], file=sys.stderr)
     tm["redline"] = has_red # can upgrade to red + green later if not having red
     tm["scroll"] = last_tm and last_tm["scroll"] or 1.0
     tm["measure"] = last_tm["measure"]
@@ -405,7 +410,8 @@ def get_or_create_curr_red_tm():
     return get_or_create_curr_tm(True)
 
 def get_t_unit(tm, tot_note):
-    #print_with_pended(tm["bpm"], tot_note, file=sys.stderr)
+    if debug_mode:
+        print_with_pended(tm["bpm"], tot_note, file=sys.stderr)
     return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
 
 def handle_a_bar():
@@ -421,21 +427,20 @@ def handle_a_bar():
     for data in bar_data:
         if isinstance(data, str):
             tot_note += 1
-    #print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
-    
-    if False and debug_mode:
-        pure_data = filter(lambda x:x[0].isdigit(), bar_data)
+
+    if debug_mode:
+        print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
+        pure_data = [x for x in bar_data if x[0].isdigit()]
         p1= "%6d %2.1f %2d %s" % (int(curr_time), \
                 get_last_red_tm()["measure"], len(pure_data), \
                 "".join(pure_data))
 
         p2= "%.4f %.2f" % (get_last_red_tm()["bpm"], \
-                get_t_unit(get_last_red_tm(), tot_note) * tot_note)
+                get_t_unit(get_last_red_tm(), max(1, tot_note)) * max(1, tot_note))
         print_with_pended(p1, file=sys.stderr)
 
     #debug
     last_debug = curr_time
-    print_each_note = False #(int(curr_time) == 112814)
     bak_curr_time = curr_time
     note_cnt = -1
     #debug
@@ -452,7 +457,10 @@ def handle_a_bar():
                     continue
                 add_a_note(data, curr_time)
                 if print_each_note:
-                    print_with_pended(note_cnt, data, curr_time, bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note), get_t_unit(get_last_red_tm(), tot_note), file=sys.stderr)
+                    print_with_pended(note_cnt, data, curr_time,
+                        bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note),
+                        get_t_unit(get_last_red_tm(), tot_note),
+                        file=sys.stderr)
                 curr_time += get_t_unit(get_last_red_tm(), tot_note)           
             else: #cmd
                 real_do_cmd(data)
@@ -587,8 +595,8 @@ def write_HitObjects(fout: TextIO) -> None:
     for ho in HitObjects:
         beg_offset = get_real_offset(ho[2])
         if int(beg_offset) != int(ho[2]):
-#            print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
-            pass
+            if debug_mode:
+                print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is abnormal")
             print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1]),
@@ -635,10 +643,10 @@ def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     write_Metadata(fout)
     write_Difficulty(fout)
     write_Events(fout)
+
     get_all(filename)
-    if not debug_mode:
-        write_TimingPoints(fout)
-        write_HitObjects(fout)
+    write_TimingPoints(fout)
+    write_HitObjects(fout)
 
     init_debug_globals()
     return chart_resources
@@ -658,7 +666,10 @@ if __name__ == "__main__":
     parser.add_argument("options", nargs="*", choices=["debug", []], metavar="{debug}",
         help="extra options (deprecated usage). Can also be specified as --<option> ")
     parser.add_argument("-d", "--debug", action="store_true",
-        help="display extra info")
+        help="display general debug info")
+    parser.add_argument("-v", "--verbose", action="store_true",
+        help="display debug info for each note")
     args = parser.parse_args()
     debug_mode = args.debug or ("debug" in args.options)
+    print_each_note = args.verbose
     tja2osu(args.filename, sys.stdout)

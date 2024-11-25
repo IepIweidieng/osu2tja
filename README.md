@@ -239,7 +239,6 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [ ] `I` (head of regular/Katsu? bar drumroll) → = head of regular bar drumroll? (TODO)
     - [x] `6` (head of big bar drumroll) → Slider, finish hitsound
     - [ ] `H` (head of big/Don? bar drumroll) → = head of big bar drumroll? (TODO)
-      - FIXME: Mid&ndash;bar-drumroll `#BPMCHANGE`s and `#SCROLL`s cause wrong slider length calculation and cause wrong time duration.
     - [x] `7` (head of regular balloon roll) → Spinner, default hitsound
     - [x] `9` (head of special balloon roll) → Spinner, default hitsound
       - TODO: use finish hitsound to mark difference

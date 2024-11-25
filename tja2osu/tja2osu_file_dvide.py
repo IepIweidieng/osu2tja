@@ -134,7 +134,7 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
 
     has_branch = False
     for line in fobj:
-        line = line.strip()
+        line = line.rstrip(b"\r\n")
         line_no_comment, _, _ = line.partition(b"//")
         if b"#BRANCHSTART" in line_no_comment:
             has_branch = True

@@ -18,7 +18,7 @@ import codecs
 from fractions import Fraction
 import os
 import math
-from typing import IO, List, Optional, Tuple, Union
+from typing import IO, Dict, List, Optional, Tuple, Union
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
@@ -54,6 +54,17 @@ HITSND_NORMAL = 1 << 0
 HITSND_WHISTLE = 1 << 1
 HITSND_FINISH = 1 << 2
 HITSND_CLAP = 1 << 3
+
+# osu event type consts
+OSU_EVENT_BG = '0'
+OSU_EVENT_VIDEO = 'Video'
+OSU_EVENT_BREAK = 'Break'
+
+INT_TO_OSU_EVENT = {
+    0: OSU_EVENT_BG,
+    1: OSU_EVENT_VIDEO,
+    2: OSU_EVENT_BREAK,
+}
 
 # tja onp consts
 ONP_NONE = '0'
@@ -128,6 +139,38 @@ def get_var(str: str) -> Tuple[str, str]:
     return var_name.strip(), var_value.strip()
 
 
+def get_event(line: str) -> Dict:
+    if line is None or line.lstrip().startswith('//'):
+        return {}
+
+    params = line.split(',', 2)
+    if len(params) < 3:
+        return {}
+
+    event_type, start_time, params = params
+    if event_type.isdigit():
+        event_type = INT_TO_OSU_EVENT.get(int(event_type), event_type)
+
+    res = {
+        'event_type': event_type,
+        'start_time': int(start_time),
+    }
+    if event_type in {OSU_EVENT_BG, OSU_EVENT_VIDEO}:
+        filename, _, params = params.partition(',')
+        x_offset, _, params = params.partition(',') # optional
+        y_offset, _, params = params.partition(',') # optional
+        if filename.startswith('"') and filename.endswith('"'):
+            filename = filename[1:-1]
+        x_offset = int(x_offset or 0)
+        y_offset = int(y_offset or 0)
+        res.update({'filename': filename, 'x_offset': x_offset, 'y_offset': y_offset})
+    elif event_type == OSU_EVENT_BREAK:
+        end_time = int(params.partition(',')[0])
+        res['end_time'] = end_time
+
+    return res
+
+
 def get_timing_point(str, prev_timing_point=None):
     if str is None:
         return {}
@@ -174,6 +217,7 @@ def get_timing_point(str, prev_timing_point=None):
 
     return ret
 
+chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def reset_global_variables() -> None:
     global timingpoints, balloons, slider_multiplier, slider_tick_rate, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
@@ -188,6 +232,9 @@ def reset_global_variables() -> None:
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
     commands_within = []
+
+    global chart_resources
+    chart_resources = {}
 
     # debug args
     show_head_info = False
@@ -604,7 +651,7 @@ MS_OSU_PRE_V5_MUSIC_OFFSET = -24
 """
 
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
-        List[str], List[str], List[str], List[str]
+        List[str], List[str], List[str], List[str], Dict[str, str]
     ]:
     reset_global_variables()
     global slider_multiplier, slider_tick_rate, column_count, timingpoints
@@ -627,6 +674,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     version = ""
     preview = 0
     hitobjects: List[Tuple[str, float, int]] = []
+
+    preimage = None
+    bgmovie = None
+    movieoffset = 0.0
 
     # state vars
     osu_ver_str = ""
@@ -689,6 +740,16 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 slider_tick_rate = float(vval)
             elif vname == "OverallDifficulty":
                 overall_difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
+        elif curr_sec == "Events":
+            data = get_event(line)
+            if data:
+                if data["event_type"] == OSU_EVENT_BG:
+                    if preimage is None and data["x_offset"] == 0 and data["y_offset"] == 0:
+                        preimage = data["filename"]
+                elif data["event_type"] == OSU_EVENT_VIDEO:
+                    if bgmovie is None and data["x_offset"] == 0 and data["y_offset"] == 0:
+                        bgmovie = data["filename"]
+                        movieoffset = data["start_time"] / 1000
         elif curr_sec == "TimingPoints":
             prev_timing_point = timingpoints and timingpoints[-1] or None
             data = get_timing_point(line, prev_timing_point)
@@ -783,6 +844,14 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads_meta.append("AUTHOR:%s" % creator) # for Malody
 
     tja_heads_meta.append("DEMOSTART:%.3f" % (preview / 1000.0))
+
+    if preimage:
+        tja_heads_meta.append("PREIMAGE:%s" % preimage)
+        chart_resources[preimage] = 'preview image'
+    if bgmovie:
+        tja_heads_meta.append("BGMOVIE:%s" % bgmovie)
+        tja_heads_meta.append("MOVIEOFFSET:%.3f" % movieoffset)
+        chart_resources[bgmovie] = 'background video'
 
     tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])
     tja_heads_sync.append("OFFSET:%.3f" % OFFSET)
@@ -887,7 +956,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                        bar_data, bar_offset_begin, end, tja_contents)
 
     tja_contents.append("#END")
-    return tja_heads_meta, tja_heads_sync, tja_heads_diff, tja_contents
+    return tja_heads_meta, tja_heads_sync, tja_heads_diff, tja_contents, chart_resources
 
 
 def main():
@@ -913,7 +982,7 @@ def main():
     # try to open file
     try:
         fp = codecs.open(args.filename, "r", "utf8")
-        head_meta, head_sync, head_diff, diff_content = osu2tja(fp, 3, 9, None) # defaulted course and level
+        head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp, 3, 9, None) # defaulted course and level
         head_sync_main = head_sync
     except IOError:
         print("Can't open file `%s`" % args.filename, file=sys.stderr)

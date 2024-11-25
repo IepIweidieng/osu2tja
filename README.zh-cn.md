@@ -48,7 +48,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 - 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个）
 - **超过 5 个难度**的 Beatmap 会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。（@MoshirMoshir；改进至必要时才加后缀）
 - **有多个音乐文件**的 Beatmaps（不可上架，但可見于部分社区喜爱（Loved）谱面）也会拆为多份 `.tja`。（新功能）
-- **自动复制并转换**音频文件。（@SamLangTen；OGG 转换 —— @k2angel）
+- **自动复制**谱面所使用的音频文件（@SamLangTen；**自动 OGG 转换** —— @k2angel）、背景图片、与其它文件。（新功能）
 
 ### 转换细节
 
@@ -69,10 +69,10 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
     - [ ] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（TODO）
   - 美术标头
-    - [ ] 背景事件：文件名 → `PREIMAGE:`（TODO）
-    - [ ] 背景事件：文件名 → `BGIMAGE:`（TODO）
-    - [ ] 视频事件：文件名 → `BGMOVIE:`（TODO）
-    - [ ] 视频事件：起始时间 → `MOVIEOFFSET:`（TODO）
+    - [x] 首个置中背景事件：文件名 → `PREIMAGE:`（新功能）
+    - [ ] ~~首个置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
+    - [x] 首个置中视频事件：文件名 → `BGMOVIE:`（新功能）
+    - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`（新功能）
     - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
   - 音频同步标头
     - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​​各难度可異（新功能）

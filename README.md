@@ -48,7 +48,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 - Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5)
 - Beatmaps with **more than 5 difficulties** are split into multiple `.tja` files (e.g., `title - 1`, `title - 2`). (@MoshirMoshir; improved to suffix only when necessary)
 - Beatmaps with **multiple song audio files** (unrankable but seen in loved beatmaps) are also split into multiple `.tja` files. (new)
-- **Automatically copy and convert** the audio file. (@SamLangTen; OGG conversion — @k2angel)
+- **Automatically copy** song audio (@SamLangTen; **automatic OGG conversion** — @k2angel), background image, and other files used by the chart. (new)
 
 ### Conversion Details
 
@@ -68,10 +68,10 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
     - [ ] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (TODO)
   - Decoration Headers
-    - [ ] Background event: filename → `PREIMAGE:` (TODO)
-    - [ ] Background event: filename → `BGIMAGE:` (TODO)
-    - [ ] Video event: filename → `BGMOVIE:` (TODO)
-    - [ ] Video event: start time → `MOVIEOFFSET:` (TODO)
+    - [x] First centered background event: filename → `PREIMAGE:` (new)
+    - [ ] ~~First centered background event: filename → `BGIMAGE:`~~ (not planned)
+    - [x] First centered video event: filename → `BGMOVIE:` (new)
+    - [x] First centered video event: start time → `MOVIEOFFSET:` (new)
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
     - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), for each difficulty (new)

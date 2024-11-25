@@ -126,6 +126,9 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
                 print(f"Warning: song audio `{song_audio}` not found. Neither copied nor converted.", file=sys.stderr)
                 song_audio_tja = song_audio
 
+            # Collect other chart resources
+            resources: Dict[str, str] = {}
+
             tja_fname = f"{folder_name}.tja"
             tja_fpath = path.join(storage_path, tja_fname)
             print(f"Converting `{osus_fname}` to `{tja_fname}` ...", end="", flush=True)
@@ -149,9 +152,10 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
                 try:
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
                         level = int(info["difficulty"])
-                        head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (
+                        head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff], rescs = (
                             osu2tja(diff_fp, diff, level, song_audio_tja)
                         )
+                        resources.update(rescs)
                         if len(head_sync_main) == 0:
                             head_sync_main = head_syncs[diff]
                         elif head_syncs[diff] != head_sync_main:
@@ -181,6 +185,13 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
 
             print_unpend()
             print(f"\rConverting `{osus_fname}` to `{tja_fname}` done!")
+
+            # Extract other resources
+            for rfname, rtype in resources.items():
+                try:
+                    osu_zip.extract(rfname, storage_path)
+                except KeyError:
+                    print_with_pended(f"Warning: Referenced {rtype} file `{rfname}` not found. Not copied.", file=sys.stderr)
 
     osu_zip.close()
 

@@ -52,12 +52,14 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 
 ### 转换细节
 
-- [x] 输入：osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
-- 输入：
-  - osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
-  - taiko 模式
-  - std、（改进）mania、catch 模式转谱
-  - 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
+- 输入（`.osu`）：
+  - [x] osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
+  - [x] 编码：无 BOM 的 UTF-8
+- TJA 标头
+  - [x] taiko 模式
+  - [x] std、（改进）mania、catch 模式转谱
+  - [x] 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
+- [x] 输出（`.tja`）编码：Shift-JIS（若可）或（新功能）帶 BOM 的 UTF-8。
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（移至 TJA 文件首行）
@@ -144,7 +146,10 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 
 ### 转换细节
 
-- [x] 输出：osu file format v14（改进）
+- 输出（`.osu`）：
+  - [x] osu file format v14（改进）
+  - [x] 编码：无 BOM 的 UTF-8
+- [x] 输入（`.tja`）编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
 - [x] 会忽略 TJA `//` 注释
   - FIXME：拆分 TJA 时 `//` 注释不会禁用命令。
 - TJA 标头

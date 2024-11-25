@@ -52,11 +52,13 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 
 ### Conversion Details
 
-- Input:
+- Input (`.osu`):
   - [x] osu file format v4&ndash;14 (those tested; warns and continues to process for other versions) (improved)
+  - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion
   - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
+- [x] Output (`.tja`) encoding: Shift-JIS (if possible) or (new) UTF-8 (with BOM).
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (moved to the first line of the TJA file)
@@ -142,8 +144,10 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - **Automatically copy** song audio, background image, and other files used by the chart (new)
 
 ### Conversion Details
-
-- [x] Output: osu file format v14 (improved)
+- Output (`.osu`):
+  - [x] osu file format v14 (improved)
+  - [x] Encoding: UTF-8 (without BOM)
+- [x] Input (`.tja`) encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
 - [x] TJA `//` comment ignoring
   - FIXME: `//` comments do not disable commands when splitting TJAs.
 - TJA Headers

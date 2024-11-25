@@ -12,8 +12,7 @@ from bisect import bisect_right
 import codecs
 import math
 import sys
-import copy
-from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple
+from typing import Dict, Optional, OrderedDict, TextIO, Tuple
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 

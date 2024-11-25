@@ -258,7 +258,6 @@ def get_real_offset(int_offset: Union[int, float]) -> float:
     int_offset = int(math.floor(int_offset))
 
     tm = get_base_red_timing_point(timingpoints, int_offset)
-    tpb = 1.0 * T_MINUTE / tm["bpm"]
     int_delta = abs(int_offset - tm["offset"])
     sign = (int_offset - tm["offset"] > 0 and 1 or -1)
 
@@ -272,7 +271,6 @@ def get_real_offset(int_offset: Union[int, float]) -> float:
 
 
 def get_slider_sound(str):
-    ret = []
     ps = str.split(',')
     reverse_cnt = int(ps[6])
     if len(ps) == 8:
@@ -825,13 +823,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     scroll = timingpoints[0]["scroll"]
     tm_idx = 0  # current timing point index
     obj_idx = 0  # current hit object index
-    chap_idx = 0  # current chapter index
     measure = timingpoints[0]["beats"]  # current measure
     curr_bpm = BPM  # current bpm
-    jiro_data = []  # jiro fumen data
 
     bar_data = []  # current bar data
-    last_tm = 0  # last hit object offset
 
     bar_offset_begin = timingpoints[0]["offset"]
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
@@ -890,7 +885,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         # get next object to process
         next_obj = hitobjects[obj_idx]
         next_obj_offset = int(math.floor(next_obj[1]))
-        next_obj_type = next_obj[0]
 
         # get next measure offset to compare
         if tm_idx < len(timingpoints):
@@ -904,7 +898,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             tm_idx += 1
             continue
 
-        tpb = T_MINUTE / curr_bpm
         # check if this object falls into this measure
         end = min(bar_offset_begin + bar_max_length, next_measure_offset)
 

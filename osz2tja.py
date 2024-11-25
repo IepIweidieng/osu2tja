@@ -3,7 +3,7 @@ import shutil
 import textwrap
 import traceback
 from common.utils import print_with_pended, print_pend, print_unpend
-from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level
+from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List, Literal

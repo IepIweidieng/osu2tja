@@ -233,13 +233,13 @@ def get_all(filename):
             continue
         if not has_started: continue
         if ("#"+END) in line:
-            # prevent bar lines at and after #END
-            tm = get_last_red_tm()
-            real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
-            real_do_cmd((BARLINEOFF,)) # hide its bar line
             break
         if ("#" in line): handle_cmd(line)
         else: handle_note(line)
+    # prevent bar lines at and after #END (probably missing and implicit)
+    tm = get_last_red_tm()
+    real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
+    real_do_cmd((BARLINEOFF,)) # hide its bar line
 
 def get_real_offset(int_offset):
 #    print_with_pended("INTOffset", int_offset, file=sys.stderr)

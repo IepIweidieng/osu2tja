@@ -138,7 +138,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 ### Features
 
 - **Batch conversion** of `.tja` files to `.osz` files. (new)
-- Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file.
+- Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file. (fixed)
 - **Automatically copy** the audio file (new)
 
 ### Conversion Details
@@ -189,7 +189,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - TJA Commands
   - [ ] `#START` → Uninherited timing point: Large beats per bar + omit first bar line + (optional) incomplete bar (TODO)
   - [x] `#START P<n>` → `#START` in player-side TJA (new)
-  - [x] `#END` → Uninherited timing point: Large beats per bar + omit first bar line (new)
+  - [x] `#END`/end-of-file → Uninherited timing point: Large beats per bar + omit first bar line (new)
   - [x] `#BRANCHSTART` → Begin branch-split section
     - TODO: detect and avoid impossible branch routes
   - [x] `#N`/`#E`/`#M` → Split into branch TJA

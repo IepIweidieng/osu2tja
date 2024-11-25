@@ -70,6 +70,32 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
     started = False
     fobj = open(path_tja, "rb")
     bom = b""
+
+    def write_chartdef():
+        fnames = fnames_by_course.setdefault((course, style, player_side), [])
+        course_suffixes: List[str] = []
+        if style > 1 or player_side > 0:
+            course_suffixes.append(f"({style}P_P{player_side + 1})")
+        if len(fnames) > 0:
+            course_suffixes.append(f"(No{len(fnames)})")
+        fname = f"{fname_base} {course}{''.join(course_suffixes)}.tja"
+        fnames.append(fname)
+
+        fout = open(os.path.join(dir_out, fname), "wb")
+
+        fout.write(bom + WATER_MARK + b"\n")
+        for str_ in common_data:
+            fout.write(str_)
+            fout.write(b"\n")
+        fout.write(b"\nCOURSE:%s\n\n" % (course.encode('latin1'),))
+
+        for str_ in diff_data:
+            fout.write(str_)
+            fout.write(b"\n")
+        fout.close()
+
+        diff_data.clear()
+
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         bom = fobj.read(len(codecs.BOM_UTF8)) # extract UTF-8 BOM
     for line in fobj:
@@ -94,30 +120,12 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
             else:
                 common_data.append(line)
         if started and b"#END" in line:
-            fnames = fnames_by_course.setdefault((course, style, player_side), [])
-            course_suffixes: List[str] = []
-            if style > 1 or player_side > 0:
-                course_suffixes.append(f"({style}P_P{player_side + 1})")
-            if len(fnames) > 0:
-                course_suffixes.append(f"(No{len(fnames)})")
-            fname = f"{fname_base} {course}{''.join(course_suffixes)}.tja"
-            fnames.append(fname)
-
-            fout = open(os.path.join(dir_out, fname), "wb")
-
-            fout.write(bom + WATER_MARK + b"\n")
-            for str_ in common_data:
-                fout.write(str_)
-                fout.write(b"\n")
-            fout.write(b"\nCOURSE:%s\n\n" % (course.encode('latin1'),))
-
-            for str_ in diff_data:
-                fout.write(str_)
-                fout.write(b"\n")
-            fout.close()
-            diff_data = []
+            write_chartdef()
             started = False
     fobj.close()
+
+    if started: # missing #END; implicit #END at end-of-file
+        write_chartdef()
 
     return [fname for fnames in fnames_by_course.values() for fname in fnames]
 

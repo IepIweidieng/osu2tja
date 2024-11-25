@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
-def reset_global_variables() -> None:
+def init_globals() -> None:
     global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
     global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
@@ -80,9 +80,12 @@ def reset_global_variables() -> None:
     bar_data = []
     lasting_note = None
 
+def init_debug_globals() -> None:
     global debug_mode, last_debug
     debug_mode = False
     last_debug = None
+
+init_debug_globals()
 
 # const_data
 BRANCH = "BRANCH"
@@ -619,7 +622,7 @@ def write_HitObjects(fout: TextIO) -> None:
     print("", file=fout)
 
 def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
-    reset_global_variables()
+    init_globals()
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     check_unsupported(filename)
@@ -636,6 +639,8 @@ def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     if not debug_mode:
         write_TimingPoints(fout)
         write_HitObjects(fout)
+
+    init_debug_globals()
     return chart_resources
 
 

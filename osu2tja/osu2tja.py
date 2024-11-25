@@ -219,9 +219,8 @@ def get_timing_point(str, prev_timing_point=None):
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
-def reset_global_variables() -> None:
+def init_globals() -> None:
     global timingpoints, balloons, slider_multiplier, slider_tick_rate, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
-    global show_head_info, combo_cnt, guess_measure
     # global variables
     timingpoints = []
     balloons = []
@@ -236,11 +235,14 @@ def reset_global_variables() -> None:
     global chart_resources
     chart_resources = {}
 
+def init_debug_globals() -> None:
+    global show_head_info, combo_cnt, guess_measure
     # debug args
     show_head_info = False
     combo_cnt = 0
     guess_measure = False
 
+init_debug_globals()
 
 # get fixed beat count
 def get_real_beat_cnt(tm, beat_cnt):
@@ -653,7 +655,7 @@ MS_OSU_PRE_V5_MUSIC_OFFSET = -24
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
         List[str], List[str], List[str], List[str], Dict[str, str]
     ]:
-    reset_global_variables()
+    init_globals()
     global slider_multiplier, slider_tick_rate, column_count, timingpoints
     global balloons, tail_fix
     global osu_format_ver
@@ -957,6 +959,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                        bar_data, bar_offset_begin, end, tja_contents)
 
     tja_contents.append("#END")
+    init_debug_globals()
     return tja_heads_meta, tja_heads_sync, tja_heads_diff, tja_contents, chart_resources
 
 

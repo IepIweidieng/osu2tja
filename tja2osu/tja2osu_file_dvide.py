@@ -233,6 +233,8 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
     print_unpend()
     print(f"\rSplitting `{fpath_tja}` into `{'`, `'.join(all_file_list)}` done!")
 
+    resources: List[Tuple[str, str]] = []
+
     dir_out = os.path.join(target_path, dirname_dest)
     os.makedirs(dir_out, exist_ok=True)
     for fname_tja_i in all_file_list:
@@ -245,7 +247,7 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         print(f"Converting `{fpath_tja_i}` to `{fname_osu_i}` ...", end="", flush=True)
         print_pend()
         try:
-            tja2osu.tja2osu(fpath_tja_i, fout)
+            resources.extend(tja2osu.tja2osu(fpath_tja_i, fout))
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
             print(f"Error processing {diff} difficulty of `{fpath_tja_i}`. Continued.", file=sys.stderr)
@@ -253,13 +255,13 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         print_unpend()
         print(f"\rConverting `{fpath_tja_i}` to `{fname_osu_i}` done!")
 
-    try:
-        wave_dec = tja2osu.convert_str(WAVE)
-        path_wave_src = os.path.join(os.path.dirname(fpath_tja), wave_dec)
-        path_wave_dest = os.path.join(dir_out, wave_dec)
-        shutil.copyfile(path_wave_src, path_wave_dest)
-    except FileNotFoundError:
-        print(f"Warning: Audio file `{path_wave_src}` not found. Not copied.", file=sys.stderr)
+    for rtype, rfname in resources:
+        rfpath_src = os.path.join(os.path.dirname(fpath_tja), rfname)
+        rfpath_desk = os.path.join(dir_out, rfname)
+        try:
+            shutil.copyfile(rfpath_src, rfpath_desk)
+        except FileNotFoundError:
+            print(f"Warning: Referenced {rtype} file `{rfpath_src}` not found. Not copied.", file=sys.stderr)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

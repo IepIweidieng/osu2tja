@@ -13,7 +13,9 @@ import codecs
 import math
 import sys
 import copy
-from typing import Optional, OrderedDict, TextIO, Tuple
+from typing import List, Optional, OrderedDict, TextIO, Tuple
+
+chart_resources: List[Tuple[str, str]] # [('type', 'filename'), ...]
 
 def reset_global_variables() -> None:
     global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
@@ -23,7 +25,7 @@ def reset_global_variables() -> None:
     TITLE = "NO TITLE"
     SUBTITLE = "NO SUBTITLE"
     BPM = 0.0
-    WAVE = "NO WAVE FILE"
+    WAVE = None
     OFFSET = 0.0
     DEMOSTART = 0.0
     MAKER = None
@@ -63,6 +65,9 @@ def reset_global_variables() -> None:
     SliderTickRate = 4
     CircleX = 256
     CircleY = 192
+
+    global chart_resources
+    chart_resources = []
 
     global has_started, curr_time, bar_data, lasting_note
     has_started = False
@@ -473,7 +478,11 @@ def write_General(fout: TextIO) -> None:
     global Title, Source, AudioFilename, PreviewTime
     Title = TITLE
     Source = SUBTITLE
-    AudioFilename = WAVE
+    if WAVE:
+        AudioFilename = WAVE
+        chart_resources.append(('song audio', WAVE))
+    else:
+        AudioFilename = ""
     PreviewTime = DEMOSTART * 1000
 
     print("[General]", file=fout)
@@ -576,7 +585,7 @@ def write_HitObjects(fout: TextIO) -> None:
             lasting_note = None
     print("", file=fout)
 
-def tja2osu(filename: str, fout: TextIO) -> None:
+def tja2osu(filename: str, fout: TextIO) -> List[Tuple[str, str]]:
     reset_global_variables()
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
@@ -593,6 +602,7 @@ def tja2osu(filename: str, fout: TextIO) -> None:
     if not debug_mode:
         write_TimingPoints(fout)
         write_HitObjects(fout)
+    return chart_resources
 
 
 def rtassert(b, str=""):

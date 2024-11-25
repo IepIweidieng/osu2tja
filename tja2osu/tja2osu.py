@@ -20,6 +20,7 @@ chart_resources: List[Tuple[str, str]] # [('type', 'filename'), ...]
 def reset_global_variables() -> None:
     global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
     global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE
+    global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     # jiro data
     ENCODING = None
     TITLE = "NO TITLE"
@@ -34,6 +35,10 @@ def reset_global_variables() -> None:
     SONGVOL = 100.0
     SEVOL = 100.0
     COURSE = "Oni"
+    PREIMAGE = None
+    BGIMAGE = None
+    BGMOVIE = None
+    MOVIEOFFSET = 0.0
 
     global AudioFilename, Title, Source, Tags, Artist, Artist, Creator, Version
     global AudioLeadIn, CountDown, SampleSet, StackLeniency, Mode, LetterboxInBreaks, PreviewTime
@@ -133,6 +138,7 @@ def rm_jiro_comment(str_: str) -> str:
 
 def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
+    global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
     try: fobj = open(filename, "rb")
@@ -156,6 +162,10 @@ def get_meta_data(filename):
         elif vname == b"SONGVOL": SONGVOL = float(vval)
         elif vname == b"SEVOL": SEVOL = float(vval)
         elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
+        elif vname == b"PREIMAGE": PREIMAGE = convert_str(vval, ENCODING)
+        elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
+        elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
+        elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
         else: # try metadata in comments
             creator = line.partition(b"//created by ")[2].strip()
             if creator: CREATOR = convert_str(creator, ENCODING)
@@ -529,6 +539,29 @@ def write_Difficulty(fout: TextIO) -> None:
     print("SliderTickRate:%s" % (repr(SliderTickRate),), file=fout)
     print("", file=fout)
 
+def write_Events(fout: TextIO) -> None:
+    print("[Events]", file=fout)
+    print("//Background and Video events", file=fout)
+
+    # FIXME: What if the filename contains double quotes (")?
+    bg = BGIMAGE or PREIMAGE
+    if bg:
+        print(f'0,0,"{bg}",0,0', file=fout)
+        chart_resources.append(('background image', bg))
+    if BGMOVIE:
+        offset = int(round(MOVIEOFFSET * 1000))
+        print(f'Video,{offset},"{BGMOVIE}",0,0', file=fout)
+        chart_resources.append(('background video', BGMOVIE))
+
+    print("//Break Periods", file=fout)
+    print("//Storyboard Layer 0 (Background)", file=fout)
+    print("//Storyboard Layer 1 (Fail)", file=fout)
+    print("//Storyboard Layer 2 (Pass)", file=fout)
+    print("//Storyboard Layer 3 (Foreground)", file=fout)
+    print("//Storyboard Layer 4 (Overlay)", file=fout)
+    print("//Storyboard Sound Samples", file=fout)
+    print("", file=fout)
+
 def write_TimingPoints(fout: TextIO) -> None:
     print("[TimingPoints]", file=fout)
     volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
@@ -598,6 +631,7 @@ def tja2osu(filename: str, fout: TextIO) -> List[Tuple[str, str]]:
     write_Editor(fout)
     write_Metadata(fout)
     write_Difficulty(fout)
+    write_Events(fout)
     get_all(filename)
     if not debug_mode:
         write_TimingPoints(fout)

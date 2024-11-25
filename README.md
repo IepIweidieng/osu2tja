@@ -139,7 +139,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 
 - **Batch conversion** of `.tja` files to `.osz` files. (new)
 - Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file. (fixed)
-- **Automatically copy** the audio file (new)
+- **Automatically copy** song audio, background image, and other files used by the chart (new)
 
 ### Conversion Details
 
@@ -166,10 +166,9 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] ? → `LetterboxInBreaks:` (defaults to `0` (false)) (improved)
     - [x] `SEVOL:` ÷ `SONGVOL:` → Timing point: hitsound volume (new)
   - Decoration Headers
-    - [ ] `PREIMAGE:` → Background event: filename (TODO)
-    - [ ] `BGIMAGE:` → Background event: filename (TODO)
-    - [ ] `BGMOVIE:` → Video event: filename (TODO)
-    - [ ] `MOVIEOFFSET:` → Video event: start time (TODO)
+    - [x] `BGIMAGE:`/`PREIMAGE:` → Background event: filename, with automatic file copy (new)
+    - [x] `BGMOVIE:` → Video event: filename, with automatic file copy (new)
+    - [x] `MOVIEOFFSET:` → Video event: start time (new)
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)
   - Sync Headers
     - [x] `BPM:` → initial uninherited timing point: BPM

@@ -59,7 +59,9 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
   - [x] taiko 模式
   - [x] std、（改进）mania、catch 模式转谱
   - [x] 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
-- [x] 输出（`.tja`）编码：Shift-JIS（若可）或（新功能）帶 BOM 的 UTF-8。
+- 输出（`.tja`）
+  - [x] 编码：Shift-JIS（若可）或（新功能）帶 BOM 的 UTF-8。
+  - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（移至 TJA 文件首行）
@@ -77,7 +79,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
     - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
   - 音频同步标头
-    - [x] 初始 BPM → `BPM:`（纯显示用，取 2 位小数），​（新功能）​各难度可異
+    - [x] 初始 BPM → `BPM:`（纯显示用），​（新功能）​各难度可異，​（新功能）输出不限位数的最简小数
     - [x] 首拍时间 → `OFFSET:`（改进），（新功能）​​各难度可異，（新功能）-15 毫秒音乐误差修正（format v4 与更早版本再额外 +24 毫秒）
       - `OFFSET:` 取音乐开始为止最后一拍的开始时间，仿 osu!。delguoqing 版是取最早的音符或时间点。
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。使用 format v4 与更早版本的上架谱面有额外的 -24 毫秒音乐误差（共 -9 毫秒）。
@@ -149,6 +151,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - 输出（`.osu`）：
   - [x] osu file format v14（改进）
   - [x] 编码：无 BOM 的 UTF-8
+  - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。
 - [x] 输入（`.tja`）编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
 - [x] 会忽略 TJA `//` 注释
   - FIXME：拆分 TJA 时 `//` 注释不会禁用命令。

@@ -78,13 +78,13 @@ ONP_BALLOON = '7'
 ONP_END = '8'
 ONP_IMO = '9'
 
-# tja command format string
-FMT_SCROLLCHANGE = '#SCROLL %f'
-FMT_BPMCHANGE = '#BPMCHANGE %f'
-FMT_GOGOSTART = '#GOGOSTART'
-FMT_GOGOEND = '#GOGOEND'
-FMT_MEASURECHANGE = '#MEASURE %d/%d'
-FMT_DELAY = '#DELAY %f'
+# tja command formatter
+FMT_SCROLLCHANGE = lambda x: f'#SCROLL {repr(x)}'
+FMT_BPMCHANGE = lambda x: f'#BPMCHANGE {repr(x)}'
+FMT_GOGOSTART = lambda: '#GOGOSTART'
+FMT_GOGOEND = lambda: '#GOGOEND'
+FMT_MEASURECHANGE = lambda x, y: f'#MEASURE {repr(x)}/{repr(y)}'
+FMT_DELAY = lambda x: f'#DELAY {repr(x)}'
 
 # ----------------------
 # utilities
@@ -92,7 +92,7 @@ FMT_DELAY = '#DELAY %f'
 
 
 def make_cmd(cmd, *args):
-    return cmd % args
+    return cmd(*args)
 
 
 def gcd_of_list(l):
@@ -620,8 +620,8 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     bar_strs.append(',')
     bar_str = ''.join(bar_strs)
 
-    head = "%4d %6d %.2f %2d " % (combo_cnt,
-                                  format_time(int(math.floor(begin))), delta_gcd/24.0, len(bar_str))
+    head = "%4d %6d %s %2d " % (combo_cnt,
+                                  format_time(int(math.floor(begin))), repr(delta_gcd/24.0), len(bar_str))
 
     if show_head_info:  # show debug info?
         print_with_pended(head + bar_str, file=sys.stderr)
@@ -846,18 +846,18 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     tja_heads_meta.append("MAKER:%s" % creator) # for TJAP2fPC-based sims
     tja_heads_meta.append("AUTHOR:%s" % creator) # for Malody
 
-    tja_heads_meta.append("DEMOSTART:%.3f" % DEMOSTART)
+    tja_heads_meta.append("DEMOSTART:%s" % repr(DEMOSTART))
 
     if preimage:
         tja_heads_meta.append("PREIMAGE:%s" % preimage)
         chart_resources[preimage] = 'preview image'
     if bgmovie:
         tja_heads_meta.append("BGMOVIE:%s" % bgmovie)
-        tja_heads_meta.append("MOVIEOFFSET:%.3f" % MOVIEOFFSET)
+        tja_heads_meta.append("MOVIEOFFSET:%s" % repr(MOVIEOFFSET))
         chart_resources[bgmovie] = 'background video'
 
-    tja_heads_sync.append("BPM:%.2f" % timingpoints[0]["bpm"])
-    tja_heads_sync.append("OFFSET:%.3f" % OFFSET)
+    tja_heads_sync.append("BPM:%s" % repr(timingpoints[0]["bpm"]))
+    tja_heads_sync.append("OFFSET:%s" % repr(OFFSET))
 
     str_info_diff_orig = f"// osu! difficulty: {version}"
     if gamemode_idx != GAMEMODE_TAIKO:

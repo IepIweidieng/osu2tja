@@ -435,8 +435,8 @@ def handle_a_bar():
                 get_last_red_tm()["measure"], len(pure_data), \
                 "".join(pure_data))
 
-        p2= "%.4f %.2f" % (get_last_red_tm()["bpm"], \
-                get_t_unit(get_last_red_tm(), max(1, tot_note)) * max(1, tot_note))
+        p2= "%s %s" % (repr(get_last_red_tm()["bpm"]), \
+                repr(get_t_unit(get_last_red_tm(), max(1, tot_note)) * max(1, tot_note)))
         print_with_pended(p1, file=sys.stderr)
 
     #debug

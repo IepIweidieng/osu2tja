@@ -58,7 +58,9 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion
   - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
-- [x] Output (`.tja`) encoding: Shift-JIS (if possible) or (new) UTF-8 (with BOM).
+- Output (`.tja`)
+  - [x] Encoding: Shift-JIS (if possible) or (new) UTF-8 (with BOM).
+  - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (moved to the first line of the TJA file)
@@ -76,7 +78,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] First centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
-    - [x] initial BPM → `BPM:` (for display only, rounded to 2 decimal digits), (new) for each difficulty
+    - [x] initial BPM → `BPM:` (for display only), (new) for each difficulty, (new) output simpliest decimal without digit count limits.
     - [x] initial beat time position → `OFFSET:` (improved), (new) for each difficulty, (new) with -15ms music offset correction (extra +24ms for format v4 and earlier)
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons. Ranked format v4 and earlier beatmaps have additional -24ms music offset (-9ms in total).
@@ -147,6 +149,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 - Output (`.osu`):
   - [x] osu file format v14 (improved)
   - [x] Encoding: UTF-8 (without BOM)
+  - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.
 - [x] Input (`.tja`) encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
 - [x] TJA `//` comment ignoring
   - FIXME: `//` comments do not disable commands when splitting TJAs.

@@ -3,7 +3,7 @@ import shutil
 import textwrap
 import traceback
 from common.utils import print_with_pended, print_pend, print_unpend
-from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level, reset_global_variables
+from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja, osu2tja_level
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List, Literal
@@ -147,7 +147,6 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
             head_sync_main_printed = False
             for diff, info in zip(difficulties, reversed(selected_infos)):
                 try:
-                    reset_global_variables()
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
                         level = int(info["difficulty"])
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff] = (

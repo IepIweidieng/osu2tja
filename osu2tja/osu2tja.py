@@ -175,26 +175,10 @@ def get_timing_point(str, prev_timing_point=None):
     return ret
 
 
-# global variables
-timingpoints = []
-balloons = []
-slider_multiplier = None
-slider_tick_rate = None
-column_count = 1
-tail_fix = False
-gamemode_idx: int = GAMEMODE_STD
-osu_format_ver = 0
-commands_within = []
-
-# debug args
-show_head_info = False
-combo_cnt = 0
-guess_measure = False
-
-
-def reset_global_variables():
+def reset_global_variables() -> None:
     global timingpoints, balloons, slider_multiplier, slider_tick_rate, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
     global show_head_info, combo_cnt, guess_measure
+    # global variables
     timingpoints = []
     balloons = []
     slider_multiplier = None
@@ -622,6 +606,7 @@ MS_OSU_PRE_V5_MUSIC_OFFSET = -24
 def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
         List[str], List[str], List[str], List[str]
     ]:
+    reset_global_variables()
     global slider_multiplier, slider_tick_rate, column_count, timingpoints
     global balloons, tail_fix
     global osu_format_ver

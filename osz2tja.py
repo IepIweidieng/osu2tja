@@ -168,20 +168,24 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
                     print(f"Error processing {diff} [{info['version']}] difficulty of `{folder_name}`. Continued.", file=sys.stderr)
 
             # Save .tja file
-            with open(tja_fpath, "w+") as f:
-                f.write("\n".join(head_meta))
-                f.write("\n")
-                f.write("\n".join(head_sync_main))
-                f.write("\n")
-                for diff in difficulties:
-                    if diff_contents[diff]:
+            for enc in ["shift-jis", "utf-8-sig"]:
+                try:
+                    with open(tja_fpath, "w+", encoding=enc) as f:
+                        f.write("\n".join(head_meta))
                         f.write("\n")
-                        f.write("\n".join(head_diffs[diff]))
+                        f.write("\n".join(head_sync_main))
                         f.write("\n")
-                        f.write("\n".join(head_syncs[diff]))
-                        f.write("\n\n")
-                        f.write("\n".join(diff_contents[diff]))
-                        f.write("\n")
+                        for diff in difficulties:
+                            if diff_contents[diff]:
+                                f.write("\n")
+                                f.write("\n".join(head_diffs[diff]))
+                                f.write("\n")
+                                f.write("\n".join(head_syncs[diff]))
+                                f.write("\n\n")
+                                f.write("\n".join(diff_contents[diff]))
+                                f.write("\n")
+                except UnicodeEncodeError:
+                    assert enc != "utf-8-sig", "Found invalid UTF-8 characters during conversion."
 
             print_unpend()
             print(f"\rConverting `{osus_fname}` to `{tja_fname}` done!")

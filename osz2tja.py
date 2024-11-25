@@ -184,6 +184,7 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
                                 f.write("\n\n")
                                 f.write("\n".join(diff_contents[diff]))
                                 f.write("\n")
+                    break
                 except UnicodeEncodeError:
                     assert enc != "utf-8-sig", "Found invalid UTF-8 characters during conversion."
 

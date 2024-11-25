@@ -113,7 +113,6 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] Circle, whistle/clap or Katsu column, finish hitsound → `4` (big Katsu)
     - [x] Slider, non-finish hitsound → `5` + `8` (regular bar drumroll)
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
-      - FIXME: Mid-slider BPM changes and slider velocity changes cause incorrect bar drumroll time duration.
     - [x] Spinner, **ANY** hitsound → `7` + `8` (regular balloon roll)
     - [ ] Spinner, finish hitsound → `9` + `8` (special balloon roll) (TODO)
 

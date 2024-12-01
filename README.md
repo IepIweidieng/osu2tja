@@ -10,6 +10,12 @@ An .osu ⟷ .tja converter, for Python 3.
 
 It contains 2 major tools: osz2tja & tja2osz.
 
+## ⚠️ IMPORTANT NOTE ⚠️
+
+For charts which aren't authored by your, the converted charts aren't yours either and are for personal use only.
+
+If you want to distribute any converted charts not authored by you, please ask the chart author(s) for permission first. We don't support content stealing and do strictly condemn it.
+
 ## Requirements
 
 - Python 3.x

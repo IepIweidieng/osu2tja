@@ -18,7 +18,7 @@ If you want to distribute any converted charts not authored by you, please ask t
 
 ## Requirements
 
-- Python 3.x
+- Python 3.10+
 - ffmpeg (optional, for osz2tja)
 
 ### ffmpeg

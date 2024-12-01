@@ -18,7 +18,7 @@
 
 ## 執行环境要求
 
-- Python 3.x
+- Python 3.10+
 - ffmpeg (选用，由 osz2tja 使用)
 
 ### ffmpeg

@@ -65,7 +65,7 @@ def init_globals() -> None:
     CircleSize = 5
     OverallDifficulty = 8.333
     ApproachRate = 5
-    SliderMultiplier = 1.44
+    SliderMultiplier = 1.4
     SliderTickRate = 4
     CircleX = 256
     CircleY = 192

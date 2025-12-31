@@ -1,35 +1,46 @@
-﻿TITLE:あなたの歌姫
-SUBTITLE:--feat.初音ミク
+﻿详细文档  Detailed documentation：
+https://github.com/IepIweidieng/TJAPlayer3/blob/gh-pages/tja.md
+
+有 ※ 者，详見 README.zh-cn.md “转换细节”  For each ※ mark, see README.md "Conversion Details" for details
+并未穷举所有功能。  Not an exhaustive view of every feature.
+
+※
+TITLE:あなたの歌姫
+SUBTITLE:--feat.初音ミク // Artist or Source
 BPM:88.99
 WAVE:utahim.ogg
 OFFSET:-1.232
-DEMOSTART:68.654 (preview)
+DEMOSTART:68.654 // PreviewTime
 
-COURSE:3(Version Oni)
-LEVEL:6(星数)
-SCOREINIT:640,2260初始分数，不可能吧。。
-SCOREDIFF:170??
-BALLOON:7,3(气球的连打个数)
+COURSE:3 // = COURSE:Oni // Version Oni
+LEVEL:6 // 星数  star count
+SCOREINIT:640,2260 // 无 combo 分,真打分  no combo score,shin-uchi score
+SCOREDIFF:170 // combo 加分量  combo bonus amount
+BALLOON:7,3 // 气球的打数  balloon hit count
 
-#START (Note definition begin)
-默认#MEASURE 4/4吗？
+#START // Note definition begin
+默认#MEASURE 4/4  defaults to #MEASURE 4/4
 
-0-空拍
-1-don
-2-ka
-3-big don
-4-big ka
-5-黄条
-7-气球
-8-黄条 or 气球结尾
-1行1小节
+（详見 README.zh-cn.md “转换细节”  See README.md "Conversion Details" for details）
+0 - 空拍  blank
+1 - don
+2 - ka
+3 - big don
+4 - big ka
+5 - 黄条  yellow bar roll
+6 - 大黄条  big yellow bar roll
+7 - 气球  balloon roll
+9 - “大气球” (地瓜/彩球/...)  "big balloon" (potato/party popper/...) roll
+8 - （大）黄条 or （大）气球 的结尾  end of (big) yellow bar roll or (big) balloon roll
+1 个 (,) = 1 小节  1 (,) = 1 bar
 
-1小节，time_unit由每小节的的长度决定（是几分之几拍的意思，非时间，因为BPM可能有一拍之内变速的）
+1 小节，time_unit 由每小节的长度决定（是几分之几拍的意思，非时间，因为 BPM 可能有一拍之内变速的）
+1 bar, time_unit is determined by "length" per bar (in x/y beats, not time, because the BPM can change within a beat)
 1020202000000022
 
-#SCROLL 1 相当于绿线，卷屏速度
-#BPMCHAGNE 70.4红线
-#GOGOSTART Kiai
+（详見 README.zh-cn.md “转换细节”  See README.md "Conversion Details" for details）
+#SCROLL 1 // 相当于绿线，卷屏速度  like a green line, scroll speed
+#BPMCHAGNE 70.4 // 红线  red line
+#GOGOSTART // Kiai
 #GOGOEND
-#MESURE 8/4每小节几拍
-
+#MESURE 8/4 // 每小节 几/4 拍  x/4 beats per bar

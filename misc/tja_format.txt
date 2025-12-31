@@ -1,35 +1,35 @@
-TITLE:���ʤ��θ芪
-SUBTITLE:--feat.�����ߥ�
+﻿TITLE:あなたの歌姫
+SUBTITLE:--feat.初音ミク
 BPM:88.99
 WAVE:utahim.ogg
 OFFSET:-1.232
 DEMOSTART:68.654 (preview)
 
 COURSE:3(Version Oni)
-LEVEL:6(����)
-SCOREINIT:640,2260��ʼ�����������ܰɡ���
+LEVEL:6(星数)
+SCOREINIT:640,2260初始分数，不可能吧。。
 SCOREDIFF:170??
-BALLOON:7,3(������������)
+BALLOON:7,3(气球的连打个数)
 
 #START (Note definition begin)
-Ĭ��#MEASURE 4/4��
+默认#MEASURE 4/4吗？
 
-0-����
+0-空拍
 1-don
 2-ka
 3-big don
 4-big ka
-5-����
-7-����
-8-���� or �����β
-1��1С��
+5-黄条
+7-气球
+8-黄条 or 气球结尾
+1行1小节
 
-1С�ڣ�time_unit��ÿС�ڵĵĳ��Ⱦ������Ǽ���֮���ĵ���˼����ʱ�䣬��ΪBPM������һ��֮�ڱ��ٵģ�
+1小节，time_unit由每小节的的长度决定（是几分之几拍的意思，非时间，因为BPM可能有一拍之内变速的）
 1020202000000022
 
-#SCROLL 1 �൱�����ߣ������ٶ�
-#BPMCHAGNE 70.4����
+#SCROLL 1 相当于绿线，卷屏速度
+#BPMCHAGNE 70.4红线
 #GOGOSTART Kiai
 #GOGOEND
-#MESURE 8/4ÿС�ڼ���
+#MESURE 8/4每小节几拍
 

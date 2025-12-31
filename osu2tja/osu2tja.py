@@ -557,8 +557,8 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
-    # ms per 1/96th note; quantize to 1/96th
-    t_unit = 60.0 * 1000 / tm["bpm"] / 24
+    # ms per 1/192nd note; quantize to 1/192nd
+    t_unit = 60.0 * 1000 / tm["bpm"] / 48
 
     # ignore past-end notes
     if len(bar_data) > 0 and get_dt_unit_cnt(t_unit, bar_data[-1][1], int(math.floor(end))) <= 0:

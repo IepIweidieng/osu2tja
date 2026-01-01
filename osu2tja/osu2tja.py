@@ -461,7 +461,10 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
-        ret.append((ONP_BALLOON, offset, column))
+        if sound & HITSND_FINISH:
+            ret.append((ONP_IMO, offset, column))
+        else:
+            ret.append((ONP_BALLOON, offset, column))
         ret.append((ONP_END, get_real_offset(int(ps[5])), column))
         # how many hit will break a ballon
         global balloons

@@ -237,7 +237,7 @@ def get_osu_sound(snd):
     elif snd == 6: return FINISH
     elif snd == 7: return EMPTY
     elif snd == 8: return EMPTY
-    elif snd == 9: return EMPTY
+    elif snd == 9: return FINISH
     else: assert False
 
 

@@ -123,8 +123,8 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] Circle, whistle/clap or Katsu column, finish hitsound → `4` (big Katsu)
     - [x] Slider, non-finish hitsound → `5` + `8` (regular bar drumroll)
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
-    - [x] Spinner, **ANY** hitsound → `7` + `8` (regular balloon roll)
-    - [ ] Spinner, finish hitsound → `9` + `8` (special balloon roll) (TODO)
+    - [x] Spinner, non-finish hitsound → `7` + `8` (regular balloon roll)
+    - [x] Spinner, finish hitsound → `9` + `8` (special balloon roll) (new)
 
 ## tja2osz
 
@@ -248,8 +248,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] `6` (head of big bar drumroll) → Slider, finish hitsound
     - [ ] `H` (head of big/Don? bar drumroll) → = head of big bar drumroll? (TODO)
     - [x] `7` (head of regular balloon roll) → Spinner, default hitsound
-    - [x] `9` (head of special balloon roll) → Spinner, default hitsound
-      - TODO: use finish hitsound to mark difference
+    - [x] `9` (head of special balloon roll) → Spinner, finish hitsound (improved)
     - [ ] `D` (head of fuze balloon roll) → = regular balloon roll? (TODO)
     - [ ] Head of any roll-type note, after unended roll-type notes → Empty (TODO)
     - [x] `8` (explicit end of rolls), after unended roll-type notes → End of last slider/spinner

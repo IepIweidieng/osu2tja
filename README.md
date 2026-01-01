@@ -103,7 +103,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
   - [x] `SliderMultiplier:` → Base `#SCROLL` multiplier for whole chart (new)
   - [x] Inherited timing point: Slider velocity change → `#SCROLL` (uncapped range)
   - [x] Timing point: Kiai time → `#GOGOSTART` & `#GOGOEND`
-  - [ ] Timing point: Omit first bar line → `#BARLINEOFF` & `#BARLINEON` (TODO)
+  - [x] Timing point: Omit first bar line → `#BARLINEOFF` & `#BARLINEON` (new)
 - TJA Note Definition
   - Timing
     - [x] relative time offset to bar start and end → beat division

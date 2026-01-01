@@ -42,6 +42,10 @@ GAMEMODE_TO_STR = {
     GAMEMODE_MANIA: "osu!mania",
 }
 
+# osu timing effects consts
+OSU_TMFX_GGT = 1 << 0
+OSU_TMFX_HIDEFIRST = 1 << 3
+
 # osu note type consts
 OSU_NOTE_CIRCLE = 1 << 0
 OSU_NOTE_SLIDER = 1 << 1
@@ -84,6 +88,8 @@ FMT_BPMCHANGE = lambda x: f'#BPMCHANGE {repr(x)}'
 FMT_GOGOSTART = lambda: '#GOGOSTART'
 FMT_GOGOEND = lambda: '#GOGOEND'
 FMT_MEASURECHANGE = lambda x, y: f'#MEASURE {repr(x)}/{repr(y)}'
+FMT_BARLINEOFF = lambda: '#BARLINEOFF'
+FMT_BARLINEON = lambda: '#BARLINEON'
 FMT_DELAY = lambda x: f'#DELAY {repr(x)}'
 
 # ----------------------
@@ -182,13 +188,15 @@ def get_timing_point(str, prev_timing_point=None):
 
     offset, rawbpmv = ps[:2]
     beats = ps[2] if len(ps) > 2 else '4'
-    is_ggt = (len(ps) > 7 and ps[7] != '0')
+    effects = ps[7] if len(ps) > 7 else '0'
 
     # fill a timing point dict
     ret = {}
     try:
+        effects = int(effects)
         ret["offset"] = float(offset)  # time
-        ret["GGT"] = is_ggt
+        ret["GGT"] = ((effects & OSU_TMFX_GGT) != 0)
+        ret["hidefirst"] = 1 if (effects & OSU_TMFX_HIDEFIRST) else 0 # 1: true, unhide at measure end
         if float(rawbpmv) > 0: # BPM change
             mspb = ret["mspb"] = float(rawbpmv)
             bpm = ret["bpm"] = 60 * 1000.0 / mspb
@@ -199,7 +207,8 @@ def get_timing_point(str, prev_timing_point=None):
             assert prev_timing_point is not None
             if (prev_timing_point["offset"] == ret["offset"]
                 and prev_timing_point["redline"]
-                and prev_timing_point["GGT"] == is_ggt
+                and prev_timing_point["GGT"] == ret["GGT"]
+                and prev_timing_point["hidefirst"] == ret["hidefirst"]
                 ):
                 ret = prev_timing_point # merge uninherited (red) + inherited (green) timing points
             else:
@@ -617,6 +626,14 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
 
     # bar-terminating symbol (1-symbol beat length if comes solely, otherwise zero length)
     bar_strs.append(',')
+
+    # unhide bar line after first measure of hidefirst timing point
+    if tm["hidefirst"] == 1: # true, unhide at measure end
+        bar_strs.append("\n")
+        bar_strs.append(make_cmd(FMT_BARLINEON))
+        bar_strs.append("\n")
+        tm["hidefirst"] = 2 # true, no unhiding at measure end
+
     bar_str = ''.join(bar_strs)
 
     head = "%4d %6d %s %2d " % (combo_cnt,
@@ -766,7 +783,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     assert len(hitobjects) > 0
 
-    # The music starts at 0ms and the bar line starts too.
+    # The music starts at 0ms and (in osu!(stable)) the bar line starts too.
     # add an initial timing point at whole beats non-after the music
     if timingpoints[0]["offset"] > 0:
         tm_first = timingpoints[0]
@@ -780,6 +797,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             new_tm_first_frac["offset"] = get_real_offset(
                 tm_first["offset"] - init_beats * tm_first["mspb"])
             new_tm_first_frac["beats"] = init_frac_bar_beats
+            new_tm_first_frac["hidefirst"] = 2 # no unhiding at measure end
             new_tms.append(new_tm_first_frac)
 
         # timing point for the first whole bar, if any
@@ -788,13 +806,16 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             new_tm_first_whole["offset"] = get_real_offset(
                 tm_first["offset"] - init_whole_bars * tm_first["beats"] * tm_first["mspb"])
             new_tm_first_whole["beats"] = tm_first["beats"]
+            # hide if the first timing point has hidefirst
+            # otherwise follow osu!(stable) and show
+            new_tm_first_whole["hidefirst"] = 2 if tm_first["hidefirst"] else 0
             new_tms.append(new_tm_first_whole)
 
         if len(new_tms) != 0:
             timingpoints = new_tms + timingpoints
 
-    # collect all #SCROLL #GOGOSTART #GOGOEND commands
-    # these commands will not be broken by #BPMCHANGE or # MEASURE
+    # collect all non-timing commands
+    # these commands will not be broken by #BPMCHANGE or #MEASURE
     assert slider_multiplier is not None
     sv_err_max = 0.00025
     # Ranked osu!taiko beatmaps uses SV 1.40. IID's tja2osu once used SV 1.44 and earlier 1.47.
@@ -802,6 +823,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         else slider_multiplier / 1.40)
     cur_scroll = 1.0
     cur_ggt = False
+    cur_hidefirst = 0
     for tm in timingpoints:
         scroll = tm["scroll"] * base_scroll
         if scroll != cur_scroll:
@@ -810,8 +832,13 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         if tm["GGT"] != cur_ggt:
             commands_within.append((tm["offset"],
                                     tm["GGT"] and FMT_GOGOSTART or FMT_GOGOEND))
+        if (tm["hidefirst"] != 0) != (cur_hidefirst != 0):
+            # command position if no measures between timing points
+            commands_within.append((tm["offset"],
+                                    tm["hidefirst"] and FMT_BARLINEOFF or FMT_BARLINEON))
         cur_scroll = scroll
         cur_ggt = tm["GGT"]
+        cur_hidefirst = tm["hidefirst"]
 
     BPM = timingpoints[0]["bpm"]
     ms_osu_total_offset = MS_OSU_MUSIC_OFFSET

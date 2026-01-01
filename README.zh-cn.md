@@ -87,7 +87,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
   - 音频同步标头
     - [x] 初始 BPM → `BPM:`（纯显示用），​（新功能）​各难度可異，​（新功能）输出不限位数的最简小数
     - [x] 首拍时间 → `OFFSET:`（改进），（新功能）​​各难度可異，（新功能）-15 毫秒音乐误差修正（format v4 与更早版本再额外 +24 毫秒）
-      - `OFFSET:` 取音乐开始为止最后一拍的开始时间，仿 osu!。delguoqing 版是取最早的音符或时间点。
+      - `OFFSET:` 取音乐开始为止最后一拍的开始时间，仿 osu!（稳定版）。delguoqing 版是取最早的音符或时间点。
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。使用 format v4 与更早版本的上架谱面有额外的 -24 毫秒音乐误差（共 -9 毫秒）。
   - 难度标头
     - [x] `Version:` & `Mode:` → TJA 注释（纯参考用）（新功能）
@@ -104,7 +104,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
   - [x] `SliderMultiplier:` → 整个谱面的基本 `#SCROLL` 倍率（新功能）
   - [x] 继承时间点：滑条速度变化 → `#SCROLL`（没限制范围）
   - [x] 时间点：Kiai 时间 → `#GOGOSTART` & `#GOGOEND`
-  - [ ] 时间点：隐藏首个小节线 → `#BARLINEOFF` & `#BARLINEON`（TODO）
+  - [x] 时间点：隐藏首个小节线 → `#BARLINEOFF` & `#BARLINEON`（新功能）
 - TJA 音符定义
   - 乐理计时
     - [x] 相对小节头尾的时间偏移 → 节拍等分数

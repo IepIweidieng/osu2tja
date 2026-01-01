@@ -883,6 +883,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             print_with_pended(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     while obj_idx < len(hitobjects):
+        # skip volumn change and kiai
+        while tm_idx < len(timingpoints) and not is_new_measure(timingpoints[tm_idx]):
+            tm_idx += 1
+
         # get next object to process
         next_obj = hitobjects[obj_idx]
         next_obj_offset = int(math.floor(next_obj[1]))
@@ -892,12 +896,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             next_measure_offset = timingpoints[tm_idx]["offset"]
         else:
             next_measure_offset = bar_offset_begin + bar_max_length + 1
-
-        # skip volumn change and kiai
-        if tm_idx < len(timingpoints) and \
-                not is_new_measure(timingpoints[tm_idx]):
-            tm_idx += 1
-            continue
 
         # check if this object falls into this measure
         end = min(bar_offset_begin + bar_max_length, next_measure_offset)
@@ -917,9 +915,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
                                          bar_data, bar_offset_begin, end, tja_contents)
                 bar_data = []
-                measure = timingpoints[tm_idx]["beats"]
-                if timingpoints[tm_idx]["redline"]:
-                    curr_bpm = timingpoints[tm_idx]["bpm"]
+                tm_next = timingpoints[tm_idx]
+                measure = tm_next["beats"]
+                if tm_next["redline"]:
+                    curr_bpm = tm_next["bpm"]
                     bar_offset_begin = next_measure_offset
                     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
                 else:
@@ -935,11 +934,12 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
                 # add new commands
                 tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
-
-                tm_idx += 1
             else:
                 assert False, "BAR END POS ERROR"
 
+            # reached next measure offset
+            if int(math.floor(end)) == int(math.floor(next_measure_offset)):
+                tm_idx += 1
         else:
             if next_obj[1] < bar_offset_begin:
                 bar_data.append((next_obj[0], bar_offset_begin))

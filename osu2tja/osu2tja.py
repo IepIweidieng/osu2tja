@@ -796,7 +796,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     # these commands will not be broken by #BPMCHANGE or # MEASURE
     assert slider_multiplier is not None
     sv_err_max = 0.00025
-    # Ranked osu!taiko beatmaps uses SV 1.40. tja2osu uses SV 1.44. Allows up-to SV 1.47.
+    # Ranked osu!taiko beatmaps uses SV 1.40. IID's tja2osu once used SV 1.44 and earlier 1.47.
     base_scroll = (1.0 if 1.40 - sv_err_max <= slider_multiplier <= 1.47 + sv_err_max
         else slider_multiplier / 1.40)
     cur_scroll = 1.0

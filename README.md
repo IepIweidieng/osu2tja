@@ -231,7 +231,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] Mid-bar `#BPMCHANGE`s
     - [x] Sum of (bar length ÷ beat division ÷ BPM at each division) → relative time offset to bar start (bug fixed for fractional-beat bars with `#SCROLL`)
     - [ ] ms-level timing accuracy (TODO)
-      - Currently everything is pre-quantized to 1/96ths (1/24 beats).
+      - Currently everything is pre-quantized to 1/192nds (1/48 beats) (improved).
   - Note Symbols
     - [x] `0` (blank) → Empty
     - [x] `1` (regular Don) → Circle, default hitsound

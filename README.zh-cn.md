@@ -91,8 +91,8 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。使用 format v4 与更早版本的上架谱面有额外的 -24 毫秒音乐误差（共 -9 毫秒）。
   - 难度标头
     - [x] `Version:` & `Mode:` → TJA 注释（纯参考用）（新功能）
-    - [ ] `Version:` → `NOTEDESIGNER<n>:`（客串制谱者的难度）（TODO）
-    - [ ] `Creator:` → `NOTEDESIGNER<n>:`（其他）（TODO）
+    - [ ] `Version:` → `NOTESDESIGNER<n>:`（客串制谱者的难度）（TODO）
+    - [ ] `Creator:` → `NOTESDESIGNER<n>:`（其他）（TODO）
     - [x] 难度按 `OverallDifficulty:` 排序 → `COURSE:`（@SamLangTen；自动化 —— @MoshirMoshir；改进为含 `COURSE:Edit`）
     - [x] `OverallDifficulty:` → `LEVEL:`（@SamLangTen）
       - TODO：使用实际的 osu! 难度星数。

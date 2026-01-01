@@ -90,8 +90,8 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons. Ranked format v4 and earlier beatmaps have additional -24ms music offset (-9ms in total).
   - Difficulty Headers
     - [x] `Version:` & `Mode:` → TJA comment (for reference only) (new)
-    - [ ] `Version:` → `NOTEDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)
-    - [ ] `Creator:` → `NOTEDESIGNER<n>:` (otherwise) (TODO)
+    - [ ] `Version:` → `NOTESDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)
+    - [ ] `Creator:` → `NOTESDESIGNER<n>:` (otherwise) (TODO)
     - [x] Difficulties sorted by `OverallDifficulty:` → `COURSE:` (@SamLangTen; automated — @MoshirMoshir; improved to include `COURSE:Edit`)
     - [x] `OverallDifficulty:` → `LEVEL:` (@SamLangTen)
       - TODO: Use the actual osu! star rating.

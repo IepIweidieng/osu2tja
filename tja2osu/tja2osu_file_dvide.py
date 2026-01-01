@@ -6,7 +6,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 try:
     from . import tja2osu
 except ImportError:
-    import tja2osu.tja2osu
+    try:
+        import tja2osu.tja2osu
+    except ImportError:
+        import tja2osu
 from common.utils import print_with_pended, print_pend, print_unpend
 
 import argparse

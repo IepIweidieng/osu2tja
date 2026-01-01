@@ -59,7 +59,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 ### Conversion Details
 
 - Input (`.osu`):
-  - [x] osu file format v4&ndash;14 (those tested; warns and continues to process for other versions) (improved)
+  - [x] osu file format v3&ndash;14 (those tested; warns and continues to process for other versions) (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion

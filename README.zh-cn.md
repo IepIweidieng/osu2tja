@@ -59,7 +59,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 ### 转换细节
 
 - 输入（`.osu`）：
-  - [x] osu file format v4\~14（有测试过的；其他版本会警告而继续处理）（改进）
+  - [x] osu file format v3\~14（有测试过的；其他版本会警告而继续处理）（改进）
   - [x] 编码：无 BOM 的 UTF-8
 - TJA 标头
   - [x] taiko 模式

@@ -224,7 +224,12 @@ def get_osu_type(snd):
             return SLIDER_END
         elif lasting_note == SPINNER:
             return SPINNER_END
-    assert False, repr(snd) + repr(lasting_note)
+        print_with_pended(f"Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
+        return None
+    print_with_pended(f"Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
+    if lasting_note is not None:
+        print_with_pended(f"Note: With unended roll-type note symbol {repr(lasting_note)}", file=sys.stderr)
+    return None
 
 def get_osu_sound(snd):
     snd = int(snd)
@@ -238,7 +243,7 @@ def get_osu_sound(snd):
     elif snd == 7: return EMPTY
     elif snd == 8: return EMPTY
     elif snd == 9: return FINISH
-    else: assert False
+    else: return EMPTY # unknown; already warned
 
 
 def get_all(filename):
@@ -337,8 +342,11 @@ def real_do_cmd(cmd):
     if cmd[0] == BPMCHANGE:
         get_or_create_curr_red_tm()["bpm"] = cmd[1]
     elif cmd[0] == MEASURE:
-        assert len(bar_data) == 0, "can't change measure within a bar"
-        get_or_create_curr_red_tm()["measure"] = cmd[1]
+        if len(bar_data) != 0:
+            print_with_pended("Warning: Changing measure within a bar is handled as changing at next bar.", file=sys.stderr)
+            get_last_red_tm()["measure"] = cmd[1]
+        else:
+            get_or_create_curr_red_tm()["measure"] = cmd[1]
     elif cmd[0] == SCROLL:
         get_or_create_curr_tm()["scroll"] = cmd[1]
     elif cmd[0] == GOGOSTART:
@@ -350,15 +358,18 @@ def real_do_cmd(cmd):
     elif cmd[0] == BARLINEON:
         get_or_create_curr_tm()["hidefirst"] = False
     else:
-        assert False, "unknown or unsupported command"
+        print_with_pended(f"Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
 
 def add_a_note(snd, offset):
     global lasting_note
     snd = int(snd)
-    HitObjects.append((get_osu_type(snd), get_osu_sound(snd), offset))
-    if get_osu_type(snd) in (SLIDER, SPINNER):
-        lasting_note = get_osu_type(snd)
-    if get_osu_type(snd) in (SLIDER_END, SPINNER_END):
+    (osu_type, osu_sound) = (get_osu_type(snd), get_osu_sound(snd))
+    if osu_type is None:
+        return
+    HitObjects.append((osu_type, osu_sound, offset))
+    if osu_type in (SLIDER, SPINNER):
+        lasting_note = osu_type
+    if osu_type in (SLIDER_END, SPINNER_END):
         lasting_note = None
     if debug_mode:
         print_with_pended(HitObjects[-1], file=sys.stderr)

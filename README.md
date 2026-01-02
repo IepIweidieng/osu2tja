@@ -253,5 +253,5 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - [x] `8` (explicit end of rolls), after unended roll-type notes → End of last slider/spinner
     - [ ] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (TODO)
     - [ ] `#END` (command), after unended roll-type notes → Forced end of last slider/spinner (TODO)
-    - [ ] `8`, straying → Empty (TODO)
+    - [x] `8`, straying → Empty (new)
     - [ ] Any roll-type note, non-positive time duration → Empty (TODO)

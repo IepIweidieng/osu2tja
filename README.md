@@ -207,8 +207,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
     - TODO: detect and avoid impossible branch routes
   - [x] `#N`/`#E`/`#M` → Split into branch TJA
     - FIXME: Omitting some branches causes missing bars.
-  - [ ] `#BRANCHEND` → Begin branch-common section
-    - FIXME: `#BRANCHEND` is recognized but ignored.
+  - [x] `#BRANCHEND` → Begin branch-common section (new bug fix)
   - [x] `#BPMCHANGE`, positive → Uninherited timing point: BPM
   - [ ] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (TODO)
   - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values

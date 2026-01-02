@@ -209,8 +209,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - TODO：检测并回避不可能的分歧路线
   - [x] `#N`/`#E`/`#M` → 拆分为分歧 TJA
     - FIXME：省略部分分歧分支会造成缺少小节的间题。
-  - [ ] `#BRANCHEND` → 分歧共通部分开始
-    - FIXME：`#BRANCHEND` 有被识别但被忽略。
+  - [x] `#BRANCHEND` → 分歧共通部分开始（新修正）
   - [x] `#BPMCHANGE`，正 → 非继承时间点：BPM
   - [ ] `#BPMCHANGE`，负，正的 (小节长 ÷ BPM) → 非继承时间点：BPM 取绝对值（TODO）
   - [x] `#MEASURE`，正整数拍数 → 非继承时间点：小节拍数（改进），（新功能）小数參数

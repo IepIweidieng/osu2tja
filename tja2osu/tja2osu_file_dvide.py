@@ -142,8 +142,7 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
         if b"#BRANCHSTART" in line_no_comment:
             has_branch = True
             continue
-        if b"#BRANCHEND" in line_no_comment \
-            or b"#SECTION" in line_no_comment:
+        if b"#SECTION" in line_no_comment:
             continue
         if b"#E" in line_no_comment:
             which = "E"

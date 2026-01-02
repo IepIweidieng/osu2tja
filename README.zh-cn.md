@@ -77,7 +77,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] `PreviewTime:` → `DEMOSTART:`，（新功能）经 osu! 校准误差修正
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
     - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
-    - [ ] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（TODO）
+    - [x] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（新功能）
   - 美术标头
     - [x] 首个置中背景事件：文件名 → `PREIMAGE:`（新功能）
     - [ ] ~~首个置中背景事件：文件名 → `BGIMAGE:`~~（计划外）

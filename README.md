@@ -76,7 +76,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] `PreviewTime:` → `DEMOSTART:`, (new) with osu! music offset correction
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
     - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
-    - [ ] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (TODO)
+    - [x] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (new)
   - Decoration Headers
     - [x] First centered background event: filename → `PREIMAGE:` (new)
     - [ ] ~~First centered background event: filename → `BGIMAGE:`~~ (not planned)

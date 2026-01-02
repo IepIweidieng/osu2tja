@@ -188,6 +188,7 @@ def get_timing_point(str, prev_timing_point=None):
 
     offset, rawbpmv = ps[:2]
     beats = ps[2] if len(ps) > 2 else '4'
+    sevol = ps[5] if len(ps) > 5 else '100'
     effects = ps[7] if len(ps) > 7 else '0'
 
     # fill a timing point dict
@@ -195,6 +196,7 @@ def get_timing_point(str, prev_timing_point=None):
     try:
         effects = int(effects)
         ret["offset"] = float(offset)  # time
+        ret["sevol"] = float(sevol)
         ret["GGT"] = ((effects & OSU_TMFX_GGT) != 0)
         ret["hidefirst"] = 1 if (effects & OSU_TMFX_HIDEFIRST) else 0 # 1: true, unhide at measure end
         if float(rawbpmv) > 0: # BPM change
@@ -827,6 +829,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     cur_scroll = 1.0
     cur_ggt = False
     cur_hidefirst = 0
+    sevol_max = 0
     for tm in timingpoints:
         scroll = tm["scroll"] * base_scroll
         if scroll != cur_scroll:
@@ -839,6 +842,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             # command position if no measures between timing points
             commands_within.append((tm["offset"],
                                     tm["hidefirst"] and FMT_BARLINEOFF or FMT_BARLINEON))
+        if tm["sevol"] > sevol_max:
+            sevol_max = tm["sevol"]
         cur_scroll = scroll
         cur_ggt = tm["GGT"]
         cur_hidefirst = tm["hidefirst"]
@@ -850,6 +855,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     OFFSET = (-timingpoints[0]["offset"] - ms_osu_total_offset) / 1000.0
     DEMOSTART = (preview + ms_osu_total_offset) / 1000.0
     MOVIEOFFSET = (movieoffset + ms_osu_total_offset) / 1000.0
+    SONGVOL = 100 / (sevol_max / 100) if sevol_max > 100 else 100
+    SEVOL = sevol_max if sevol_max < 100 else 100
 
     scroll = timingpoints[0]["scroll"]
     tm_idx = 0  # current timing point index
@@ -884,6 +891,12 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     tja_heads_sync.append("BPM:%s" % repr(timingpoints[0]["bpm"]))
     tja_heads_sync.append("OFFSET:%s" % repr(OFFSET))
+
+    # not timing syncing, but better to consistent across difficulties
+    if SONGVOL != 100:
+        tja_heads_sync.append("SONGVOL:%s" % repr(SONGVOL))
+    if SEVOL != 100:
+        tja_heads_sync.append("SEVOL:%s" % repr(SEVOL))
 
     str_info_diff_orig = f"// osu! difficulty: {version}"
     if gamemode_idx != GAMEMODE_TAIKO:

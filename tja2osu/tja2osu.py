@@ -217,10 +217,12 @@ WHISTLE = 2
 def get_osu_type(snd):
     assert snd != '0'
     # non-rolls: end unended roll first if exists, then emit the note
-    if snd in ('1', '2', '3', '4'): return CIRCLE if lasting_note is None else FORCED_END
+    if snd in ('1', '2', '3', '4', 'A', 'B', 'G'): return CIRCLE if lasting_note is None else FORCED_END
+    # converted to empty
+    if snd in ('F', 'C'): return None if lasting_note is None else FORCED_END
     # roll heads: ignore repeated roll heads (especially for special balloon bonus border)
-    if snd in ('5', '6'): return SLIDER if lasting_note is None else None
-    if snd in ('7', '9'): return SPINNER if lasting_note is None else None
+    if snd in ('5', '6', 'I', 'H'): return SLIDER if lasting_note is None else None
+    if snd in ('7', '9', 'D'): return SPINNER if lasting_note is None else None
     # roll end and unrecognized note symbols
     if snd == '8':
         if lasting_note is not None and lasting_note[0] == SLIDER:
@@ -238,14 +240,18 @@ def get_osu_sound(snd):
     assert snd != '0'
     if snd == '1': return EMPTY
     elif snd == '2': return CLAP
-    elif snd == '3': return FINISH
-    elif snd == '4': return FINISH+CLAP
+    elif snd in ('3', 'A'): return FINISH
+    elif snd in ('4', 'B'): return FINISH+CLAP
+    elif snd == 'G': return FINISH+WHISTLE+CLAP
     elif snd == '5': return EMPTY
+    elif snd == 'I': return CLAP
     elif snd == '6': return FINISH
+    elif snd == 'H': return FINISH+CLAP
     elif snd == '7': return EMPTY
     elif snd == '8': return EMPTY
     elif snd == '9': return FINISH
-    else: return EMPTY # unknown; already warned
+    elif snd == 'D': return CLAP
+    else: return EMPTY # empty or unknown and warned
 
 
 def get_all(filename):

@@ -246,20 +246,20 @@ Tool created by @delguoqing
     - [x] `0` (blank) → Empty
     - [x] `1` (regular Don) → Circle, default hitsound
     - [x] `2` (regular Katsu) → Circle, clap hitsound
-    - [ ] `F` (ad-lib) → = regular Don/Katsu? (TODO)
-    - [ ] `C` (bomb/mine) → = regular Don/Katsu? empty? (TODO)
+    - [x] `F` (ad-lib) → empty
+    - [x] `C` (bomb/mine) → empty
     - [x] `3` (big Don) → Circle, finish hitsound
-    - [ ] `A` (handed big Don) → Circle, finish hitsound (TODO)
+    - [x] `A` (handed big Don) → (big Don) Circle, finish hitsound (new)
     - [x] `4` (big Katsu) → Circle, clap finish hitsound
-    - [ ] `B` (handed big Katsu) → Circle, clap finish hitsound (TODO)
-    - [ ] `G` (Kadon) → = big Don/Katsu? (TODO)
+    - [x] `B` (handed big Katsu) → (big Katsu) Circle, clap finish hitsound (new)
+    - [x] `G` (Kadon) → (big Katsu) Circle, whistle + clap finish hitsound (new)
     - [x] `5` (head of regular bar drumroll) → Slider, default hitsound
-    - [ ] `I` (head of regular/Katsu? bar drumroll) → = head of regular bar drumroll? (TODO)
+    - [x] `I` (head of regular/Katsu? bar drumroll) → (regular bar drumroll) Slider, clap hitsound (new)
     - [x] `6` (head of big bar drumroll) → Slider, finish hitsound
-    - [ ] `H` (head of big/Don? bar drumroll) → = head of big bar drumroll? (TODO)
+    - [x] `H` (head of big/Don? bar drumroll) → (big bar drumroll) Slider, clap finish hitsound (new)
     - [x] `7` (head of regular balloon roll) → Spinner, default hitsound
     - [x] `9` (head of special balloon roll) → Spinner, finish hitsound (improved)
-    - [ ] `D` (head of fuze balloon roll) → = regular balloon roll? (TODO)
+    - [x] `D` (head of fuze balloon roll) → (regular balloon) Spinner, clap hitsound (new)
     - [x] Head of any roll-type note, after unended roll-type notes → Empty
     - [x] `8` (explicit end of rolls), after unended roll-type notes → End of last slider/spinner
     - [x] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (improved)

@@ -204,9 +204,10 @@ def add_default_timing_point():
 
 CIRCLE = 1
 SLIDER = 2
-SPINNER = 12 
-SLIDER_END = -2
-SPINNER_END = -12 
+SPINNER = 12
+SLIDER_END = -SLIDER
+SPINNER_END = -SPINNER
+FORCED_END = -CIRCLE
 
 EMPTY = 0
 CLAP = 8
@@ -215,19 +216,22 @@ WHISTLE = 2
 
 def get_osu_type(snd):
     assert snd != '0'
-    if snd in ('1', '2', '3', '4'): return CIRCLE
-    if snd in ('5', '6'): return SLIDER
-    if snd in ('7', '9'): return SPINNER
+    # non-rolls: end unended roll first if exists, then emit the note
+    if snd in ('1', '2', '3', '4'): return CIRCLE if lasting_note is None else FORCED_END
+    # roll heads: ignore repeated roll heads (especially for special balloon bonus border)
+    if snd in ('5', '6'): return SLIDER if lasting_note is None else None
+    if snd in ('7', '9'): return SPINNER if lasting_note is None else None
+    # roll end and unrecognized note symbols
     if snd == '8':
-        if lasting_note == SLIDER:
+        if lasting_note is not None and lasting_note[0] == SLIDER:
             return SLIDER_END
-        elif lasting_note == SPINNER:
+        elif lasting_note is not None and lasting_note[0] == SPINNER:
             return SPINNER_END
         print_with_pended(f"Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
     print_with_pended(f"Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
     if lasting_note is not None:
-        print_with_pended(f"Note: With unended roll-type note symbol {repr(lasting_note)}", file=sys.stderr)
+        print_with_pended(f"Note: With unended roll-type note {lasting_note}", file=sys.stderr)
     return None
 
 def get_osu_sound(snd):
@@ -245,7 +249,7 @@ def get_osu_sound(snd):
 
 
 def get_all(filename):
-    global has_started, curr_time
+    global has_started, curr_time, lasting_note
     try: fobj = open(filename, "rb")
     except IOError: rtassert(False, "can't open tja file.")
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
@@ -264,6 +268,15 @@ def get_all(filename):
             break
         if ("#" in line): handle_cmd(line)
         else: handle_note(line)
+    else:
+        print_with_pended(f"Warning: Missing #END at end of chart.", file=sys.stderr)
+    if len(bar_data) != 0:
+        print_with_pended(f"Warning: Missing comma (,) at end of chart.", file=sys.stderr)
+        handle_note(",")
+    if lasting_note is not None:
+        print_with_pended(f"Warning: Unended roll-type note {lasting_note} ended by end of chart at {curr_time}.", file=sys.stderr)
+        add_a_note('8', curr_time)
+
     # prevent bar lines at and after #END (probably missing and implicit)
     tm = get_last_red_tm()
     real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
@@ -363,11 +376,15 @@ def real_do_cmd(cmd):
 def add_a_note(snd, offset):
     global lasting_note
     (osu_type, osu_sound) = (get_osu_type(snd), get_osu_sound(snd))
+    if osu_type == FORCED_END: # end unended roll, then emit the note
+        add_a_note('8', offset)
+        add_a_note(snd, offset)
+        return
     if osu_type is None:
         return
     HitObjects.append((osu_type, osu_sound, offset))
     if osu_type in (SLIDER, SPINNER):
-        lasting_note = osu_type
+        lasting_note = (osu_type, snd, offset)
     if osu_type in (SLIDER_END, SPINNER_END):
         lasting_note = None
     if debug_mode:
@@ -467,16 +484,13 @@ def handle_a_bar():
         for data in bar_data:
             if isinstance(data, str): #note
                 note_cnt += 1
-                if data == "0" or \
-                    (lasting_note != None and data != '8'):
-                    curr_time += get_t_unit(get_last_red_tm(), tot_note)
-                    continue
-                add_a_note(data, curr_time)
-                if print_each_note:
-                    print_with_pended(note_cnt, data, curr_time,
-                        bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note),
-                        get_t_unit(get_last_red_tm(), tot_note),
-                        file=sys.stderr)
+                if data != "0":
+                    add_a_note(data, curr_time)
+                    if print_each_note:
+                        print_with_pended(note_cnt, data, curr_time,
+                            bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note),
+                            get_t_unit(get_last_red_tm(), tot_note),
+                            file=sys.stderr)
                 curr_time += get_t_unit(get_last_red_tm(), tot_note)           
             else: #cmd
                 real_do_cmd(data)

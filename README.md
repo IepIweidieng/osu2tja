@@ -260,9 +260,9 @@ Tool created by @delguoqing
     - [x] `7` (head of regular balloon roll) → Spinner, default hitsound
     - [x] `9` (head of special balloon roll) → Spinner, finish hitsound (improved)
     - [ ] `D` (head of fuze balloon roll) → = regular balloon roll? (TODO)
-    - [ ] Head of any roll-type note, after unended roll-type notes → Empty (TODO)
+    - [x] Head of any roll-type note, after unended roll-type notes → Empty
     - [x] `8` (explicit end of rolls), after unended roll-type notes → End of last slider/spinner
-    - [ ] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (TODO)
-    - [ ] `#END` (command), after unended roll-type notes → Forced end of last slider/spinner (TODO)
+    - [x] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (improved)
+    - [x] `#END` (command), after unended roll-type notes → Forced end of last slider/spinner (new)
     - [x] `8`, straying → Empty (new)
     - [ ] Any roll-type note, non-positive time duration → Empty (TODO)

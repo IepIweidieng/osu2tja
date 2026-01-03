@@ -31,6 +31,8 @@ After downloading, unzip it and copy `bin/ffmpeg.exe` into the same directory as
 
 ## osz2tja
 
+Tool created by @SamLangTen
+
 ### Usage
 
 ```bash
@@ -56,9 +58,40 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 - Beatmaps with **multiple song audio files** (unrankable but seen in loved beatmaps) are also split into multiple `.tja` files. (new)
 - **Automatically copy** song audio files (@SamLangTen; **automatic OGG conversion** — @k2angel), (new) as well as background image and other files used by the chart.
 
-### Conversion Details
+## tja2osz
 
-- Input (`.osu`):
+Tool created by @MoshirMoshir
+
+### Usage
+
+```bash
+python tja2osz.py [input_folder] [output_folder]
+```
+
+Example:
+
+```bash
+python tja2osz.py a_folder b_folder
+```
+
+- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). Defaults to `Songs` if omitted.
+- `[output_folder]` is where the converted `.osu` files and audio files will be saved. Defaults to `Output` if omitted.
+
+tja2osz will create a folder in `[output_folder]` for each processed `.tja` file. This folder will contain converted `.osu` files and audio file. tja2osz will also create an `.osz` file in `[output_folder]` for these `.osu` files.
+
+### Features
+
+- **Batch conversion** of `.tja` files to `.osz` files. (new)
+- Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file. (fixed)
+- **Automatically copy** song audio, background image, and other files used by the chart (new)
+
+## Conversion Details
+
+### osu2tja
+
+Tool created by @delguoqing
+
+- Input (`.osu`) (extracted from `.osz` by osz2tja):
   - [x] osu file format v3&ndash;14 (those tested; warns and continues to process for other versions) (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
@@ -126,33 +159,11 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
     - [x] Spinner, non-finish hitsound → `7` + `8` (regular balloon roll)
     - [x] Spinner, finish hitsound → `9` + `8` (special balloon roll) (new)
 
-## tja2osz
+### tja2osu
 
-### Usage
+Tool created by @delguoqing
 
-```bash
-python tja2osz.py [input_folder] [output_folder]
-```
-
-Example:
-
-```bash
-python tja2osz.py a_folder b_folder
-```
-
-- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). Defaults to `Songs` if omitted.
-- `[output_folder]` is where the converted `.osu` files and audio files will be saved. Defaults to `Output` if omitted.
-
-tja2osz will create a folder in `[output_folder]` for each processed `.tja` file. This folder will contain converted `.osu` files and audio file. tja2osz will also create an `.osz` file in `[output_folder]` for these `.osu` files.
-
-### Features
-
-- **Batch conversion** of `.tja` files to `.osz` files. (new)
-- Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file. (fixed)
-- **Automatically copy** song audio, background image, and other files used by the chart (new)
-
-### Conversion Details
-- Output (`.osu`):
+- Output (`.osu`) (packed to song folder and `.osz` by tja2osz):
   - [x] osu file format v14 (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.

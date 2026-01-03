@@ -31,6 +31,8 @@
 
 ## osz2tja
 
+本工具由 @SamLangTen 建立
+
 ### 用法
 
 ```bash
@@ -56,9 +58,40 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 - **有多个音乐文件**的 Beatmaps（不可上架，但可見于部分社区喜爱（Loved）谱面）也会拆为多份 `.tja`。（新功能）
 - **自动复制**谱面所使用的音频文件（@SamLangTen；**自动 OGG 转换** —— @k2angel）、（新功能）以及背景图片、与其它文件。
 
-### 转换细节
+## tja2osz
 
-- 输入（`.osu`）：
+本工具由 @MoshirMoshir 建立
+
+### 用法
+
+```bash
+python tja2osz.py [input_folder] [output_folder]
+```
+
+示例：
+
+```bash
+python tja2osz.py a_folder b_folder
+```
+
+- `[input_folder]` 为 `.tja` 文件所在的位置（可在任意内部目录中）。若省略，默认为 `Songs`。
+- `[output_folder]` 为转换后的 `.osu` 文件和音频文件的输出位置。若省略，默认为 `Output`。
+
+tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一个文件夹，其中包含转换后的 `.osu` 文件和音频文件。并且 tja2osz 会在 `[output_folder]` 中为转换后的 `.osu` 文件创建 `.osz` 文件。
+
+### 功能
+
+- **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。（新功能）
+- 自动拆分各个难度、玩家侧、谱面分歧主路線为各自的 `.osu` 难度文件。（已修正）
+- **自动复制**谱面所使用的音乐音频、背景图片、与其它文件。（新功能）
+
+## 转换细节
+
+### osu2tja
+
+本工具由 @delguoqing 建立
+
+- 输入（`.osu`）（使用 osz2tja 时由 `.osz` 提取）：
   - [x] osu file format v3\~14（有测试过的；其他版本会警告而继续处理）（改进）
   - [x] 编码：无 BOM 的 UTF-8
 - TJA 标头
@@ -127,34 +160,11 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
     - [x] 转盘，非 finish 音效 → `7` + `8`（一般气球连打）
     - [x] 转盘，finish 音效 → `9` + `8` (特殊气球连打)（新功能）
 
-## tja2osz
+### tja2osu
 
-### 用法
+本工具由 @delguoqing 建立
 
-```bash
-python tja2osz.py [input_folder] [output_folder]
-```
-
-示例：
-
-```bash
-python tja2osz.py a_folder b_folder
-```
-
-- `[input_folder]` 为 `.tja` 文件所在的位置（可在任意内部目录中）。若省略，默认为 `Songs`。
-- `[output_folder]` 为转换后的 `.osu` 文件和音频文件的输出位置。若省略，默认为 `Output`。
-
-tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一个文件夹，其中包含转换后的 `.osu` 文件和音频文件。并且 tja2osz 会在 `[output_folder]` 中为转换后的 `.osu` 文件创建 `.osz` 文件。
-
-### 功能
-
-- **批量转换** `.tja` 谱面文件为 `.osz` 谱面文件。（新功能）
-- 自动拆分各个难度、玩家侧、谱面分歧主路線为各自的 `.osu` 难度文件。（已修正）
-- **自动复制**谱面所使用的音乐音频、背景图片、与其它文件。（新功能）
-
-### 转换细节
-
-- 输出（`.osu`）：
+- 输出（`.osu`）（使用 tja2osz 时打包为歌曲资料夹与 `.osz`）：
   - [x] osu file format v14（改进）
   - [x] 编码：无 BOM 的 UTF-8
   - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。

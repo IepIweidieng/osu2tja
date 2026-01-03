@@ -265,4 +265,4 @@ Tool created by @delguoqing
     - [x] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (improved)
     - [x] `#END` (command), after unended roll-type notes → Forced end of last slider/spinner (new)
     - [x] `8`, straying → Empty (new)
-    - [ ] Any roll-type note, non-positive time duration → Empty (TODO)
+    - [x] Any roll-type note, non-positive time duration → Empty (new)

@@ -649,21 +649,23 @@ def write_HitObjects(fout: TextIO) -> None:
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SLIDER)
             ln = lasting_note
-            tmr = get_red_tm_at(int(ln[2]))
-            tmg = get_tm_at(int(ln[2])) # green if red + green, otherwise red
-            curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
-            print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
-                    int(get_real_offset(ln[2])), ln[0], ln[1], \
-                    int(CircleX+curve_len), CircleY, 1, curve_len),
-                file=fout)
+            if ho[2] > ln[2]: # skip non-positive duration rolls
+                tmr = get_red_tm_at(int(ln[2]))
+                tmg = get_tm_at(int(ln[2])) # green if red + green, otherwise red
+                curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
+                print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
+                        int(get_real_offset(ln[2])), ln[0], ln[1], \
+                        int(CircleX+curve_len), CircleY, 1, curve_len),
+                    file=fout)
             lasting_note = None
         elif ho[0] == SPINNER_END:
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SPINNER, "this is abnormal")
             ln = lasting_note
-            print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
-                    ln[0], ln[1], int(get_real_offset(ho[2]))),
-                file=fout)
+            if ho[2] > ln[2]: # skip non-positive length rolls
+                print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
+                        ln[0], ln[1], int(get_real_offset(ho[2]))),
+                    file=fout)
             lasting_note = None
     print("", file=fout)
 

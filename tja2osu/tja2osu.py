@@ -214,12 +214,11 @@ FINISH = 4
 WHISTLE = 2 
 
 def get_osu_type(snd):
-    snd = int(snd)
-    assert snd != 0
-    if snd in (1, 2, 3, 4): return CIRCLE
-    if snd in (5, 6): return SLIDER
-    if snd in (7, 9): return SPINNER
-    if snd == 8:
+    assert snd != '0'
+    if snd in ('1', '2', '3', '4'): return CIRCLE
+    if snd in ('5', '6'): return SLIDER
+    if snd in ('7', '9'): return SPINNER
+    if snd == '8':
         if lasting_note == SLIDER:
             return SLIDER_END
         elif lasting_note == SPINNER:
@@ -232,17 +231,16 @@ def get_osu_type(snd):
     return None
 
 def get_osu_sound(snd):
-    snd = int(snd)
-    assert snd != 0
-    if snd == 1: return EMPTY
-    elif snd == 2: return CLAP
-    elif snd == 3: return FINISH
-    elif snd == 4: return FINISH+CLAP
-    elif snd == 5: return EMPTY
-    elif snd == 6: return FINISH
-    elif snd == 7: return EMPTY
-    elif snd == 8: return EMPTY
-    elif snd == 9: return FINISH
+    assert snd != '0'
+    if snd == '1': return EMPTY
+    elif snd == '2': return CLAP
+    elif snd == '3': return FINISH
+    elif snd == '4': return FINISH+CLAP
+    elif snd == '5': return EMPTY
+    elif snd == '6': return FINISH
+    elif snd == '7': return EMPTY
+    elif snd == '8': return EMPTY
+    elif snd == '9': return FINISH
     else: return EMPTY # unknown; already warned
 
 
@@ -319,8 +317,10 @@ def handle_cmd(line: str) -> None:
     elif ("#"+DELAY) in line:
         arg_str = line.partition('#'+DELAY)[2][1:].strip()
         cmd = (DELAY, float(arg_str))
-    else:
-        return
+    else: # default handling
+        cmd_arg = line.lstrip().split(maxsplit=1)
+        cmd_str, arg_str = cmd_arg[0], cmd_arg[1] if len(cmd_arg) > 1 else ""
+        cmd = (cmd_str.removeprefix('#'), arg_str)
 
     if bar_data == []:
         real_do_cmd(cmd)
@@ -362,7 +362,6 @@ def real_do_cmd(cmd):
 
 def add_a_note(snd, offset):
     global lasting_note
-    snd = int(snd)
     (osu_type, osu_sound) = (get_osu_type(snd), get_osu_sound(snd))
     if osu_type is None:
         return
@@ -503,10 +502,12 @@ def handle_a_bar():
 def handle_note(line):
     global bar_data
     for ch in line:
-        if ch.isdigit():
+        if ch.isalnum() and ch.isascii():
             bar_data.append(ch)
         elif ch == ",":
             handle_a_bar()
+        elif not ch.isspace():
+            print_with_pended(f"Warning: Invalid TJA note symbol {repr(ch)} ignored", file=sys.stderr)
 
 def write_fmt_ver_str(fout: TextIO) -> None:
     print("osu file format v14", file=fout)

@@ -192,6 +192,8 @@ MS_OSU_MUSIC_OFFSET = 15
 <https://github.com/ppy/osu/issues/24625>
 """
 
+BEAT_RES = 192 // 4 # 1/192nd
+
 def add_default_timing_point():
     global curr_time
 
@@ -309,16 +311,16 @@ def get_real_offset(int_offset):
     int_delta = abs(int_offset - tm["offset"])
     sign = (int_offset - tm["offset"] > 0 and 1 or -1)
 
-    t_unit_cnt = round(int_delta * tm["bpm"] * 24 / 60000)
+    t_unit_cnt = round(int_delta * tm["bpm"] * BEAT_RES / 60000)
 
-    beat_cnt = t_unit_cnt / 24
+    beat_cnt = t_unit_cnt / BEAT_RES
     ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
     
     if debug_mode:
         print_with_pended(tm, file=sys.stderr)
         print(t_unit_cnt, file=sys.stderr)
         print("DELTA = ", int_delta, file=sys.stderr)
-        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/24, file=sys.stderr)
+        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/BEAT_RES, file=sys.stderr)
         print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
         print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
 

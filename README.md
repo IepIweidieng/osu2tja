@@ -143,7 +143,7 @@ Tool created by @delguoqing
     - [x] relative time offset to bar start and end → beat division
     - [x] Mid-bar inter-note command insertion (improved, new)
     - [ ] ms-level timing accuracy (TODO)
-      - Currently everything is pre-quantized to 1/96ths (1/24 beats).
+      - Currently everything is pre-quantized to 1/192nds (1/48 beats) (improved).
   - Note Symbols
     - [x] (std mode) short slider to circles (improved using the official algorithm)
     - [x] (mania mode) hold to circles (new)

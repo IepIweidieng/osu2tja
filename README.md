@@ -194,7 +194,7 @@ Tool created by @delguoqing
     - [x] `MOVIEOFFSET:` → Video event: start time, with osu! offset correction (new)
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)
   - Sync Headers
-    - [x] `BPM:` → initial uninherited timing point: BPM
+    - [x] `BPM:` → initial uninherited timing point: BPM, (new) defaults to 120 for matching TaikoJiro behavior
     - [x] `OFFSET:` → initial uninherited timing point: time, (new) with +15ms music offset correction
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons.
   - Difficulty Headers

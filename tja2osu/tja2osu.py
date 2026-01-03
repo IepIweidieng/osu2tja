@@ -24,7 +24,7 @@ def init_globals() -> None:
     ENCODING = None
     TITLE = "NO TITLE"
     SUBTITLE = "NO SUBTITLE"
-    BPM = 0.0
+    BPM = 120.0
     WAVE = None
     OFFSET = 0.0
     DEMOSTART = 0.0

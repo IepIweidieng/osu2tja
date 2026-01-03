@@ -192,8 +192,6 @@ MS_OSU_MUSIC_OFFSET = 15
 <https://github.com/ppy/osu/issues/24625>
 """
 
-BEAT_RES = 192 // 4 # 1/192nd
-
 def add_default_timing_point():
     global curr_time
 
@@ -303,30 +301,57 @@ def get_all(filename):
     real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
+# get fixed offset base by the nearest base timing points
+# step 1: find the nearest past red timing point r
+# step 2: calculate the fixed beat count from t to point r
+# step 3: get fixed offset from fixed beat count and bpm
+# step 4: find the nearest any-color timing points, past point p and future point f
+# step 5: adjust fixed offset so that it is at or after point p and before point f
+
+BEAT_RES = 0 # aligning disabled
+
 def get_real_offset(int_offset):
     if debug_mode:
         print_with_pended("INTOffset", int_offset, file=sys.stderr)
-    tm = get_red_tm_at(int_offset)
-    tpb = 60000 / tm["bpm"]
-    int_delta = abs(int_offset - tm["offset"])
-    sign = (int_offset - tm["offset"] > 0 and 1 or -1)
+    if BEAT_RES <= 0:
+        aligned_offset = int_offset
+    else:
+        tm = get_red_tm_at(int_offset)
+        int_tm_offset = int(tm["offset"])
+        tpb = 60000 / tm["bpm"]
+        int_delta = int_offset - tm["offset"] # more accurate
+        sign = (int_delta > 0 and 1 or -1)
 
-    t_unit_cnt = round(int_delta * tm["bpm"] * BEAT_RES / 60000)
+        t_unit_cnt = round(abs(int_delta) * tm["bpm"] * BEAT_RES / 60000)
 
-    beat_cnt = t_unit_cnt / BEAT_RES
-    ret = tm["offset"] + beat_cnt * 60000 * sign / tm["bpm"]
-    
-    if debug_mode:
-        print_with_pended(tm, file=sys.stderr)
-        print(t_unit_cnt, file=sys.stderr)
-        print("DELTA = ", int_delta, file=sys.stderr)
-        print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/BEAT_RES, file=sys.stderr)
-        print(int_offset, "-->", tm["offset"] + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
-        print(int(tm["offset"] + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
+        beat_cnt = t_unit_cnt / BEAT_RES
+        aligned_offset = int_tm_offset + beat_cnt * 60000 * sign / tm["bpm"]
 
-        print("CMP", int(tm["offset"]+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt), file=sys.stderr)
-        
-    return ret     
+        if debug_mode:
+            print_with_pended(tm, file=sys.stderr)
+            print(t_unit_cnt, file=sys.stderr)
+            print("DELTA = ", int_delta, file=sys.stderr)
+            print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/BEAT_RES, file=sys.stderr)
+            print(int_offset, "-->", int_tm_offset + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
+            print(int(int_tm_offset + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
+
+            print("CMP", int(int_tm_offset+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt), file=sys.stderr)
+
+    ret = aligned_offset
+    idx_tm_p = get_idx_tm_at(int_offset)
+    tm_p_offset = TimingPoints[idx_tm_p]["offset"]
+    int_tm_p_offset = int(tm_p_offset)
+    if ret < tm_p_offset:
+        ret = int_tm_p_offset
+    if idx_tm_p + 1 < len(TimingPoints):
+        tm_f_offset = TimingPoints[idx_tm_p + 1]["offset"]
+        int_tm_f_offset = int(tm_f_offset)
+        if ret > int_tm_f_offset - 1:
+            ret = int_tm_f_offset - 1
+        if int_tm_f_offset <= int_tm_p_offset:
+            print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical integer offset")
+
+    return ret
    
 def handle_cmd(line: str) -> None:
     cmd = None
@@ -417,9 +442,12 @@ def get_last_tm():
 def get_last_red_tm():
     return TimingPointsRed[-1]
         
-def get_tm_at(t):
+def get_idx_tm_at(t):
     assert len(TimingPoints) > 0, "Need at least one timing point"
-    return TimingPoints[max(0, bisect_right(TimingPoints, t, key=lambda tm: tm["offset"]) - 1)]
+    return max(0, bisect_right(TimingPoints, t, key=lambda tm: tm["offset"]) - 1)
+
+def get_tm_at(t):
+    return TimingPoints[get_idx_tm_at(t)]
 
 def get_red_tm_at(t):
     assert len(TimingPointsRed) > 0, "Need at least one uninherited timing point"
@@ -432,7 +460,7 @@ def create_new_tm(has_red: bool = False):
     last_red_tm = get_last_red_tm()
     
     tm = {}
-    tm["offset"] = int(curr_time)
+    tm["offset"] = curr_time
     if debug_mode:
         print_with_pended("CREATE NEW TM", tm["offset"], file=sys.stderr)
     tm["redline"] = has_red # can upgrade to red + green later if not having red
@@ -445,19 +473,18 @@ def create_new_tm(has_red: bool = False):
     TimingPoints.append(tm)
     if has_red:
         TimingPointsRed.append(tm)
-        curr_time = int(tm["offset"])
+        curr_time = tm["offset"]
 
     return tm
 
 def get_or_create_curr_tm(need_red: bool = False):
     global curr_time
     tm = get_last_tm()
-    if int(curr_time) != tm["offset"]:
+    if int(curr_time) != int(tm["offset"]):
         tm = create_new_tm(need_red)
     elif need_red and not tm["redline"]: # needs to upgrade to red + green
         tm["redline"] = True
         TimingPointsRed.append(tm)
-        curr_time = int(tm["offset"])
     return tm
 
 def get_or_create_curr_red_tm():
@@ -720,11 +747,14 @@ if __name__ == "__main__":
         help="source .tja file. Allows only 1 notechart definition (`#START` to `#END`) and no branch commands.")
     parser.add_argument("options", nargs="*", choices=["debug", []], metavar="{debug}",
         help="extra options (deprecated usage). Can also be specified as --<option> ")
+    parser.add_argument("-b", "--beat-align", nargs="?", const=48, type=int, default=BEAT_RES,
+        help="align hit objects to specified division of a beat (48 if omitted). Default: No aligning (0).")
     parser.add_argument("-d", "--debug", action="store_true",
         help="display general debug info")
     parser.add_argument("-v", "--verbose", action="store_true",
         help="display debug info for each note")
     args = parser.parse_args()
+    BEAT_RES = args.beat_align
     debug_mode = args.debug or ("debug" in args.options)
     print_each_note = args.verbose
     tja2osu(args.filename, sys.stdout)

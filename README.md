@@ -96,7 +96,7 @@ Tool created by @delguoqing
   - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion
-  - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
+  - [x] time offsets in decimal, appears in osu file format v128 (for osu!lazer) (new)
   - [x] warn and ignore lines with parsing errors (improved)
 - Output (`.tja`)
   - [x] Encoding: Shift-JIS (if possible) or (new) UTF-8 (with BOM).
@@ -243,8 +243,9 @@ Tool created by @delguoqing
     - [x] Measure with no note symbols (`,`) → Full measure (new bug fix)
     - [x] Mid-bar `#BPMCHANGE`s
     - [x] Sum of (bar length ÷ beat division ÷ BPM at each division) → relative time offset to bar start (bug fixed for fractional-beat bars with `#SCROLL`)
-    - [ ] ms-level timing accuracy (TODO)
-      - Currently everything is pre-quantized to 1/192nds (1/48 beats) (improved).
+    - [x] ms-level timing accuracy (improved)
+      - `tja2osu.py` offers the `--beat-align` option for quantized hit objects to specified division of beat (improved).
+      - FIXME: An unintended extra bar line might appear closely before (about 1ms) a (probably hidden) bar line (of an uninherited timing point (red line)).
   - Note Symbols
     - [x] `0` (blank) → Empty
     - [x] `1` (regular Don) → Circle, default hitsound

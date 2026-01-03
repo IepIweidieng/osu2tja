@@ -18,6 +18,7 @@ import codecs
 from fractions import Fraction
 import os
 import math
+import traceback
 from typing import IO, Dict, List, Optional, Tuple, Union
 
 OSU_VER_STR_PREFIX = "osu file format v"
@@ -707,84 +708,88 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     curr_sec = ""
     # read data
     lines = fp.readlines()
-    for line in lines:
-        line = line.strip()
-        if line == "":
-            continue
+    for lineno, line in enumerate(lines):
+        try:
+            line = line.strip()
+            if line == "":
+                continue
 
-        # check osu file format version
-        if osu_ver_str == "":
-            osu_ver_str = line
-            osu_format_ver = int(line.partition(OSU_VER_STR_PREFIX)[2])
-            if osu_format_ver not in OSU_VER_SUPPORT:
-                str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
-                print_with_pended(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
-                      file=sys.stderr)
+            # check osu file format version
+            if osu_ver_str == "":
+                osu_ver_str = line
+                osu_format_ver = int(line.partition(OSU_VER_STR_PREFIX)[2])
+                if osu_format_ver not in OSU_VER_SUPPORT:
+                    str_vers_support = "/".join((str(i) for i in OSU_VER_SUPPORT))
+                    print_with_pended(f"Warning: found osu file format v{osu_format_ver}, but only v{str_vers_support} are supported at this moment. The conversion will be performed but might fail.",
+                          file=sys.stderr)
 
-        # new section? Update section name.
-        new_sec = get_section_name(line)
-        if new_sec:
-            curr_sec = new_sec
-            continue
+            # new section? Update section name.
+            new_sec = get_section_name(line)
+            if new_sec:
+                curr_sec = new_sec
+                continue
 
-        # varible? Parse variable
-        vname, vval = get_var(line)
+            # varible? Parse variable
+            vname, vval = get_var(line)
 
-        # read in useful infomation in following sections
-        if curr_sec == "General":
-            if vname == "AudioFilename":
-                root, ext = os.path.splitext(vval)
-                if ext.lower() not in [".ogg", ".mp3"]:
-                    vval = root+".ogg"
-                audio = vval
-            elif vname == "PreviewTime":
-                preview = int(vval)
-            elif vname == "Mode":
-                gamemode_idx = int(vval)
+            # read in useful infomation in following sections
+            if curr_sec == "General":
+                if vname == "AudioFilename":
+                    root, ext = os.path.splitext(vval)
+                    if ext.lower() not in [".ogg", ".mp3"]:
+                        vval = root+".ogg"
+                    audio = vval
+                elif vname == "PreviewTime":
+                    preview = int(vval)
+                elif vname == "Mode":
+                    gamemode_idx = int(vval)
 
-        elif curr_sec == "Metadata":
-            if vname in ("Title", "TitleUnicode"):
-                title = vval or title
-            elif vname == "Creator":
-                creator = vval
-            elif vname == "Version":
-                version = vval
-            elif vname == "Source":
-                subtitle = vval
-            elif vname in ("Artist", "ArtistUnicode"):
-                artist = vval or artist
-        elif curr_sec == "Difficulty":
-            if vname == "CircleSize":
-                if gamemode_idx == GAMEMODE_MANIA:
-                    column_count = int(vval)
-            elif vname == "SliderMultiplier":
-                slider_multiplier = float(vval)
-            elif vname == "SliderTickRate":
-                slider_tick_rate = float(vval)
-            elif vname == "OverallDifficulty":
-                overall_difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
-        elif curr_sec == "Events":
-            data = get_event(line)
-            if data:
-                if data["event_type"] == OSU_EVENT_BG:
-                    if preimage is None and data["x_offset"] == 0 and data["y_offset"] == 0:
-                        preimage = data["filename"]
-                elif data["event_type"] == OSU_EVENT_VIDEO:
-                    if bgmovie is None and data["x_offset"] == 0 and data["y_offset"] == 0:
-                        bgmovie = data["filename"]
-                        movieoffset = data["start_time"] / 1000
-        elif curr_sec == "TimingPoints":
-            prev_timing_point = timingpoints and timingpoints[-1] or None
-            data = get_timing_point(line, prev_timing_point)
-            if data:
-                timingpoints.append(data)
-        elif curr_sec == "HitObjects":
-            data = get_note(line, overall_difficulty)
-            idx_last = 0
-            for obj in data:
-                # fix out-of-order objects for converted osu!mania holds
-                idx_last = bisect_right(hitobjects, obj[1], lo=idx_last, key=lambda x: x[1])
-                hitobjects.insert(idx_last, obj)
+            elif curr_sec == "Metadata":
+                if vname in ("Title", "TitleUnicode"):
+                    title = vval or title
+                elif vname == "Creator":
+                    creator = vval
+                elif vname == "Version":
+                    version = vval
+                elif vname == "Source":
+                    subtitle = vval
+                elif vname in ("Artist", "ArtistUnicode"):
+                    artist = vval or artist
+            elif curr_sec == "Difficulty":
+                if vname == "CircleSize":
+                    if gamemode_idx == GAMEMODE_MANIA:
+                        column_count = int(vval)
+                elif vname == "SliderMultiplier":
+                    slider_multiplier = float(vval)
+                elif vname == "SliderTickRate":
+                    slider_tick_rate = float(vval)
+                elif vname == "OverallDifficulty":
+                    overall_difficulty = math.floor(float(vval)) # accuracy, not the actual star rating
+            elif curr_sec == "Events":
+                data = get_event(line)
+                if data:
+                    if data["event_type"] == OSU_EVENT_BG:
+                        if preimage is None and data["x_offset"] == 0 and data["y_offset"] == 0:
+                            preimage = data["filename"]
+                    elif data["event_type"] == OSU_EVENT_VIDEO:
+                        if bgmovie is None and data["x_offset"] == 0 and data["y_offset"] == 0:
+                            bgmovie = data["filename"]
+                            movieoffset = data["start_time"] / 1000
+            elif curr_sec == "TimingPoints":
+                prev_timing_point = timingpoints and timingpoints[-1] or None
+                data = get_timing_point(line, prev_timing_point)
+                if data:
+                    timingpoints.append(data)
+            elif curr_sec == "HitObjects":
+                data = get_note(line, overall_difficulty)
+                idx_last = 0
+                for obj in data:
+                    # fix out-of-order objects for converted osu!mania holds
+                    idx_last = bisect_right(hitobjects, obj[1], lo=idx_last, key=lambda x: x[1])
+                    hitobjects.insert(idx_last, obj)
+        except Exception:
+            print_with_pended(traceback.format_exc(), file=sys.stderr)
+            print_with_pended(f"Error parsing `{fp.name}` at line {lineno}. Continued.", file=sys.stderr)
 
     assert len(hitobjects) > 0
 

@@ -15,30 +15,35 @@ import subprocess
 
 def extract_osu_file_info(file) -> Dict[str, object]:
     result: Dict[str, object] = dict()
-    for line in file:
-        if line == "[Difficulty]":
-            break
+    for lineno, line in enumerate(file):
+        try:
+            if line == "[Difficulty]":
+                break
 
-        if line.startswith(OSU_VER_STR_PREFIX) and "format_ver" not in result:
-            result["format_ver"] = int(line.partition(OSU_VER_STR_PREFIX)[2].strip())
-            continue
+            if line.startswith(OSU_VER_STR_PREFIX) and "format_ver" not in result:
+                result["format_ver"] = int(line.partition(OSU_VER_STR_PREFIX)[2].strip())
+                continue
 
-        key, _, val = line.partition(":")
-        if key == "Version":
-            result["version"] = val.strip()
-        elif key == "OverallDifficulty": # accuracy, not the real star rating
-            result["difficulty"] = float(val)
-        elif key == "Title":
-            result["title_ascii"] = val.strip()
-            if "title" not in result:
-                result["title"] = result["title_ascii"]
-        elif key == "TitleUnicode":
-            result["title"] = val.strip()
-        elif key == "AudioFilename":
-            result["audio"] = val.strip()
+            key, _, val = line.partition(":")
+            if key == "Version":
+                result["version"] = val.strip()
+            elif key == "OverallDifficulty": # accuracy, not the real star rating
+                result["difficulty"] = float(val)
+            elif key == "Title":
+                result["title_ascii"] = val.strip()
+                if "title" not in result:
+                    result["title"] = result["title_ascii"]
+            elif key == "TitleUnicode":
+                result["title"] = val.strip()
+            elif key == "AudioFilename":
+                result["audio"] = val.strip()
 
-        if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio"]):
-            break
+            if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio"]):
+                break
+        except Exception:
+            print_with_pended(traceback.format_exc(), file=sys.stderr)
+            print_with_pended(f"Error parsing header in `{file.name}` at line {lineno}. Continued.", file=sys.stderr)
+
     return result
 
 

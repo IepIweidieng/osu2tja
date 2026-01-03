@@ -12,6 +12,7 @@ from bisect import bisect_right
 import codecs
 import math
 import sys
+import traceback
 from typing import Dict, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
@@ -160,27 +161,31 @@ def get_meta_data(filename):
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         ENCODING = "utf-8-sig"
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
-    for line in fobj:
-        vname, vval = parse_tja_header(line)
-        if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
-        elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
-        elif vname == b"BPM": BPM = float(vval)
-        elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
-        elif vname == b"OFFSET": OFFSET = float(vval)
-        elif vname == b"DEMOSTART": DEMOSTART = float(vval)
-        elif vname == b"HEADSCROLL": HEADSCROLL = float(vval)
-        elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
-        elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
-        elif vname == b"SONGVOL": SONGVOL = float(vval)
-        elif vname == b"SEVOL": SEVOL = float(vval)
-        elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
-        elif vname == b"PREIMAGE": PREIMAGE = convert_str(vval, ENCODING)
-        elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
-        elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
-        elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
-        else: # try metadata in comments
-            creator = line.partition(b"//created by ")[2].strip()
-            if creator: CREATOR = convert_str(creator, ENCODING)
+    for lineno, line in enumerate(fobj):
+        try:
+            vname, vval = parse_tja_header(line)
+            if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
+            elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
+            elif vname == b"BPM": BPM = float(vval)
+            elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
+            elif vname == b"OFFSET": OFFSET = float(vval)
+            elif vname == b"DEMOSTART": DEMOSTART = float(vval)
+            elif vname == b"HEADSCROLL": HEADSCROLL = float(vval)
+            elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
+            elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
+            elif vname == b"SONGVOL": SONGVOL = float(vval)
+            elif vname == b"SEVOL": SEVOL = float(vval)
+            elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
+            elif vname == b"PREIMAGE": PREIMAGE = convert_str(vval, ENCODING)
+            elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
+            elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
+            elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
+            else: # try metadata in comments
+                creator = line.partition(b"//created by ")[2].strip()
+                if creator: CREATOR = convert_str(creator, ENCODING)
+        except Exception:
+            print_with_pended(traceback.format_exc(), file=sys.stderr)
+            print_with_pended(f"Error parsing header in `{filename}` at line {lineno}. Continued.", file=sys.stderr)
 
 MS_OSU_MUSIC_OFFSET = 15
 """Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
@@ -265,19 +270,23 @@ def get_all(filename):
 
     has_started = False
     add_default_timing_point()
-    for line in fobj:
-        line = line.decode("latin-1").strip()
-        line = rm_jiro_comment(line)
-        if not has_started and ("#"+START) in line:
-            has_started = True
-            if HEADSCROLL != 1.0:
-                real_do_cmd((SCROLL, HEADSCROLL))
-            continue
-        if not has_started: continue
-        if ("#"+END) in line:
-            break
-        if ("#" in line): handle_cmd(line)
-        else: handle_note(line)
+    for lineno, line in enumerate(fobj):
+        try:
+            line = line.decode("latin-1").strip()
+            line = rm_jiro_comment(line)
+            if not has_started and ("#"+START) in line:
+                has_started = True
+                if HEADSCROLL != 1.0:
+                    real_do_cmd((SCROLL, HEADSCROLL))
+                continue
+            if not has_started: continue
+            if ("#"+END) in line:
+                break
+            if ("#" in line): handle_cmd(line)
+            else: handle_note(line)
+        except Exception:
+            print_with_pended(traceback.format_exc(), file=sys.stderr)
+            print_with_pended(f"Error parsing note chart in `{filename}` at line {lineno}. Continued.", file=sys.stderr)
     else:
         print_with_pended(f"Warning: Missing #END at end of chart.", file=sys.stderr)
     if len(bar_data) != 0:

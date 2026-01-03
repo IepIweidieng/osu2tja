@@ -98,6 +98,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - [x] taiko 模式
   - [x] std、（改进）mania、catch 模式转谱
   - [x] 小数时间偏移（見于用 osu!lazer 创建或用第三方工具转换的谱面）（新功能）
+  - [x] 警告并忽略分析失败的行（改进）
 - 输出（`.tja`）
   - [x] 编码：Shift-JIS（若可）或（新功能）帶 BOM 的 UTF-8。
   - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。
@@ -168,7 +169,9 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - [x] osu file format v14（改进）
   - [x] 编码：无 BOM 的 UTF-8
   - [x] 浮点数精度：Python 內置 `float` (IEEE 754 binary64) 精度，（改进）输出不限位数的最简小数。
-- [x] 输入（`.tja`）编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
+- 输入（`.tja`）
+  - [x] 编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
+  - [x] 警告并忽略分析失败的行（改进）
 - [x] 会忽略 TJA `//` 注释，（已修正）拆分 TJA 时亦然
 - TJA 标头
   - 元数据标头

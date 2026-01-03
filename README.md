@@ -97,6 +97,7 @@ Tool created by @delguoqing
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion
   - [x] time offsets in decimal (seen in beatmaps created in osu!lazer or converted by 3rd-party tools) (new)
+  - [x] warn and ignore lines with parsing errors (improved)
 - Output (`.tja`)
   - [x] Encoding: Shift-JIS (if possible) or (new) UTF-8 (with BOM).
   - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.
@@ -167,7 +168,9 @@ Tool created by @delguoqing
   - [x] osu file format v14 (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.
-- [x] Input (`.tja`) encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
+- Input (`.tja`)
+  - [x] encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
+  - [x] warn and ignore lines with parsing errors (improved)
 - [x] TJA `//` comment ignoring, (fixed) including when when splitting TJAs
 - TJA Headers
   - Metadata Headers

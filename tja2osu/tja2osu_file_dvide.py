@@ -85,33 +85,37 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
 
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         bom = fobj.read(len(codecs.BOM_UTF8)) # extract UTF-8 BOM
-    for line in fobj:
-        line = line.rstrip(b"\r\n")
-        line_no_comment, comment_delim, comment = line.partition(b"//")
-        if not started and b"#START" in line_no_comment:
-            started = True
-            _, line, side_str = line_no_comment.partition(b"#START")
-            if comment_delim:
-                line += b" " + comment_delim + comment # rebuild line
-            side_str = side_str.strip()
-            if side_str.startswith(b"P") and side_str[1:].isdigit():
-                player_side = int(side_str[1:]) - 1
+    for lineno, line in enumerate(fobj):
+        try:
+            line = line.rstrip(b"\r\n")
+            line_no_comment, comment_delim, comment = line.partition(b"//")
+            if not started and b"#START" in line_no_comment:
+                started = True
+                _, line, side_str = line_no_comment.partition(b"#START")
+                if comment_delim:
+                    line += b" " + comment_delim + comment # rebuild line
+                side_str = side_str.strip()
+                if side_str.startswith(b"P") and side_str[1:].isdigit():
+                    player_side = int(side_str[1:]) - 1
+                else:
+                    player_side = 0
+            if started:
+                diff_data.append(line)
             else:
-                player_side = 0
-        if started:
-            diff_data.append(line)
-        else:
-            vname, vval = tja2osu.parse_tja_header(line_no_comment)
-            if vname == b"COURSE":
-                assert vval is not None
-                course = get_course_by_number(vval)
-            elif vname == b"STYLE":
-                style = get_style(vval) or style
-            else:
-                common_data.append(line)
-        if started and b"#END" in line_no_comment:
-            write_chartdef()
-            started = False
+                vname, vval = tja2osu.parse_tja_header(line_no_comment)
+                if vname == b"COURSE":
+                    assert vval is not None
+                    course = get_course_by_number(vval)
+                elif vname == b"STYLE":
+                    style = get_style(vval) or style
+                else:
+                    common_data.append(line)
+            if started and b"#END" in line_no_comment:
+                write_chartdef()
+                started = False
+        except Exception:
+            print_with_pended(traceback.format_exc(), file=sys.stderr)
+            print_with_pended(f"Error parsing `{filename}` at line {lineno}. Continued.", file=sys.stderr)
     fobj.close()
 
     if started: # missing #END; implicit #END at end-of-file

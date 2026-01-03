@@ -209,7 +209,7 @@ Tool created by @delguoqing
       - `1.4` is the standard of Ranked osu! beatmaps and is based on some games before AC15.
       - `1.44` would be more accurate for AC15&ndash;.
     - [ ] (Mostly-used) beat division → `SliderTickRate:` (TODO) (defaults to `4` (1/16th))
-    - [ ] `HEADSCROLL:` → initial inherited timing point: Slider velocity change (TODO)
+    - [x] `HEADSCROLL:` → initial inherited timing point: Slider velocity change (new)
 - TJA Commands
   - [ ] `#START` → Uninherited timing point: Large beats per bar + omit first bar line + (optional) incomplete bar (TODO)
   - [x] `#START P<n>` → `#START` in player-side TJA (new)

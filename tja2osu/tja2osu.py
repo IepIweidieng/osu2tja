@@ -17,7 +17,7 @@ from typing import Dict, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def init_globals() -> None:
-    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART
+    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
     global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     # jiro data
@@ -28,6 +28,7 @@ def init_globals() -> None:
     WAVE = None
     OFFSET = 0.0
     DEMOSTART = 0.0
+    HEADSCROLL = 1.0
     MAKER = None
     AUTHOR = None
     CREATOR = None
@@ -150,7 +151,7 @@ def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
     return None, type(line)()
 
 def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
+    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
@@ -167,6 +168,7 @@ def get_meta_data(filename):
         elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
         elif vname == b"OFFSET": OFFSET = float(vval)
         elif vname == b"DEMOSTART": DEMOSTART = float(vval)
+        elif vname == b"HEADSCROLL": HEADSCROLL = float(vval)
         elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
         elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
         elif vname == b"SONGVOL": SONGVOL = float(vval)
@@ -268,6 +270,8 @@ def get_all(filename):
         line = rm_jiro_comment(line)
         if not has_started and ("#"+START) in line:
             has_started = True
+            if HEADSCROLL != 1.0:
+                real_do_cmd((SCROLL, HEADSCROLL))
             continue
         if not has_started: continue
         if ("#"+END) in line:

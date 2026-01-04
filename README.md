@@ -226,6 +226,7 @@ Tool created by @delguoqing
   - [ ] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (TODO)
   - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values
   - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values
+  - [x] Mid-measure `#MEASURE`s are handled as if they were at the head of the measure as in TaikoJiro (improved)
   - [ ] Negative (bar length ÷ BPM) → Notechart events are not in completely increasing time order, re-sorted by time (TODO)
   - [x] `#DELAY` → move time of definition cursor
     - FIXME: The bar line after `#DELAY` will be wrongly displayed until the next uninherited timing point generated.

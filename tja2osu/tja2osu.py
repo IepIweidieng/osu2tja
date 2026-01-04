@@ -381,7 +381,7 @@ def handle_cmd(line: str) -> None:
         cmd_str, arg_str = cmd_arg[0], cmd_arg[1] if len(cmd_arg) > 1 else ""
         cmd = (cmd_str.removeprefix('#'), arg_str)
 
-    if bar_data == []:
+    if bar_data == [] or cmd[0] == MEASURE:
         real_do_cmd(cmd)
     else:
         bar_data.append(cmd)
@@ -400,9 +400,9 @@ def real_do_cmd(cmd):
     # handel timing point change command    
     if cmd[0] == BPMCHANGE:
         get_or_create_curr_red_tm()["bpm"] = cmd[1]
-    elif cmd[0] == MEASURE:
+    elif cmd[0] == MEASURE: # processed before notes
         if len(bar_data) != 0:
-            print_with_pended("Warning: Changing measure within a bar is handled as changing at next bar.", file=sys.stderr)
+            print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
             get_last_red_tm()["measure"] = cmd[1]
         else:
             get_or_create_curr_red_tm()["measure"] = cmd[1]

@@ -223,6 +223,7 @@ Tool created by @delguoqing
     - FIXME: Omitting some branches causes missing bars.
   - [x] `#BRANCHEND` → Begin branch-common section (new bug fix)
   - [x] `#BPMCHANGE`, positive → Uninherited timing point: BPM
+    - The absolute value of milliseconds per beat is capped between 6×10^-298 to 6×10^298 to prevent osu! from crash.
   - [ ] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (TODO)
   - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values
   - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values

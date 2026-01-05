@@ -298,7 +298,7 @@ def get_all(filename):
 
     # prevent bar lines at and after #END (probably missing and implicit)
     tm = get_last_red_tm()
-    real_do_cmd((MEASURE, max(tm["measure"], math.ceil(tm["bpm"])))) # insert a >= 1 minute measure
+    real_do_cmd((MEASURE, math.ceil(max(1, tm["measure"], tm["bpm"])))) # insert a >= 1 minute measure
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
 # get fixed offset base by the nearest base timing points
@@ -661,7 +661,7 @@ def write_TimingPoints(fout: TextIO) -> None:
         meter = max(1, int(round(tm["measure"])))
         fx = tm["GGT"] + 8 * tm["hidefirst"]
         if tm["redline"]:
-            beat_dur = 60000.0 / tm["bpm"]
+            beat_dur = math.copysign(min(max(abs(60000.0 / tm["bpm"]), 6E-298), 6E+298), tm["bpm"])
             print(f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}", file=fout)
         if not tm["redline"] or tm["scroll"] != 1.0:
             beat_dur = -100 / tm["scroll"]

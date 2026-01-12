@@ -196,7 +196,7 @@ def get_meta_data(filename):
                 if creator: CREATOR = convert_str(creator, ENCODING)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing header in `{filename}` at line {lineno}. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing header in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
 
 MS_OSU_MUSIC_OFFSET = 15
 """Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
@@ -299,7 +299,7 @@ def get_all(filename):
             else: handle_note(line)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing note chart in `{filename}` at line {lineno}. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing note chart in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
     else:
         print_with_pended(f"Warning: Missing #END at end of chart.", file=sys.stderr)
     if len(bar_data) != 0:

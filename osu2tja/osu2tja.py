@@ -790,7 +790,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     hitobjects.insert(idx_last, obj)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing `{fp.name}` at line {lineno}. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing `{fp.name}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
 
     assert len(hitobjects) > 0
 

@@ -42,7 +42,7 @@ def extract_osu_file_info(file) -> Dict[str, object]:
                 break
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing header in `{file.name}` at line {lineno}. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing header in `{file.name}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
 
     return result
 

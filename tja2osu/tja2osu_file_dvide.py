@@ -115,7 +115,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
                 started = False
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing `{filename}` at line {lineno}. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
     fobj.close()
 
     if started: # missing #END; implicit #END at end-of-file

@@ -226,7 +226,7 @@ Tool created by @delguoqing
   - [x] `#BRANCHEND` → Begin branch-common section (new bug fix)
   - [x] `#BPMCHANGE`, positive → Uninherited timing point: BPM
     - The absolute value of milliseconds per beat is capped between 6×10^-298 to 6×10^298 to prevent osu! from crash.
-  - [ ] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (TODO)
+  - [x] `#BPMCHANGE`, negative, with positive (bar length ÷ BPM) → Uninherited timing point: absolute-valued BPM (new)
   - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values
   - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values
   - [x] Mid-measure `#MEASURE`s are handled as if they were at the head of the measure as in TaikoJiro (improved)
@@ -271,6 +271,6 @@ Tool created by @delguoqing
     - [x] Head of any roll-type note, after unended roll-type notes → Empty
     - [x] `8` (explicit end of rolls), after unended roll-type notes → End of last slider/spinner
     - [x] Any hit-type note, after unended roll-type notes → Forced end of last slider/spinner (improved)
-    - [x] `#END` (command), after unended roll-type notes → Forced end of last slider/spinner (new)
+    - [x] `#END` (command)/end-of-file, after unended roll-type notes → Forced end of last slider/spinner (new)
     - [x] `8`, straying → Empty (new)
     - [x] Any roll-type note, non-positive time duration → Empty (new)

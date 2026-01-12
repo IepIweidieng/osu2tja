@@ -234,7 +234,7 @@ Tool created by @delguoqing
     - FIXME: The generated events might not be in the correct increasing time order if large negative `#DELAY`s are used.
   - [x] `#SCROLL`, with positive (scroll × BPM) → Inherited timing point: Slider velocity change
     - FIXME: Use BPM changes to work around the slider velocity change being capped between 0.01x to 10x in osu!.
-  - [ ] Non-positive/complex-valued (scroll × BPM) → Inherited timing point: Absolute-valued slider velocity change (TODO)
+  - [x] Non-positive/complex-valued (scroll × BPM) → Inherited timing point: Absolute-valued slider velocity change (new)
   - [ ] `#SUDDEN`, with positive stop duration → Inherited timing point: Scaled slider velocity change (TODO)
   - [x] `#GOGOSTART` & `#GOGOEND` → Timing point: Kiai time
   - [x] `#BARLINEOFF` & `#BARLINEON` → Timing point: Omit first bar line (new)

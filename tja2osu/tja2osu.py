@@ -151,6 +151,12 @@ def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
         return vname, vval
     return None, type(line)()
 
+def parse_tja_complex(str_) -> complex:
+    str_ = str_.lower().rstrip()
+    if str_.endswith('i'):
+        str_ = str_.removesuffix('i') + 'j'
+    return complex(str_)
+
 def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
@@ -170,7 +176,7 @@ def get_meta_data(filename):
             elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
             elif vname == b"OFFSET": OFFSET = float(vval)
             elif vname == b"DEMOSTART": DEMOSTART = float(vval)
-            elif vname == b"HEADSCROLL": HEADSCROLL = float(vval)
+            elif vname == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(vval)
             elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
             elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
             elif vname == b"SONGVOL": SONGVOL = float(vval)
@@ -364,7 +370,7 @@ def handle_cmd(line: str) -> None:
         cmd = (MEASURE, 4.0*float(arg1.strip()) / float(arg2.strip()))
     elif ("#"+SCROLL) in line:
         arg_str = line.partition('#'+SCROLL)[2][1:].strip()
-        cmd = (SCROLL, float(arg_str))        
+        cmd = (SCROLL, parse_tja_complex(arg_str))
     elif ("#"+GOGOSTART) in line:
         cmd = (GOGOSTART,)
     elif ("#"+GOGOEND) in line:
@@ -399,7 +405,7 @@ def real_do_cmd(cmd):
     
     # handel timing point change command    
     if cmd[0] == BPMCHANGE:
-        get_or_create_curr_red_tm()["bpm"] = cmd[1]
+        get_or_create_curr_red_tm()["bpm"] = abs(cmd[1])
     elif cmd[0] == MEASURE: # processed before notes
         if len(bar_data) != 0:
             print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
@@ -407,7 +413,7 @@ def real_do_cmd(cmd):
         else:
             get_or_create_curr_red_tm()["measure"] = cmd[1]
     elif cmd[0] == SCROLL:
-        get_or_create_curr_tm()["scroll"] = cmd[1]
+        get_or_create_curr_tm()["scroll"] = abs(cmd[1])
     elif cmd[0] == GOGOSTART:
         get_or_create_curr_tm()["GGT"] = True
     elif cmd[0] == GOGOEND:

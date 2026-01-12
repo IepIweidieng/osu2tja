@@ -235,7 +235,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - FIXME：使用大的负 `#DELAY` 时，生成的事件可能不会是正确递增时间序。
   - [x] `#SCROLL`，正的 (scroll × BPM) → 继承时间点：滑条速度变化
     - FIXME：用 BPM 变化绕过 osu! 滑条速度变化会锁在 0.01x 到 10x 之间的限制。
-  - [ ] 非正/复数的（scroll × BPM）→ 继承时间点：滑条速度变化取绝对值（TODO）
+  - [x] 非正/复数的（scroll × BPM）→ 继承时间点：滑条速度变化取绝对值（新功能）
   - [ ] `#SUDDEN`，有正停止时长 → 继承时间点：经调整的滑条速度变化（TODO）
   - [x] `#GOGOSTART` & `#GOGOEND` → 时间点：Kiai 时间
   - [x] `#BARLINEOFF` & `#BARLINEON` → 时间点：隐藏首个小节线（新功能）

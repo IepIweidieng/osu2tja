@@ -75,11 +75,12 @@ def init_globals() -> None:
     global chart_resources
     chart_resources = {}
 
-    global has_started, curr_time, bar_data, lasting_note
+    global has_started, curr_time, bar_data, lasting_note, unknowns
     has_started = False
     curr_time = 0.0
     bar_data = []
     lasting_note = None
+    unknowns = set()
 
 def init_debug_globals() -> None:
     global debug_mode, last_debug, print_each_note
@@ -186,6 +187,10 @@ def get_meta_data(filename):
             elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
             elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
             elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
+            elif vname is not None and (vname+b':') not in unknowns:
+                line_printable = convert_str(line.removesuffix(b'\n'), ENCODING)
+                print_with_pended(f"Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
+                unknowns.add(vname+b':')
             else: # try metadata in comments
                 creator = line.partition(b"//created by ")[2].strip()
                 if creator: CREATOR = convert_str(creator, ENCODING)
@@ -244,7 +249,9 @@ def get_osu_type(snd):
             return SPINNER_END
         print_with_pended(f"Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
-    print_with_pended(f"Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
+    if snd not in unknowns:
+        print_with_pended(f"Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
+        unknowns.add(snd)
     if lasting_note is not None:
         print_with_pended(f"Note: With unended roll-type note {lasting_note}", file=sys.stderr)
     return None
@@ -422,8 +429,9 @@ def real_do_cmd(cmd):
         get_or_create_curr_tm()["hidefirst"] = True
     elif cmd[0] == BARLINEON:
         get_or_create_curr_tm()["hidefirst"] = False
-    else:
+    elif ('#'+cmd[0]) not in unknowns:
         print_with_pended(f"Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
+        unknowns.add('#'+cmd[0])
 
 def add_a_note(snd, offset):
     global lasting_note

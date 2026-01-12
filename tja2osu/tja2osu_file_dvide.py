@@ -53,7 +53,9 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
     style = 1
     player_side = 0
     common_data: List[bytes] = []
-    diff_data: List[bytes] = []
+    diff_data: Dict[str, List[bytes]] = {}
+    chartdef_data: List[bytes] = []
+    after_course = False
     started = False
     fobj = open(path_tja, "rb")
     bom = b""
@@ -76,41 +78,51 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
             fout.write(b"\n")
         fout.write(b"\nCOURSE:%s\n\n" % (course.encode('latin1'),))
 
-        for str_ in diff_data:
-            fout.write(str_)
-            fout.write(b"\n")
+        for data in (diff_data.get(course, []), chartdef_data):
+            for str_ in data:
+                fout.write(str_)
+                fout.write(b"\n")
         fout.close()
 
-        diff_data.clear()
+        chartdef_data.clear()
 
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         bom = fobj.read(len(codecs.BOM_UTF8)) # extract UTF-8 BOM
     for lineno, line in enumerate(fobj):
         try:
             line = line.rstrip(b"\r\n")
+            if line == WATER_MARK:
+                continue
             line_no_comment, comment_delim, comment = line.partition(b"//")
-            if not started and b"#START" in line_no_comment:
+            cmd, cmd_arg = tja2osu.parse_tja_command(line_no_comment)
+            if cmd == b"START":
                 started = True
-                _, line, side_str = line_no_comment.partition(b"#START")
+                line = b"#START"
                 if comment_delim:
                     line += b" " + comment_delim + comment # rebuild line
-                side_str = side_str.strip()
+                side_str = cmd_arg.strip()
                 if side_str.startswith(b"P") and side_str[1:].isdigit():
                     player_side = int(side_str[1:]) - 1
                 else:
                     player_side = 0
-            if started:
-                diff_data.append(line)
+            elif cmd is None:
+                hdr, hdr_arg = tja2osu.parse_tja_header(line_no_comment)
+                if hdr == b"COURSE":
+                    if hdr_arg is not None:
+                        course = get_course_by_number(hdr_arg)
+                        after_course = True
+                elif hdr == b"STYLE":
+                    style = get_style(hdr_arg) or style
+                    continue
+
+            if started or cmd is not None:
+                chartdef_data.append(line)
+            elif after_course:
+                diff_data.setdefault(course, []).append(line)
             else:
-                vname, vval = tja2osu.parse_tja_header(line_no_comment)
-                if vname == b"COURSE":
-                    assert vval is not None
-                    course = get_course_by_number(vval)
-                elif vname == b"STYLE":
-                    style = get_style(vval) or style
-                else:
-                    common_data.append(line)
-            if started and b"#END" in line_no_comment:
+                common_data.append(line)
+
+            if cmd == b"END":
                 write_chartdef()
                 started = False
         except Exception:
@@ -142,21 +154,21 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
     has_branch = False
     for line in fobj:
         line = line.rstrip(b"\r\n")
+        if line == WATER_MARK:
+            continue
         line_no_comment, _, _ = line.partition(b"//")
-        if b"#BRANCHSTART" in line_no_comment:
+        cmd, cmd_arg = tja2osu.parse_tja_command(line_no_comment)
+        if cmd == b"BRANCHSTART":
             has_branch = True
-            continue
-        if b"#SECTION" in line_no_comment:
-            continue
-        if b"#E" in line_no_comment:
-            which = "E"
-        elif b"#N" in line_no_comment:
-            which = "N"
-        elif (b"#M" in line_no_comment) and (b"#MEASURE" not in line_no_comment):
-            which = "M"
-        elif b"#BRANCHEND" in line_no_comment:
             which = None
-        else:
+        elif cmd in (b"E", b"N", b"M"):
+            which = cmd
+        elif cmd in (b"BRANCHEND", b"END"):
+            which = None
+        if cmd in (b"BRANCHSTART", b"N", b"E", b"M", b"BRANCHEND", b"SECTION", b"LEVELHOLD"):
+            continue
+
+        if cmd is None:
             vname, vval = tja2osu.parse_tja_header(line_no_comment)
             if vname == b"COURSE":
                 vval_str = vval
@@ -165,19 +177,18 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
                 branch_data[2].append(b"COURSE:" + vval_str + b"(Tatsujin)")
                 continue
 
-            line_str = line
-            if which == None:
-                branch_data[0].append(line_str)
-                branch_data[1].append(line_str)
-                branch_data[2].append(line_str)
-            elif which == "E":
-                branch_data[0].append(line_str)
-            elif which == "N":
-                branch_data[1].append(line_str)
-            elif which == "M":
-                branch_data[2].append(line_str)
-            else:
-                assert False
+        if which is None:
+            branch_data[0].append(line)
+            branch_data[1].append(line)
+            branch_data[2].append(line)
+        elif which == b"E":
+            branch_data[0].append(line)
+        elif which == b"N":
+            branch_data[1].append(line)
+        elif which == b"M":
+            branch_data[2].append(line)
+        else:
+            assert False
     fobj.close()
     if not has_branch:
         return []

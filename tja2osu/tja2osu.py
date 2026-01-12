@@ -11,6 +11,7 @@ import argparse
 from bisect import bisect_right
 import codecs
 import math
+import re
 import sys
 import traceback
 from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
@@ -91,7 +92,7 @@ def init_debug_globals() -> None:
 init_debug_globals()
 
 # const_data
-BRANCH = "BRANCH"
+BRANCHSTART = "BRANCHSTART"
 END = "END"
 START = "START"
 BPMCHANGE = "BPMCHANGE"
@@ -134,23 +135,25 @@ def check_unsupported(filename):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     END_cnt = 0
     for line in fobj:
-        rtassert(("#"+BRANCH).decode() not in line, "don't support branch")
-        END_cnt += (("#"+END).decode() in line)
-        rtassert(END_cnt <= 1, "don't support multiple fumen.")
-
-def rm_jiro_comment(str_: str) -> str:
-    assert isinstance(str_, str)
-    return str_.partition('//')[0]
+        cmd, cmd_arg = parse_tja_command(line)
+        rtassert(cmd != BRANCHSTART.decode(), "don't support branch")
+        END_cnt += (cmd != END.decode())
+        rtassert(END_cnt < 1 or cmd != START.decode(), "don't support multiple fumen.")
 
 Str = TypeVar('Str', str, bytes)
+
+def rm_jiro_comment(str_: Str) -> Str:
+    return str_.partition(b'//' if type(str_) == bytes else '//')[0]
+
+str_pat_tja_header = r'^[ \t]*([^ \t:]*)[ \t]*:(.*)$'
+pat_tja_header = re.compile(str_pat_tja_header)
+bpat_tja_header = re.compile(str_pat_tja_header.encode())
+
 def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
-    delim = cast(Str, b":" if type(line) == bytes else ":")
-    vname, delim_got, vval = line.partition(delim)
-    vname = vname.strip()
-    vval = vval.strip()
-    if delim_got == delim and vname.isalnum(): # probably a header
-        return vname, vval
-    return None, type(line)()
+    match = (bpat_tja_header if type(line) == bytes else pat_tja_header).match(line)
+    if match is None:
+        return None, type(line)()
+    return match.groups()
 
 def parse_tja_complex(str_) -> complex:
     str_ = str_.lower().rstrip()
@@ -170,16 +173,18 @@ def get_meta_data(filename):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     for lineno, line in enumerate(fobj):
         try:
-            vname, vval = parse_tja_header(line)
-            if vname == b"TITLE": TITLE = convert_str(vval, ENCODING)
-            elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval, ENCODING)
+            line = line.rstrip(b"\r\n")
+            vname, vval_raw = parse_tja_header(line)
+            vval = rm_jiro_comment(vval_raw).rstrip()
+            if vname == b"TITLE": TITLE = convert_str(vval_raw, ENCODING)
+            elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval_raw, ENCODING)
             elif vname == b"BPM": BPM = float(vval)
             elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
             elif vname == b"OFFSET": OFFSET = float(vval)
             elif vname == b"DEMOSTART": DEMOSTART = float(vval)
             elif vname == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(vval)
-            elif vname == b"MAKER": MAKER = convert_str(vval, ENCODING)
-            elif vname == b"AUTHOR": AUTHOR = convert_str(vval, ENCODING)
+            elif vname == b"MAKER": MAKER = convert_str(vval_raw, ENCODING)
+            elif vname == b"AUTHOR": AUTHOR = convert_str(vval_raw, ENCODING)
             elif vname == b"SONGVOL": SONGVOL = float(vval)
             elif vname == b"SEVOL": SEVOL = float(vval)
             elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
@@ -273,6 +278,15 @@ def get_osu_sound(snd):
     elif snd == 'D': return CLAP
     else: return EMPTY # empty or unknown and warned
 
+str_pat_tja_command = r'^[ \t]*#([^ \t]*[A-Z_]+)[ \t]?(.*)$'
+pat_tja_command = re.compile(str_pat_tja_command)
+bpat_tja_command = re.compile(str_pat_tja_command.encode())
+
+def parse_tja_command(line: Str) -> Tuple[Optional[Str], Str]:
+    match = (bpat_tja_command if type(line) == bytes else pat_tja_command).match(line)
+    if match is None:
+        return None, type(line)()
+    return match.groups()
 
 def get_all(filename):
     global has_started, curr_time, lasting_note
@@ -286,17 +300,23 @@ def get_all(filename):
     for lineno, line in enumerate(fobj):
         try:
             line = line.decode("latin-1").strip()
-            line = rm_jiro_comment(line)
-            if not has_started and ("#"+START) in line:
-                has_started = True
-                if HEADSCROLL != 1.0:
-                    real_do_cmd((SCROLL, HEADSCROLL))
+            line = rm_jiro_comment(line).rstrip()
+            hdr, hdr_arg = parse_tja_header(line)
+            if hdr is not None:
+                # no need to handle
                 continue
-            if not has_started: continue
-            if ("#"+END) in line:
-                break
-            if ("#" in line): handle_cmd(line)
-            else: handle_note(line)
+            cmd, cmd_arg = parse_tja_command(line)
+            if cmd is not None:
+                if not has_started and cmd == START:
+                    has_started = True
+                    if HEADSCROLL != 1.0:
+                        real_do_cmd((SCROLL, HEADSCROLL))
+                    continue
+                if cmd == END:
+                    break
+                handle_cmd(line, cmd, cmd_arg)
+                continue
+            handle_note(line)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
             print_with_pended(f"Error parsing note chart in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
@@ -366,35 +386,21 @@ def get_real_offset(int_offset):
 
     return ret
    
-def handle_cmd(line: str) -> None:
+def handle_cmd(line: str, cmd_name: str, cmd_arg: str) -> None:
     cmd = None
-    if ("#"+BPMCHANGE) in line:
-        bpm = float(line.partition('#'+BPMCHANGE)[2][1:].strip())
-        cmd = (BPMCHANGE, bpm)
-    elif ("#"+MEASURE) in line:
-        arg_str = line.partition('#'+MEASURE)[2][1:].strip()
-        arg1, arg2 = arg_str.split('/')
-        cmd = (MEASURE, 4.0*float(arg1.strip()) / float(arg2.strip()))
-    elif ("#"+SCROLL) in line:
-        arg_str = line.partition('#'+SCROLL)[2][1:].strip()
-        cmd = (SCROLL, parse_tja_complex(arg_str))
-    elif ("#"+GOGOSTART) in line:
-        cmd = (GOGOSTART,)
-    elif ("#"+GOGOEND) in line:
-        cmd = (GOGOEND,)
-    elif ("#"+BARLINEOFF) in line:
-        cmd = (BARLINEOFF,)
-    elif ("#"+BARLINEON) in line:
-        cmd = (BARLINEON,)
-    elif ("#"+DELAY) in line:
-        arg_str = line.partition('#'+DELAY)[2][1:].strip()
-        cmd = (DELAY, float(arg_str))
+    if cmd_name == BPMCHANGE:
+        cmd = (cmd_name, float(cmd_arg))
+    elif cmd_name == MEASURE:
+        arg1, arg2 = cmd_arg.split('/')
+        cmd = (cmd_name, 4.0*float(arg1.strip()) / float(arg2.strip()))
+    elif cmd_name == SCROLL:
+        cmd = (cmd_name, parse_tja_complex(cmd_arg))
+    elif cmd_name == DELAY:
+        cmd = (cmd_name, float(cmd_arg))
     else: # default handling
-        cmd_arg = line.lstrip().split(maxsplit=1)
-        cmd_str, arg_str = cmd_arg[0], cmd_arg[1] if len(cmd_arg) > 1 else ""
-        cmd = (cmd_str.removeprefix('#'), arg_str)
+        cmd = (cmd_name, cmd_arg)
 
-    if bar_data == [] or cmd[0] == MEASURE:
+    if bar_data == [] or cmd_name == MEASURE:
         real_do_cmd(cmd)
     else:
         bar_data.append(cmd)

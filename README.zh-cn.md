@@ -172,7 +172,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - 输入（`.tja`）
   - [x] 编码：UTF-8、GBK、Shift-JIS、& Big5 猜一（改进）
   - [x] 警告并忽略分析失败的行（改进）
-- [x] 会忽略 TJA `//` 注释，（已修正）拆分 TJA 时亦然
+  - [x] 会忽略 TJA `//` 注释，（改进）曲名、副标题、谱面作者的 TJA 标头除外
+  - [x] 避免误分析 TJA 标头或命令（例如将 `//#NMSCROLL` 当作 `#N`，`#LYRIC #END` 当作 `#END` 与 `#E`）（修正）
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（新功能）
@@ -204,6 +205,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - 难度标头
     - [x] `STYLE:` → `Version:`（新功能）
     - [x] `COURSE:` → `Version:`（默认为 `Oni`）（改进）
+      - 在首个有效 `COURSE:` 前的标头，各难度共用；之后的标头，各难度独立（改进）
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>`，`<notesdesigner>` 不为 `<maker>`/`<author>` 时（TODO）
     - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:`（TODO）（默认为 `7`（大致为太鼓魔王 10 星入魂难度）（改进）））
     - [x] `CircleSize:5`（无效果）

@@ -171,7 +171,8 @@ Tool created by @delguoqing
 - Input (`.tja`)
   - [x] encoding: Guessed among UTF-8, GBK, Shift-JIS, & Big5 (improved)
   - [x] warn and ignore lines with parsing errors (improved)
-- [x] TJA `//` comment ignoring, (fixed) including when when splitting TJAs
+  - [x] TJA `//` comment ignoring, (improved) except for the TJA headers for song title, subtitle, and chart author.
+  - [x] prevent misinterpreting TJA header or command (such as `//#NMSCROLL` as `#N`, `#LYRIC #END` as `#END` and `#E`) (new bug fix)
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (new)
@@ -203,6 +204,7 @@ Tool created by @delguoqing
   - Difficulty Headers
     - [x] `STYLE:` → `Version:` (new)
     - [x] `COURSE:` → `Version:` (defaults to `Oni`) (improved)
+      - Headers before the first value `COURSE:` are shared by all difficulties, and headers after it are independent in each difficulty (improved)
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>` when `<notesdesigner>` isn't `<maker>`/`<author>` (TODO)
     - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:` (TODO) (defaults to `7` (roughly Taiko Oni 10 full gauge) (improved))
     - [x] `CircleSize:5` (no effects)

@@ -311,7 +311,7 @@ def get_all(filename):
 
     # prevent bar lines at and after #END (probably missing and implicit)
     tm = get_last_red_tm()
-    real_do_cmd((MEASURE, math.ceil(max(1, tm["measure"], tm["bpm"])))) # insert a >= 1 minute measure
+    real_do_cmd((MEASURE, math.ceil(min(max(tm["measure"], tm["bpm"], 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
 # get fixed offset base by the nearest base timing points

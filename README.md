@@ -228,10 +228,10 @@ Tool created by @delguoqing
   - [x] `#MEASURE`, positive integer beats → Uninherited timing point: Beats per bar (improved), (new) float values
   - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values
   - [x] Mid-measure `#MEASURE`s are handled as if they were at the head of the measure as in TaikoJiro (improved)
-  - [ ] Negative (bar length ÷ BPM) → Notechart events are not in completely increasing time order, re-sorted by time (TODO)
+  - [x] Negative (bar length ÷ BPM) or large negative `#DELAY` → Notechart events are not in completely increasing time order, re-sorted by time (new)
+    - FIXME: The bar line of overlapped measures are ignored and not converted
   - [x] `#DELAY` → move time of definition cursor
     - FIXME: The bar line after `#DELAY` will be wrongly displayed until the next uninherited timing point generated.
-    - FIXME: The generated events might not be in the correct increasing time order if large negative `#DELAY`s are used.
   - [x] `#SCROLL`, with positive (scroll × BPM) → Inherited timing point: Slider velocity change
     - FIXME: Use BPM changes to work around the slider velocity change being capped between 0.01x to 10x in osu!.
   - [x] Non-positive/complex-valued (scroll × BPM) → Inherited timing point: Absolute-valued slider velocity change (new)

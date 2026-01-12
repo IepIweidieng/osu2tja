@@ -13,7 +13,7 @@ import codecs
 import math
 import sys
 import traceback
-from typing import Dict, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
+from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
@@ -412,7 +412,7 @@ def real_do_cmd(cmd):
     
     # handel timing point change command    
     if cmd[0] == BPMCHANGE:
-        get_or_create_curr_red_tm()["bpm"] = abs(cmd[1])
+        get_or_create_curr_red_tm()["bpm"] = cmd[1]
     elif cmd[0] == MEASURE: # processed before notes
         if len(bar_data) != 0:
             print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
@@ -670,22 +670,32 @@ def write_Events(fout: TextIO) -> None:
 def write_TimingPoints(fout: TextIO) -> None:
     print("[TimingPoints]", file=fout)
     volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
+    res: List[Tuple[int, str]] = []
     for tm in TimingPoints:
+        if tm["measure"] / tm["bpm"] < 0:
+            continue # ignore negative sections (assumed to be overlapped by later positive sections)
         time = int(tm["offset"])
+        while len(res) > 0 and res[-1][0] > time:
+            res.pop() # override overlapped positive sections
         meter = max(1, int(round(tm["measure"])))
         fx = tm["GGT"] + 8 * tm["hidefirst"]
         if tm["redline"]:
-            beat_dur = math.copysign(min(max(abs(60000.0 / tm["bpm"]), 6E-298), 6E+298), tm["bpm"])
-            print(f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}", file=fout)
+            beat_dur = min(max(abs(60000.0 / tm["bpm"]), 6E-298), 6E+298)
+            res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}"))
         if not tm["redline"] or tm["scroll"] != 1.0:
             beat_dur = -100 / tm["scroll"]
-            print(f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}", file=fout)
+            res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}"))
         tm["offset"] = int(tm["offset"])
+
+    # res is sorted
+    for _, line in res:
+        print(line, file=fout)
     print("", file=fout)
 
 def write_HitObjects(fout: TextIO) -> None:
     print("[HitObjects]", file=fout)
     lasting_note = None
+    res: List[Tuple[int, str]] = []
     for ho in HitObjects:
         beg_offset = get_real_offset(ho[2])
         if int(beg_offset) != int(ho[2]):
@@ -693,8 +703,7 @@ def write_HitObjects(fout: TextIO) -> None:
                 print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
         if ho[0] == CIRCLE:
             rtassert(lasting_note is None, "this is abnormal")
-            print("%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1]),
-                file=fout)
+            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1])))
         elif ho[0] == SLIDER:
             rtassert(lasting_note is None, "this is abnormal")
             lasting_note = ho
@@ -709,20 +718,22 @@ def write_HitObjects(fout: TextIO) -> None:
                 tmr = get_red_tm_at(int(ln[2]))
                 tmg = get_tm_at(int(ln[2])) # green if red + green, otherwise red
                 curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
-                print("%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
+                res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
                         int(get_real_offset(ln[2])), ln[0], ln[1], \
-                        int(CircleX+curve_len), CircleY, 1, curve_len),
-                    file=fout)
+                        int(CircleX+curve_len), CircleY, 1, curve_len)))
             lasting_note = None
         elif ho[0] == SPINNER_END:
             rtassert(lasting_note is not None and \
                     lasting_note[0] == SPINNER, "this is abnormal")
             ln = lasting_note
             if ho[2] > ln[2]: # skip non-positive length rolls
-                print("%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
-                        ln[0], ln[1], int(get_real_offset(ho[2]))),
-                    file=fout)
+                res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
+                        ln[0], ln[1], int(get_real_offset(ho[2])))))
             lasting_note = None
+
+    res.sort(key=lambda x: x[0])
+    for _, line in res:
+        print(line, file=fout)
     print("", file=fout)
 
 def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:

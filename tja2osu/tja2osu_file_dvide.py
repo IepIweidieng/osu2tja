@@ -111,6 +111,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
                     if hdr_arg is not None:
                         course = get_course_by_number(hdr_arg)
                         after_course = True
+                        continue
                 elif hdr == b"STYLE":
                     style = get_style(hdr_arg) or style
                     continue

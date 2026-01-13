@@ -206,10 +206,14 @@ Tool created by @delguoqing
     - [x] `COURSE:` → `Version:` (defaults to `Oni`) (improved)
       - Headers before the first value `COURSE:` are shared by all difficulties, and headers after it are independent in each difficulty (improved)
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>` when `<notesdesigner>` isn't `<maker>`/`<author>` (TODO)
-    - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:` (TODO) (defaults to `7` (roughly Taiko Oni 10 full gauge) (improved))
+    - [x] `COURSE:` + `LEVEL:` → `HPDrainRate:` (new)
+      - Defaults to `8` for `Easy`, `7` for `Normal`, `6` for `Hard` or 8+ star other difficulties, and `5` for other difficulties, based on the lower-limit of ranking guideline if note count is not high (improved)
     - [x] `CircleSize:5` (no effects)
     - [x] `ApproachRate:5` (no effects)
-    - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:` (TODO) (defaults to `8.333` (Taiko Hard & Oni GREAT/GOOD window) (improved))
+    - [x] `COURSE:` → `OverallDifficulty:` (new)
+      - `2.3` for `Easy` and `Normal`: GREAT/GOOD ±42.5ms, OK ±100.5ms, BAD ±115.5ms, approximately Taiko Easy & Normal GREAT/GOOD window
+      - `5` for `Hard`: GREAT/GOOD ±34.5ms, OK ±79.5ms, BAD ±94.5ms, upper-limit of ranking guideline
+      - `8` for other difficulties: GREAT/GOOD ±25.5ms, OK ±61.5ms, BAD ±79.5ms, approximately Taiko Hard & Oni GREAT/GOOD window)
     - [x] ? → `SliderMultiplier:` (defaults to `1.4` (osu!taiko default note spacing))
       - `1.4` is the standard of Ranked osu! beatmaps and is based on some games before AC15.
       - `1.44` would be more accurate for AC15&ndash;.

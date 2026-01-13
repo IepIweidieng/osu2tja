@@ -20,7 +20,7 @@ chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def init_globals() -> None:
     global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
-    global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE
+    global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     # jiro data
     ENCODING = None
@@ -37,6 +37,7 @@ def init_globals() -> None:
     SONGVOL = 100.0
     SEVOL = 100.0
     COURSE = "Oni"
+    LEVEL = 0
     PREIMAGE = None
     BGIMAGE = None
     BGMOVIE = None
@@ -66,7 +67,7 @@ def init_globals() -> None:
     HitObjects = []
     HPDrainRate = 7
     CircleSize = 5
-    OverallDifficulty = 8.333
+    OverallDifficulty = 8
     ApproachRate = 5
     SliderMultiplier = 1.4
     SliderTickRate = 4
@@ -161,8 +162,19 @@ def parse_tja_complex(str_) -> complex:
         str_ = str_.removesuffix('i') + 'j'
     return complex(str_)
 
+def get_course_by_number(str_: Str) -> str:
+    if not str_.isdigit():
+        return convert_str(str_) if type(str_) == bytes else str_
+    num = int(str_)
+    if num <= 0: return "Easy"
+    elif num == 1: return "Normal"
+    elif num == 2: return "Hard"
+    elif num == 3: return "Oni"
+    elif num == 4: return "Edit"
+    else: return "Edit%d" % (num-4)
+
 def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, BPM
+    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
@@ -187,7 +199,8 @@ def get_meta_data(filename):
             elif vname == b"AUTHOR": AUTHOR = convert_str(vval_raw, ENCODING)
             elif vname == b"SONGVOL": SONGVOL = float(vval)
             elif vname == b"SEVOL": SEVOL = float(vval)
-            elif vname == b"COURSE": COURSE = convert_str(vval, ENCODING)
+            elif vname == b"COURSE": COURSE = get_course_by_number(convert_str(vval, ENCODING))
+            elif vname == b"LEVEL": LEVEL = float(vval)
             elif vname == b"PREIMAGE": PREIMAGE = convert_str(vval, ENCODING)
             elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
             elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
@@ -641,6 +654,17 @@ def write_Metadata(fout: TextIO) -> None:
     print("", file=fout)
 
 def write_Difficulty(fout: TextIO) -> None:
+    global HPDrainRate, OverallDifficulty, SliderTickRate
+    course = COURSE.lower()
+    # lower-limit of ranking guideline if note count is not high
+    HPDrainRate = (8 if course.startswith('easy')
+        else 7 if course.startswith('normal')
+        else 6 if course.startswith('hard')
+        else (5 if LEVEL < 8 else 6)) # for higher BAD penalty
+    OverallDifficulty = (2.3 if course.startswith('easy') or course.startswith('normal') # 42.5ms for GREAT/GOOD
+        else 5 if course.startswith('hard') # upper-limit of ranking guideline
+        else 8) # 25.5ms for GREAT/GOOD
+
     print("[Difficulty]", file=fout)
     print("HPDrainRate:%s" % (repr(HPDrainRate),), file=fout)
     print("CircleSize:%s" % (repr(CircleSize),), file=fout)

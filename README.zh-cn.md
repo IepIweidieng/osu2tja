@@ -207,10 +207,14 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `COURSE:` → `Version:`（默认为 `Oni`）（改进）
       - 在首个有效 `COURSE:` 前的标头，各难度共用；之后的标头，各难度独立（改进）
     - [ ] `NOTESDESIGNER<n>:` → `Version:<notesdesigner>'s <course>`，`<notesdesigner>` 不为 `<maker>`/`<author>` 时（TODO）
-    - [ ] `COURSE:` + `LEVEL:` → `HPDrainRate:`（TODO）（默认为 `7`（大致为太鼓魔王 10 星入魂难度）（改进）））
+    - [x] `COURSE:` + `LEVEL:` → `HPDrainRate:`（新功能）
+      - 默认 `Easy` 为 `8`，`Normal` 为 `7`，`Hard` 与 8+ 星的其他难度为 `6`，其他为 `5`，基于音符数不多时的上架谱面准则下限（改进）
     - [x] `CircleSize:5`（无效果）
     - [x] `ApproachRate:5`（无效果）
-    - [ ] `COURSE:` + `LEVEL:` → `OverallDifficulty:`（TODO）（默认为 `8.333`（太鼓困难、魔王的良判定幅）（改进）
+    - [x] `COURSE:` → `OverallDifficulty:`（新功能）
+      - `Easy`、`Normal` 为 `2.3`：良±42.5ms、可±100.5ms、不可±115.5ms，近似太鼓简单、普通的良判定幅
+      - `Hard` 为 `5`：良±34.5ms、可±79.5ms、不可±94.5ms，上架谱面准则上限
+      - 其他难度为 `8`：良±25.5ms、可±61.5ms、不可±79.5ms，近似太鼓困难、魔王的良判定幅
     - [x] ？ → `SliderMultiplier:`（默认为 `1.4`（osu!taiko 预设音符间距））
       - `1.4` 是 osu! 上架谱面的标准，基于部分 AC15 之前的游戏。
       - `1.44` 会更接近 AC15~。

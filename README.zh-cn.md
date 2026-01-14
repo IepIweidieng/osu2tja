@@ -110,11 +110,10 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `Artist:` 或 `ArtistUnicode:` → `ARTIST:`（Malody 用）（新功能）
     - [x] `AudioFilename:` → `WAVE:`，（@SamLangTen）自动文件复制，（@k2angel）OGG 转换
     - [x] `PreviewTime:` → `DEMOSTART:`，（新功能）经 osu! 校准误差修正
-    - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
-    - [x] `Creator:` → `AUTHOR:`（Malody 用）（新功能）
+    - [x] `Creator:` → `MAKER:`（@MoshirMoshir）&（新功能）`AUTHOR:`（Malody 用）
     - [x] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（新功能）
   - 美术标头
-    - [x] 首个置中背景事件：文件名 → `PREIMAGE:`（新功能）
+    - [x] 首个置中背景事件：文件名 → `PREIMAGE:` & `COVER:`（Malody 用）（新功能）
     - [ ] ~~首个置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
     - [x] 首个置中视频事件：文件名 → `BGMOVIE:`（新功能）
     - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
@@ -195,7 +194,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] ? → `LetterboxInBreaks:`（默认为 `0`（false））（改进）
     - [x] `SEVOL:` ÷ `SONGVOL:` → 时间点：音效音量（新功能）
   - 美术标头
-    - [x] `BGIMAGE:`/`PREIMAGE:` → 背景事件：文件名，自动文件复制（新功能）
+    - [x] `BGIMAGE:`/`PREIMAGE:`/`COVER:` → 背景事件：文件名，自动文件复制（新功能）
     - [x] `BGMOVIE:` → 视频事件：文件名，自动文件复制（新功能）
     - [x] `MOVIEOFFSET:` → 视频事件：开始时间，经 osu! 校准误差修正（新功能）
     - [ ] TJAPlayer3-Extended 的 OBJ 命令 → 故事板事件（计划外）

@@ -109,11 +109,10 @@ Tool created by @delguoqing
     - [x] `Artist:` or `ArtistUnicode:` → `ARTIST:` (for Malody) (new)
     - [x] `AudioFilename:` → `WAVE:`, (@SamLangTen) with automatic file copy, (@k2angel) with OGG conversion
     - [x] `PreviewTime:` → `DEMOSTART:`, (new) with osu! music offset correction
-    - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
-    - [x] `Creator:` → `AUTHOR:` (for Malody) (new)
+    - [x] `Creator:` → `MAKER:` (@MoshirMoshir) & (new) `AUTHOR:` (for Malody)
     - [x] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (new)
   - Decoration Headers
-    - [x] First centered background event: filename → `PREIMAGE:` (new)
+    - [x] First centered background event: filename → `PREIMAGE:` & `COVER:` (for Malody) (new)
     - [ ] ~~First centered background event: filename → `BGIMAGE:`~~ (not planned)
     - [x] First centered video event: filename → `BGMOVIE:` (new)
     - [x] First centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
@@ -194,7 +193,7 @@ Tool created by @delguoqing
     - [x] ? → `LetterboxInBreaks:` (defaults to `0` (false)) (improved)
     - [x] `SEVOL:` ÷ `SONGVOL:` → Timing point: hitsound volume (new)
   - Decoration Headers
-    - [x] `BGIMAGE:`/`PREIMAGE:` → Background event: filename, with automatic file copy (new)
+    - [x] `BGIMAGE:`/`PREIMAGE:`/`COVER:` → Background event: filename, with automatic file copy (new)
     - [x] `BGMOVIE:` → Video event: filename, with automatic file copy (new)
     - [x] `MOVIEOFFSET:` → Video event: start time, with osu! offset correction (new)
     - [ ] TJAPlayer3-Extended OBJ commands → Storyboard event (not planned)

@@ -894,6 +894,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     if preimage:
         tja_heads_meta.append("PREIMAGE:%s" % preimage)
+        tja_heads_meta.append("COVER:%s" % preimage) # for Malody
         chart_resources[preimage] = 'preview image'
     if bgmovie:
         tja_heads_meta.append("BGMOVIE:%s" % bgmovie)

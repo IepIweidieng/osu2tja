@@ -20,7 +20,7 @@ chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def init_globals() -> None:
     global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
-    global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL
+    global MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     # jiro data
     ENCODING = None
@@ -34,7 +34,6 @@ def init_globals() -> None:
     DEMOSTART = 0.0
     HEADSCROLL = 1.0
     MAKER = None
-    AUTHOR = None
     CREATOR = None
     SONGVOL = 100.0
     SEVOL = 100.0
@@ -200,7 +199,7 @@ def parse_tja_genre(genres: str) -> List[str]:
     return res
 
 def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
+    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
@@ -223,13 +222,12 @@ def get_meta_data(filename):
             elif vname == b"OFFSET": OFFSET = float(vval)
             elif vname == b"DEMOSTART": DEMOSTART = float(vval)
             elif vname == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(vval)
-            elif vname == b"MAKER": MAKER = convert_str(vval_raw, ENCODING)
-            elif vname == b"AUTHOR": AUTHOR = convert_str(vval_raw, ENCODING)
+            elif vname in (b"MAKER", b"AUTHOR"): MAKER = convert_str(vval_raw, ENCODING)
             elif vname == b"SONGVOL": SONGVOL = float(vval)
             elif vname == b"SEVOL": SEVOL = float(vval)
             elif vname == b"COURSE": COURSE = get_course_by_number(convert_str(vval, ENCODING))
             elif vname == b"LEVEL": LEVEL = float(vval)
-            elif vname == b"PREIMAGE": PREIMAGE = convert_str(vval, ENCODING)
+            elif vname in (b"PREIMAGE", b"COVER"): PREIMAGE = convert_str(vval, ENCODING)
             elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
             elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
             elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
@@ -762,7 +760,7 @@ def write_Metadata(fout: TextIO) -> None:
     Title, Artist, Source = parse_tja_subtitle(TITLE, SUBTITLE, GENRE)
     if not Artist:
         Artist = ARTIST # fallback, as ARTIST: for Malody is romanized
-    Creator = MAKER or AUTHOR or CREATOR or Creator
+    Creator = MAKER or CREATOR or Creator
     Version = COURSE
     Tags.extend((genre for genre in GENRE if genre not in ("namco", "opentaiko")))
     for i, tag in enumerate(Tags):

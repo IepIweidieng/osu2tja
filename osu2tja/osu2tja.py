@@ -241,7 +241,7 @@ def init_globals() -> None:
     slider_multiplier = None
     slider_tick_rate = None
     column_count = 1
-    tail_fix = False
+    tail_fix = 0
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
     commands_within = []
@@ -571,16 +571,15 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
     global combo_cnt, tail_fix
     global commands_within
 
-    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
-        return
-
     # ms per quantizing unit
     t_unit = 60.0 * 1000 / tm["bpm"] / BEAT_RES
 
     # ignore past-end notes
-    if len(bar_data) > 0 and get_dt_unit_cnt(t_unit, bar_data[-1][1], int(math.floor(end))) <= 0:
-        tail_fix = True
-        write_bar_data(tm, bar_data[:-1], begin, end, tja_contents)
+    while len(bar_data) > 0 and get_dt_unit_cnt(t_unit, bar_data[-1][1], int(math.floor(end))) <= 0:
+        tail_fix += 1
+        bar_data = bar_data[:-1]
+
+    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
         return
 
     # ignore past-end commands
@@ -982,8 +981,8 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 bar_max_length = measure * time_per_beat
 
                 if tail_fix:
-                    tail_fix = False
-                    obj_idx -= 1
+                    obj_idx -= max(0, tail_fix)
+                    tail_fix = 0
                     new_obj = (hitobjects[obj_idx][0], bar_offset_begin, hitobjects[obj_idx][2])
                     hitobjects[obj_idx] = new_obj
 

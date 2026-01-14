@@ -19,13 +19,15 @@ from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, ca
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def init_globals() -> None:
-    global ENCODING, TITLE, SUBTITLE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
+    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
     global MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     # jiro data
     ENCODING = None
     TITLE = "NO TITLE"
-    SUBTITLE = "NO SUBTITLE"
+    SUBTITLE = ""
+    ARTIST = ""
+    GENRE = []
     BPM = 120.0
     WAVE = None
     OFFSET = 0.0
@@ -43,7 +45,7 @@ def init_globals() -> None:
     BGMOVIE = None
     MOVIEOFFSET = 0.0
 
-    global AudioFilename, Title, Source, Tags, Artist, Artist, Creator, Version
+    global AudioFilename, Title, Source, Tags, Artist, Creator, Version
     global AudioLeadIn, CountDown, SampleSet, StackLeniency, Mode, LetterboxInBreaks, PreviewTime
     global TimingPoints, TimingPointsRed, HitObjects
     global HPDrainRate, CircleSize, OverallDifficulty, ApproachRate, SliderMultiplier, SliderTickRate, CircleX, CircleY
@@ -51,8 +53,8 @@ def init_globals() -> None:
     AudioFilename = ""
     Title = ""
     Source = ""
-    Tags = "taiko jiro tja"
-    Artist = "unknown"
+    Tags = ["tja"]
+    Artist = "Unknown Artist"
     Creator = "unknown"
     Version = "Oni"
     AudioLeadIn = 0
@@ -173,8 +175,32 @@ def get_course_by_number(str_: Str) -> str:
     elif num == 4: return "Edit"
     else: return "Edit%d" % (num-4)
 
+def parse_tja_genre(genres: str) -> List[str]:
+    res: List[str] = []
+    for genre in genres.split(","):
+        genre = genre.lower()
+        if genre in {"ポップス", "j-pop", "pop", "rock", "流行音乐", "华语流行音乐", "流行音樂", "華語流行音樂"}:
+            genre = "pop"
+        elif genre in {"キッズ", "どうよう", "童謡・民謡", "children", "children/folk", "children-folk"}:
+            genre = "children-folk"
+        elif genre in {"アニメ", "anime", "anime/tv", "卡通动画音乐", "卡通動畫音樂", "애니메이션"}:
+            genre = "anime"
+        elif genre.startswith("ボーカロイド") or genre.startswith("vocaloid"):
+            genre = "vocaloid"
+        elif genre in {"ゲームミュージック", "game music", "游戏音乐", "遊戲音樂", "게임"}:
+            genre = "game"
+        elif genre in {"バラエティ", "バラエティー", "ゲーム＆バラエティ", "variety", "综合音乐", "綜合音樂", "버라이어티"}:
+            genre = "variety"
+        elif genre in {"クラシック", "クラッシック", "classical", "classic", "古典音乐", "古典音樂", "클래식"}:
+            genre = "classical"
+        elif genre in {"ナムコオリジナル", "namco original", "namco原创音乐", "namco原創音樂", "남코 오리지널"}:
+            genre = "namco"
+        if genre:
+            res.append(genre)
+    return res
+
 def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
+    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, AUTHOR, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
     rtassert(filename.endswith(".tja"), "filename should ends with .tja")
@@ -190,6 +216,8 @@ def get_meta_data(filename):
             vval = rm_jiro_comment(vval_raw).rstrip()
             if vname == b"TITLE": TITLE = convert_str(vval_raw, ENCODING)
             elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval_raw, ENCODING)
+            elif vname == b"ARTIST": ARTIST = convert_str(vval_raw, ENCODING)
+            elif vname == b"GENRE": GENRE = parse_tja_genre(convert_str(vval_raw, ENCODING))
             elif vname == b"BPM": BPM = float(vval)
             elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
             elif vname == b"OFFSET": OFFSET = float(vval)
@@ -609,9 +637,7 @@ def write_fmt_ver_str(fout: TextIO) -> None:
     print("", file=fout)
 
 def write_General(fout: TextIO) -> None:
-    global Title, Source, AudioFilename, PreviewTime
-    Title = TITLE
-    Source = SUBTITLE
+    global AudioFilename, PreviewTime
     if WAVE:
         AudioFilename = WAVE
         chart_resources[WAVE] = 'song audio'
@@ -638,19 +664,116 @@ def write_Editor(fout: TextIO) -> None:
     print("GridSize: 4", file=fout)
     print("", file=fout)
 
+pat_work_info = re.compile(r'^\w*?(?:ドラマ|[\w ]*?Drama|剧|劇|アニメ|[\w ]*? Anime|动画|動畫|映画|[\w ]*? Movie|电影|電影|CMソング)')
+pat_song_type = re.compile(r'(?:(?:オープニング・?|OP|エンディング・?|ED)?(?:テーマ|主題)[歌曲]?|(?:Opening |Ending )?Theme( Song)?|(?:主[题題]|片[头頭尾])[歌曲]?|デモソング|Demo Song|メドレー|Medley|組曲) *$')
+
+def parse_tja_subtitle(title: str, subtitle: str, genres: List[str]) -> Tuple[str, str, str]: # Title, Artist, Source
+    artist = ""
+    # original genre as Source, where the work title extracted from subtitle is assumed to be fictional
+    source = ""
+    if "namco" in genres:
+        source = "Taiko no Tatsujin"
+    elif "opentaiko" in genres:
+        source = "OpenTaiko"
+
+    # subtitle is second line of title
+    if subtitle.startswith("++"): # or not subtitle.startswith("--"): # some charters omits --
+        subtitle = subtitle.removeprefix('++')
+        return title + " " + subtitle, artist or Artist, source or Source
+
+    # try extracting info
+    subtitle = subtitle.removeprefix("--")
+
+    # work info as secondary title
+    match = re.match(r'^[～~].*?(?:[「『]| " ?)(.*?)(?:[」』]| ?" ).*?[～~]', subtitle)
+    if match is not None:
+        if not source:
+            source = match.group(1)
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # secondary title
+    match = (re.match(r'^[～~—].+?[～~—]', subtitle) # secondary title or version
+        or re.match(r'''^[^ 「」『』："/]+?[「『"'] ?.+? ?[」』"']''', subtitle)) # movement (classical music)
+    if match is not None:
+        title += " " + match.group(0)
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # cover/remix info
+    match = re.match(rf'^[^ 「」『』："/]*? cover ver.', subtitle)
+    if match is not None:
+        title += f" ({match.group(1)} Cover)"
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # original song info ((original) artists, original title, original artists)
+    match = (re.match(rf'^原曲：([^ 「」『』："/]*?)()()', subtitle) # or `From " <original artists> "` (ambiguous)
+         or re.match(rf'^([^ 「」『』："/]*?) (?:原曲|From)(?:[「『]| " ?)(.*?) ?/ ?(.*?)(?:[」』]| ?")', subtitle))
+    if match is not None:
+        artist = match.group(1)
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # Touhou arrangements
+    match = re.match(r'^(?:東方Projectアレンジ|Touhou Project Arrange|東方Project Arrange)', subtitle)
+    if match is not None:
+        if not source:
+            source = "Touhou Project"
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # "From" source: (artist, source)
+    match = (re.match(r'^(?:([^ 「」『』："/]*?)(?: | ?/ ?))?[「『](.*?)[」』][^「」『』："/]*?', subtitle) # ambiguous if no space after artist
+         or re.match(r'^(?:([^ 「」『』："/]*?)(?: | ?/ ?))?(?:From|來自)(?:[^「」『』："/]*?)?(?:[「『]| " ?)(.*?)(?:[」』]| ?")', subtitle)
+         or re.match(r'^([^「」『』："/]*?)(?:[「『]| " ?)(.*?)(?:[」』]| ?" )[^「」『』："/]*?', subtitle)) # artist or work type before "From"
+    if match is not None:
+        artist, source = match.group(1) or artist, source or match.group(2)
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # quoted or spaced work title + song type
+    match = re.match(r'^[「『 ](.*?)[」』 ]\w+', subtitle)
+    if match is not None:
+        if not source:
+            source = match.group(1)
+        subtitle = subtitle.removeprefix(match.group(0)).lstrip().removeprefix('/').lstrip()
+
+    # ambiguous with single slash, assumed `artist / source`
+    # or `<album or series> / <artists or band>` or `<artists> / <project or publisher>` or `<singers> / <other artists or project>`
+    match = (re.match(r'^(.*?) / (.*)', subtitle)
+        or re.match(r'^(.*?) ?/ ?(.*)', subtitle)) # some charters omit spaces
+    if match is not None:
+        artist, source = match.group(1), source or match.group(2)
+        subtitle = ""
+
+    # ambiguous, assumed artist
+    # or `<work name> <song type>`
+    if not artist:
+        artist = subtitle
+
+    # keyword detection for source
+    if pat_work_info.match(artist):
+        artist, source = "", artist
+    elif pat_song_type.match(artist):
+        artist, source = "", artist
+    match = pat_song_type.search(source)
+    if match is not None:
+        source = source.removesuffix(match.group(0)).rstrip()
+
+    return title, artist or Artist, source or Source
+
 def write_Metadata(fout: TextIO) -> None:
-    global Title, Source, Creator, AudioFilename, PreviewTime, Version
-    Title = TITLE
-    Source = SUBTITLE    
+    global Title, Artist, Source, Creator, AudioFilename, PreviewTime, Version
+    Title, Artist, Source = parse_tja_subtitle(TITLE, SUBTITLE, GENRE)
+    if not Artist:
+        Artist = ARTIST # fallback, as ARTIST: for Malody is romanized
     Creator = MAKER or AUTHOR or CREATOR or Creator
     Version = COURSE
+    Tags.extend((genre for genre in GENRE if genre not in ("namco", "opentaiko")))
+    for i, tag in enumerate(Tags):
+        Tags[i] = tag.strip().replace(' ', '_')
     print("[Metadata]", file=fout)
     print("Title:%s" % (Title,), file=fout)
     print("Artist:%s" % (Artist,), file=fout)
     print("Creator:%s" % (Creator,), file=fout)
     print("Version:%s" % (Version,), file=fout)
     print("Source:%s" % (Source,), file=fout)
-    print("Tags:%s" % (Tags,), file=fout)
+    print("Tags:%s" % (" ".join(Tags),), file=fout)
     print("", file=fout)
 
 def write_Difficulty(fout: TextIO) -> None:

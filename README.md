@@ -105,7 +105,8 @@ Tool created by @delguoqing
   - Metadata Headers
     - [x] osu2tja watermark (moved to the first line of the TJA file)
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
-    - [x] `Source:` **AND/OR** `ArtistUnicode:`/`Artist:` → `SUBTITLE:` (@k2angel)
+    - [x] `Source:` **AND/OR** `ArtistUnicode:`/`Artist:` → `SUBTITLE:` (@k2angel), (improved) in `Artist / From " Source "` format
+    - [x] `Artist:` or `ArtistUnicode:` → `ARTIST:` (for Malody) (new)
     - [x] `AudioFilename:` → `WAVE:`, (@SamLangTen) with automatic file copy, (@k2angel) with OGG conversion
     - [x] `PreviewTime:` → `DEMOSTART:`, (new) with osu! music offset correction
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir)
@@ -176,12 +177,12 @@ Tool created by @delguoqing
 - TJA Headers
   - Metadata Headers
     - [x] osu2tja watermark (new)
-    - [x] `TITLE:` → `Title:`, (new) UTF-8 with(out) BOM support
-    - [ ] `SUBTITLE:` → `Artist:` (TODO) (Currently defaults to `unknown`)
+    - [x] `TITLE:` & `SUBTITLE:` → `Title:`, (new) UTF-8 with(out) BOM support, (new) `SUBTITLE:` appends to `TITLE:` if matches certain patterns
+    - [x] `SUBTITLE:` & `GENRE:` → `Artist:` & `Source:`, (new) based on many common patterns and keywords, (improved) where unknown `Artist:` fall backs to `ARTIST:` header and unknown `Source:` defaults to empty
+    - [x] `ARTIST:` → `Artist:` (new), (improved) defaults to `Unknown Artist`
     - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:` (new) (defaults to `unknown`)
-    - [x] `SUBTITLE:` → `Source:` (bug fixed), (new) UTF-8 with(out) BOM support
-    - [x] ? → `Tags:` (defaults to `taiko jiro tja`)
-    - [ ] `GENRE:` → `Tags:` (TODO)
+    - [x] ? → `Tags:` (defaults to `tja` (improved))
+    - [x] `GENRE:` → `Tags:` (new)
     - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)
     - [x] `WAVE:` → `AudioFilename:`, (new) with automatic file copy
     - [x] ? → `AudioLeadIn:` (defaults to `0`) (improved)

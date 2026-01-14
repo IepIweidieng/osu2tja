@@ -754,7 +754,9 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     version = vval
                 elif vname == "Source":
                     subtitle = vval
-                elif vname in ("Artist", "ArtistUnicode"):
+                elif vname == "Artist":
+                    artist_roman = artist = vval or artist
+                elif vname == "ArtistUnicode":
                     artist = vval or artist
             elif curr_sec == "Difficulty":
                 if vname == "CircleSize":
@@ -878,9 +880,12 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     bar_cnt = 1
     tja_heads_meta.append(WATER_MARK)
     tja_heads_meta.append("TITLE:%s" % title)
-    if subtitle != "" and artist != "":
-        subtitle = f"{artist} ｢{subtitle}｣より"
+    if subtitle != "":
+        subtitle = f'From " {subtitle} "'
+        if artist != "":
+            subtitle = f"{artist} / {subtitle}"
     tja_heads_meta.append("SUBTITLE:--%s" % (subtitle or artist))
+    tja_heads_meta.append("ARTIST:%s" % (artist_roman or artist))
     tja_heads_meta.append("WAVE:%s" % (audio_name or audio))
     tja_heads_meta.append("MAKER:%s" % creator) # for TJAP2fPC-based sims
     tja_heads_meta.append("AUTHOR:%s" % creator) # for Malody

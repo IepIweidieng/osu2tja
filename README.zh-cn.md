@@ -106,7 +106,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
   - 元数据标头
     - [x] osu2tja 水印（移至 TJA 文件首行）
     - [x] `TitleUnicode:`/`Title:` → `TITLE:`
-    - [x] `Source:` **和/或** `ArtistUnicode:`/`Artist:` → `SUBTITLE:`（@k2angel）
+    - [x] `Source:` **和/或** `ArtistUnicode:`/`Artist:` → `SUBTITLE:`（@k2angel），（改进）使用 `Artist / From " Source "` 格式
+    - [x] `Artist:` 或 `ArtistUnicode:` → `ARTIST:`（Malody 用）（新功能）
     - [x] `AudioFilename:` → `WAVE:`，（@SamLangTen）自动文件复制，（@k2angel）OGG 转换
     - [x] `PreviewTime:` → `DEMOSTART:`，（新功能）经 osu! 校准误差修正
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）
@@ -177,12 +178,12 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - TJA 标头
   - 元数据标头
     - [x] osu2tja 水印（新功能）
-    - [x] `TITLE:` → `Title:`，（新功能）支持带或不带 BOM 的 UTF-8
-    - [ ] `SUBTITLE:` → `Artist:`（TODO）（目前默认为 `unknown`）
+    - [x] `TITLE:` & `SUBTITLE:` → `Title:`，（新功能）支持带或不带 BOM 的 UTF-8，（新功能）`SUBTITLE:` 匹配特定模式时接在 `TITLE:` 后
+    - [x] `SUBTITLE:` & `GENRE:` → `Artist:` & `Source:`，（新功能）基于多个常见模式与关键字，（改进）未知 `Artist:` 时改用 `ARTIST:` 标头，未知 `Source:` 预设为空
+    - [x] `ARTIST:` → `Artist:`（新功能），（改进）预设为 `Unknown Artist`
     - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:`（新功能）（默认为 `unknown`）
-    - [x] `SUBTITLE:` → `Source:`（已修正），（新功能）支持带或不带 BOM 的 UTF-8
-    - [x] ? → `Tags:` (默认为 `taiko jiro tja`)
-    - [ ] `GENRE:` → `Tags:`（TODO）
+    - [x] ? → `Tags:`（默认为 `tja`（改进））
+    - [x] `GENRE:` → `Tags:`（新功能）
     - [ ] `NOTESDESIGNER<n>:` → `Tags:`（为客串制谱者时）（TODO）
     - [x] `WAVE:` → `AudioFilename:`，（新功能）自动文件复制
     - [x] ? → `AudioLeadIn:`（默认为 `0`）（改进）

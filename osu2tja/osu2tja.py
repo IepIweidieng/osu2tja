@@ -195,39 +195,34 @@ def get_timing_point(str, prev_timing_point=None):
 
     # fill a timing point dict
     ret = {}
-    try:
-        effects = int(effects)
-        ret["offset"] = float(offset)  # time
-        ret["sevol"] = float(sevol)
-        ret["GGT"] = ((effects & OSU_TMFX_GGT) != 0)
-        ret["hidefirst"] = 1 if (effects & OSU_TMFX_HIDEFIRST) else 0 # 1: true, unhide at measure end
-        if float(rawbpmv) > 0: # BPM change
-            mspb = ret["mspb"] = float(rawbpmv)
-            bpm = ret["bpm"] = 60 * 1000.0 / mspb
-            ret["beats"] = int(beats) # measure change
-            ret["scroll"] = 1.0
-            ret["redline"] = True
-        elif float(rawbpmv) < 0: # SCROLL speed change
-            assert prev_timing_point is not None
-            if (prev_timing_point["offset"] == ret["offset"]
-                and prev_timing_point["redline"]
-                and prev_timing_point["GGT"] == ret["GGT"]
-                and prev_timing_point["hidefirst"] == ret["hidefirst"]
-                ):
-                ret = prev_timing_point # merge uninherited (red) + inherited (green) timing points
-            else:
-                ret["mspb"] = prev_timing_point.get("mspb", None)
-                ret["bpm"] = prev_timing_point.get("bpm", None)
-                ret["beats"] = prev_timing_point.get("beats", None) # ignored for inherited timing points
-                ret["redline"] = False
-                ret["offset"] = get_real_offset(ret["offset"])
-            ret["scroll"] = -100.0 / float(rawbpmv)
+    effects = int(effects)
+    ret["offset"] = float(offset)  # time
+    ret["sevol"] = float(sevol)
+    ret["GGT"] = ((effects & OSU_TMFX_GGT) != 0)
+    ret["hidefirst"] = 1 if (effects & OSU_TMFX_HIDEFIRST) else 0 # 1: true, unhide at measure end
+    if float(rawbpmv) > 0: # BPM change
+        mspb = ret["mspb"] = float(rawbpmv)
+        bpm = ret["bpm"] = 60 * 1000.0 / mspb
+        ret["beats"] = int(beats) # measure change
+        ret["scroll"] = 1.0
+        ret["redline"] = True
+    elif float(rawbpmv) < 0: # SCROLL speed change
+        assert prev_timing_point is not None
+        if (prev_timing_point["offset"] == ret["offset"]
+            and prev_timing_point["redline"]
+            and prev_timing_point["GGT"] == ret["GGT"]
+            and prev_timing_point["hidefirst"] == ret["hidefirst"]
+            ):
+            ret = prev_timing_point # merge uninherited (red) + inherited (green) timing points
         else:
-            assert False
-
-    except:
-        print_with_pended("Osu file Error, at [TimingPoints] section, please check", file=sys.stderr)
-        return {}
+            ret["mspb"] = prev_timing_point.get("mspb", None)
+            ret["bpm"] = prev_timing_point.get("bpm", None)
+            ret["beats"] = prev_timing_point.get("beats", None) # ignored for inherited timing points
+            ret["redline"] = False
+            ret["offset"] = get_real_offset(ret["offset"])
+        ret["scroll"] = -100.0 / float(rawbpmv)
+    else:
+        assert False
 
     return ret
 
@@ -791,7 +786,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     hitobjects.insert(idx_last, obj)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing `{fp.name}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
+            print_with_pended(f"Error parsing `{fp.name}` at line {lineno} in section [{curr_sec}]: `{line}`. Continued.", file=sys.stderr)
 
     assert len(hitobjects) > 0
 

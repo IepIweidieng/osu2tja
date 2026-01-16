@@ -456,15 +456,16 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
                 if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
                     break
         else:
+            offset_end = get_real_offset(offset + taiko_duration))
             if sound & HITSND_FINISH:
                 ret.append((ONP_RENDA_DAI, offset, column))
             else:
                 ret.append((ONP_RENDA, offset, column))
-            ret.append((ONP_END, offset + taiko_duration, column))
+            ret.append((ONP_END, offset_end, column))
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_base_red_timing_point(timingpoints, offset)
-        offset_end = int(ps[5].split(':', 1)[0])
+        offset_end = get_real_offset(float(ps[5].split(':', 1)[0]))
         taiko_duration = offset_end - offset
         tick_spacing = min(tmr["mspb"] / slider_tick_rate, float(taiko_duration))
         j = offset
@@ -478,17 +479,18 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
+        offset_end = get_real_offset(float(ps[5]))
         if sound & HITSND_FINISH:
             ret.append((ONP_IMO, offset, column))
         else:
             ret.append((ONP_BALLOON, offset, column))
-        ret.append((ONP_END, get_real_offset(int(ps[5])), column))
+        ret.append((ONP_END, offset_end, column))
         # how many hit will break a ballon
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
             else 5 + 2.5 * (od - 5) / 5 if od > 5
             else 5) * swell_hit_multiplier
-        hits = int(max(1, (ret[-1][1] - ret[-2][1]) / 1000 * hit_multiplier))
+        hits = int(max(1, (offset_end - offset) / 1000 * hit_multiplier))
         balloons.append(hits)
 
     return ret

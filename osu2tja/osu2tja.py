@@ -244,11 +244,10 @@ def init_globals() -> None:
     chart_resources = {}
 
 def init_debug_globals() -> None:
-    global show_head_info, combo_cnt, guess_measure
+    global show_head_info, combo_cnt
     # debug args
     show_head_info = False
     combo_cnt = 0
-    guess_measure = False
 
 init_debug_globals()
 
@@ -475,26 +474,6 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
     return ret
 
 
-# BEAT - MEASURE TABLE: (beat_cnt, numerator, denominator)
-measure_table = (
-    (0.25, 1, 16),
-    (1, 1, 4),
-    (1.25, 5, 16),
-    (1.5, 3, 8),
-    (2, 2, 4),
-    (2.25, 9, 16),
-    (2.5, 5, 8),
-    (3, 3, 4),
-    (3.75, 15, 16),
-    (4, 4, 4),
-    (4.5, 9, 8),
-    (5, 5, 4),
-    (6, 6, 4),
-    (7, 7, 4),
-    (8, 8, 4),
-    (9, 9, 4),
-)
-
 def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
     denominator = tsign_raw.denominator
     numerator = tsign_raw.numerator
@@ -507,51 +486,76 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
     return (numerator, denominator)
 
 # handle an incomplete bar
-# use #MEASURE to write a bar, and use #DELAY to fix the remaining time error.
+# use #MEASURE to write the quantized and unquantized parts as 2 bars, and use #DELAY to fix the remaining time error.
 
 
 def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
-    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
+    global tail_fix
+    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= end):
         return
 
+    bar_emitted = False
+
     mspb = T_MINUTE / tm["bpm"]
-    my_beat_cnt = 1.0 * (end - begin) * tm["bpm"] / T_MINUTE
+    my_beat_cnt = (end - begin) * tm["bpm"] / T_MINUTE
 
     # this is accurate
     time_bar_data_last = bar_data[-1][1] if len(bar_data) > 0 else begin
-    min_beat_cnt = 1.0 * tm["bpm"] * (time_bar_data_last - begin) / T_MINUTE
+    min_beat_cnt = (time_bar_data_last - begin) * tm["bpm"] / T_MINUTE
 
-    # force guess measure?
-    global guess_measure
-    for beat_cnt, numerator, denominator in (measure_table if not guess_measure else []):
-        if beat_cnt > min_beat_cnt and \
-                abs(beat_cnt - my_beat_cnt) < 1 / 384 and \
-                abs(int(math.floor(begin + 1.0 * beat_cnt * mspb)) - int(math.floor(end))) <= 25:
-            break
-    else:
-        # Missing all, guess a measure here!
-        fraction = Fraction(my_beat_cnt / 4).limit_denominator(48 * 48)
-        (numerator, denominator) = get_tsign(fraction)
+    # calculate #MEASURE for quantized part
+    fraction_q = Fraction(int(BEAT_RES * my_beat_cnt), 4 * BEAT_RES)
+    (numerator_q, denominator_q) = get_tsign(fraction_q)
 
-        # avoid the last note to be divided into the next bar
-        if min_beat_cnt > 0 and numerator <= min_beat_cnt * denominator:
-            numerator = int(min_beat_cnt * denominator) + 1
-            # re-simplify the fraction
-            (numerator, denominator) = get_tsign(Fraction(numerator, denominator))
+    beat_cnt_q = 4 * numerator_q / denominator_q
+    end_q = begin + beat_cnt_q * mspb
+
+    # write quantized part
+    if numerator_q != 0:
+        tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_q, denominator_q))
+        if write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q)):
+            bar_emitted = True
+
+    # data for unquantized part
+    bar_data = bar_data[-tail_fix:] if tail_fix > 0 else []
+    tail_fix = 0
+    my_beat_cnt_unq = my_beat_cnt - beat_cnt_q
+    min_beat_cnt_unq = min_beat_cnt - beat_cnt_q
+
+    # calculate #MEASURE for unquantized part
+    fraction_unq = Fraction(my_beat_cnt_unq / 4).limit_denominator(48 * 48)
+    (numerator_unq, denominator_unq) = get_tsign(fraction_unq)
+
+    # avoid the last note to be divided into the next bar
+    if len(bar_data) > 0 and min_beat_cnt_unq > 0 and numerator_unq <= min_beat_cnt_unq * denominator_unq:
+        numerator_unq = int(min_beat_cnt_unq * denominator_unq) + 1
+        # re-simplify the fraction
+        (numerator_unq, denominator_unq) = get_tsign(Fraction(numerator_unq, denominator_unq))
+    beat_cnt_unq = 4 * numerator_unq / denominator_unq
+    end_unq = end_q + beat_cnt_unq * mspb
+
+    # write quantized part
+    if not (numerator_unq == 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
         # Note: numerator and denominator can both have decimal places
-        elif numerator == 0:
-            (numerator, denominator) = (1, 4 * max(1, mspb))
+        if numerator_unq == 0:
+            (numerator_unq, denominator_unq) = (1, 4 * max(1, mspb))
+            beat_cnt_unq = 4 * numerator_unq / denominator_unq
+            end_unq = end_q + beat_cnt_unq * mspb
+        tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_unq, denominator_unq))
+        if bar_emitted and tm["hidefirst"] <= 0:
+            tja_contents.append(make_cmd(FMT_BARLINEOFF))
+        write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
+        if bar_emitted and tm["hidefirst"] <= 0:
+            tja_contents.append(make_cmd(FMT_BARLINEON))
 
-        beat_cnt = 4 * numerator / denominator
-
-    tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator, denominator))
-    write_bar_data(tm, bar_data, begin, begin + beat_cnt * mspb, tja_contents)
-    delay_time = int(math.floor(end)) - int(math.floor(begin + beat_cnt * mspb))
+    # write delay part
+    delay_time = end - end_unq
     # Note: #DELAY value can be in any sign
 
-    # jiro will ignore delays shorter than 0.001s
-    if abs(delay_time) >= 1:
+    # Note: jiro will ignore delays shorter than 0.001s, but tjap3 simulators do not
+    # for playing in jiro, use "BPMCHANGEによるズレ調整器" by CurryDry0608hk
+    if delay_time != 0:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 
 
@@ -560,65 +564,92 @@ def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[fl
     return int(round(delta))
 
 
-def write_bar_data(tm, bar_data, begin, end, tja_contents):
+def write_bar_data(tm, bar_data, begin, end, tja_contents, time_sig=None, limit=None):
     global show_head_info
     global combo_cnt, tail_fix
     global commands_within
 
-    # ms per quantizing unit
-    t_unit = 60.0 * 1000 / tm["bpm"] / BEAT_RES
+    if time_sig is None:
+        time_sig = (tm["beats"], 4)
+    if limit is None:
+        limit = end
 
-    # ignore past-end notes
-    while len(bar_data) > 0 and get_dt_unit_cnt(t_unit, bar_data[-1][1], int(math.floor(end))) <= 0:
+    # ms per quantizing unit
+    ibegin = int(math.floor(begin))
+    iend = int(math.floor(end))
+    ilimit = int(math.floor(limit))
+
+    # ensure correct detection of past-end notes
+    has_subdivs = True
+    t_unit = 60.0 * 1000 / tm["bpm"] / BEAT_RES
+    if t_unit > iend - ibegin:
+        has_subdivs = False
+        t_unit = iend - ibegin
+
+    # ignore past-limit notes
+    while len(bar_data) > 0 and (bar_data[-1][1] >= limit or (has_subdivs and get_dt_unit_cnt(t_unit, bar_data[-1][1], iend) <= 0)):
         tail_fix += 1
         bar_data = bar_data[:-1]
 
-    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and len(commands_within) == 0:
-        return
+    if ibegin == iend and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= ilimit):
+        return False
 
-    # ignore past-end commands
-    idx_cmd_limit = bisect_left(commands_within, int(math.floor(end)), key=lambda cmd: cmd[0])
+    # ignore past-limit commands
+    idx_cmd_limit = bisect_left(commands_within, ilimit, key=lambda cmd: cmd[0])
 
     # build offset data
     offset_list = sorted(set(itertools.chain(
-        [int(math.floor(begin))],
+        [ibegin],
         (cmd[0] for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
         (datum[1] for datum in bar_data),
-        [int(math.floor(end))],
+        [iend],
     )))
 
     # calculate beat division (no known efficient general solution exists (integer factor problem); do heuristics here)
-    delta_list = [get_dt_unit_cnt(t_unit, offset_list[i], offset_list[i + 1])
-        for i in range(len(offset_list) - 1)]
-    delta_list_non_zero = [d for d in delta_list if d != 0] # ignore sub-quantization intervals
-    delta_gcd = gcd_of_list(delta_list_non_zero) if len(delta_list_non_zero) != 0 else 1
+    time_units = [(offset_list[i], get_dt_unit_cnt(t_unit, ibegin, offset_list[i])) # force aligned to begin
+        for i in range(len(offset_list))]
+    time_unit_deltas = [(time_units[i][0], time_units[i][1], time_units[i + 1][1] - time_units[i][1])
+        for i in range(len(time_units) - 1)]
+    delta_nonzero = [d for t, u, d in time_unit_deltas if d != 0] # ignore sub-quantization intervals
+    units_per_div = gcd_of_list(delta_nonzero) if len(delta_nonzero) != 0 else 1
+
+    time_to_div = {t: u // units_per_div for t, u in time_units}
+    time_ddivs = [(t, d // units_per_div) for t, u, d in time_unit_deltas if u < units_per_div * time_to_div[iend]]
+
+    t_div = min(end - begin, units_per_div * t_unit)
+    divs_target = time_to_div[iend]
 
     # build notechart definition bar string
     bar_strs: List[str] = []
     idx_cmd = 0
     idx_bar_data = 0
+    divs = 0
+
     # floating number offset should match exactly here since they are in the list as-is
     # use <= in case bad things happen
-    for offset, delta_n_symbols in zip(offset_list, delta_list): # in range(len(offset_list) - 1)
+    for offset, delta_divs in time_ddivs:
         # Insert commands
-        while idx_cmd < len(commands_within) and commands_within[idx_cmd][0] <= offset:
+        while idx_cmd < idx_cmd_limit and commands_within[idx_cmd][0] <= offset:
             bar_strs.append("\n")
             bar_strs.append(make_cmd(*commands_within[idx_cmd][1:]))
             bar_strs.append("\n")
             idx_cmd += 1
 
-        if delta_n_symbols > 0:
+        if delta_divs > 0:
             # Insert a note (simultaneous notes are not supported)
-            note = ONP_NONE
+            note_type = ONP_NONE
             while idx_bar_data < len(bar_data) and bar_data[idx_bar_data][1] <= offset:
-                note = bar_data[idx_bar_data][0]
+                note_type = bar_data[idx_bar_data][0]
                 idx_bar_data += 1
-            if note in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
+            if note_type in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
                 combo_cnt += 1
-            bar_strs.append(note)
+            if note_type != ONP_NONE or divs_target > 1:
+                bar_strs.append(note_type)
+                divs += 1
 
             # Insert blanks (if needed)
-            bar_strs.append("0" * int(delta_n_symbols / delta_gcd - 1))
+            bar_strs.append("0" * int(delta_divs - 1))
+            divs += int(delta_divs - 1)
 
     # remove processed notechart objects
     commands_within = commands_within[idx_cmd:]
@@ -632,17 +663,18 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents):
         bar_strs.append("\n")
         bar_strs.append(make_cmd(FMT_BARLINEON))
         bar_strs.append("\n")
-        tm["hidefirst"] = 2 # true, no unhiding at measure end
+        tm["hidefirst"] = -1 # false (was true), no unhiding at measure end
 
     bar_str = ''.join(bar_strs)
 
     head = "%4d %6d %s %2d " % (combo_cnt,
-                                  format_time(int(math.floor(begin))), repr(delta_gcd/BEAT_RES), len(bar_str))
+                                  format_time(int(math.floor(begin))), repr(units_per_div/BEAT_RES), len(bar_str))
 
     if show_head_info:  # show debug info?
         print_with_pended(head + bar_str, file=sys.stderr)
 
     tja_contents.append(bar_str)
+    return True
 
 
 def osu2tja_level(star_osu: float) -> float:
@@ -803,7 +835,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             new_tm_first_frac["offset"] = get_real_offset(
                 tm_first["offset"] - init_beats * tm_first["mspb"])
             new_tm_first_frac["beats"] = init_frac_bar_beats
-            new_tm_first_frac["hidefirst"] = 2 # no unhiding at measure end
+            new_tm_first_frac["hidefirst"] = 2 # true, no unhiding at measure end
             new_tms.append(new_tm_first_frac)
 
         # timing point for the first whole bar, if any
@@ -839,10 +871,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         if tm["GGT"] != cur_ggt:
             commands_within.append((tm["offset"],
                                     tm["GGT"] and FMT_GOGOSTART or FMT_GOGOEND))
-        if (tm["hidefirst"] != 0) != (cur_hidefirst != 0):
+        if (tm["hidefirst"] > 0) != (cur_hidefirst > 0):
             # command position if no measures between timing points
             commands_within.append((tm["offset"],
-                                    tm["hidefirst"] and FMT_BARLINEOFF or FMT_BARLINEON))
+                                    tm["hidefirst"] > 0 and FMT_BARLINEOFF or FMT_BARLINEON))
         if tm["sevol"] > sevol_max:
             sevol_max = tm["sevol"]
         cur_scroll = scroll
@@ -943,54 +975,58 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         if tm_idx < len(timingpoints):
             next_measure_offset = timingpoints[tm_idx]["offset"]
         else:
-            next_measure_offset = bar_offset_begin + bar_max_length + 1
+            next_measure_offset = None
 
         # check if this object falls into this measure
-        end = min(bar_offset_begin + bar_max_length, next_measure_offset)
+        end = bar_offset_begin + bar_max_length
+        if next_measure_offset is not None:
+            end = min(end, next_measure_offset)
 
         if next_obj_offset >= int(math.floor(end)):
             # write_a_measure()
+            measure_changed = False
+            next_measure_reached = (next_measure_offset is not None and int(math.floor(end)) == int(math.floor(next_measure_offset)))
+
             if int(math.floor(end)) == int(math.floor(bar_offset_begin + bar_max_length)):
                 tm = get_base_timing_point(timingpoints, bar_offset_begin)
-                write_bar_data(tm, bar_data, bar_offset_begin,
-                               end, tja_contents)
-                bar_data = []
-                bar_cnt += 1
+                write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
                 bar_offset_begin = get_real_offset(end)
-                bar_max_length = measure * time_per_beat
-            elif int(math.floor(end)) == int(math.floor(next_measure_offset)):  # collect an incomplete bar?
+            elif next_measure_reached:  # collect an incomplete bar?
                 if tm_idx > 0: # not the start of the initial bar
-                    write_incomplete_bar(get_base_timing_point(timingpoints, bar_offset_begin),
-                                         bar_data, bar_offset_begin, end, tja_contents)
-                bar_data = []
+                    tm = get_base_timing_point(timingpoints, bar_offset_begin)
+                    write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
+                measure_changed = True
+            else:
+                assert False, "BAR END POS ERROR"
+
+            bar_data = []
+            bar_cnt += 1
+
+            if next_measure_reached:
                 tm_next = timingpoints[tm_idx]
-                measure = tm_next["beats"]
+                measure_next = tm_next["beats"]
+                if measure_next != measure:
+                    measure_changed = True
+                measure = measure_next
                 if tm_next["redline"]:
                     curr_bpm = tm_next["bpm"]
                     bar_offset_begin = next_measure_offset
                     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
                 else:
                     bar_offset_begin = end
-                time_per_beat = (60 * 1000) / curr_bpm
-                bar_max_length = measure * time_per_beat
+                bar_max_length = measure * tm_next["mspb"]
+                if measure_changed:
+                    tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
 
-                if tail_fix:
-                    obj_idx -= max(0, tail_fix)
-                    tail_fix = 0
-                    new_obj = (hitobjects[obj_idx][0], bar_offset_begin, hitobjects[obj_idx][2])
-                    hitobjects[obj_idx] = new_obj
-
-                # add new commands
-                tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
-            else:
-                assert False, "BAR END POS ERROR"
-
-            # reached next measure offset
-            if int(math.floor(end)) == int(math.floor(next_measure_offset)):
                 tm_idx += 1
+
+            # reprocess rejected objs later
+            if tail_fix:
+                obj_idx -= max(0, tail_fix)
+                tail_fix = 0
         else:
             if next_obj[1] < bar_offset_begin:
-                bar_data.append((next_obj[0], bar_offset_begin))
+                bar_data.append((next_obj[0], bar_offset_begin, *next_obj[2:]))
             else:
                 bar_data.append(next_obj)
             obj_idx += 1
@@ -1013,12 +1049,11 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true",
         help="display extra info")
     parser.add_argument("-g", "--guess-measure", "--guess", action="store_true",
-        help="force skipping predefined integer ratio look-up for bar length")
+        help="deprecated option intended for forcing skipping predefined integer ratio look-up (now removed) for bar length. Has no effects.")
     args = parser.parse_args()
 
-    global show_head_info, guess_measure
+    global show_head_info
     show_head_info = args.debug
-    guess_measure = args.guess_measure
 
     # check filename
     if not args.filename.lower().endswith(".osu"):

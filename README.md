@@ -133,7 +133,8 @@ Tool created by @delguoqing
 - TJA Commands
   - [x] Uninherited timing point: BPM → `#BPMCHANGE`
   - [x] Uninherited timing point: Beats per bar → `#MEASURE`
-  - [x] Incomplete bar → `#MEASURE` + optional `#DELAY` (crash fixed — @delguoqing; improved to ms-level accuracy)
+  - [x] Incomplete bar → (improved) quantized `#MEASURE` + unquantized `#MEASURE` + `#DELAY` (crash fixed — @delguoqing; improved to ms with decimal place accuracy for TJAPlayer3 series and OpenTaiko), (new bug fix) prevent the unquanized part from including commands and notes from future measures
+    - (new bug fix) prevent the output measure from using wrong timing point and causing chart desyncs or even infinite loops
   - [x] `SliderMultiplier:` → Base `#SCROLL` multiplier for whole chart (new)
   - [x] Inherited timing point: Slider velocity change → `#SCROLL` (uncapped range)
   - [x] Timing point: Kiai time → `#GOGOSTART` & `#GOGOEND`

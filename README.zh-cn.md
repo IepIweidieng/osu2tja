@@ -134,7 +134,8 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
 - TJA 命令
   - [x] 非继承时间点：BPM → `#BPMCHANGE`
   - [x] 非继承时间点：小节拍数 → `#MEASURE`
-  - [x] 不完整小节 → `#MEASURE` + 可能的 `#DELAY`（崩溃修正 —— @delguoqing；改进至毫秒精度）
+  - [x] 不完整小节 → （改进）量化 `#MEASURE` + 未量化 `#MEASURE` + `#DELAY`（崩溃修正 —— @delguoqing；改进至小数毫秒精度，适用于 TJAPlayer3 系列与 OpenTaiko），（新修正）防止未量化部分包含未来小节的命令与音符
+    - （新修正）防止输出的小节使用错误的时间点而造成谱面不同步甚至无穷回圈
   - [x] `SliderMultiplier:` → 整个谱面的基本 `#SCROLL` 倍率（新功能）
   - [x] 继承时间点：滑条速度变化 → `#SCROLL`（没限制范围）
   - [x] 时间点：Kiai 时间 → `#GOGOSTART` & `#GOGOEND`

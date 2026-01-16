@@ -13,7 +13,6 @@ from functools import reduce
 import itertools
 import sys
 import argparse
-import copy
 import codecs
 from fractions import Fraction
 import os
@@ -117,10 +116,10 @@ def get_base_timing_point(timing_points, t):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
     if int(math.floor(t)) < timing_points[0]["offset"]:
-        return copy.copy(timingpoints[0])
+        return timingpoints[0] # no copy for correctly updating hidefirst
 
     idx_tm = bisect_right(timing_points, t, key=lambda tm: tm["offset"]) - 1
-    return copy.copy(timing_points[idx_tm])
+    return timing_points[idx_tm] # no copy for correctly updating hidefirst
 
 
 def get_base_red_timing_point(timing_points, t):

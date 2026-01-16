@@ -910,8 +910,13 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     bar_cnt = 1
+
+    if gamemode_idx != GAMEMODE_TAIKO:
+        str_mode = GAMEMODE_TO_STR.get(gamemode_idx, f"game mode {gamemode_idx}")
+        title += f" [{str_mode}]"
+
     tja_heads_meta.append(WATER_MARK)
-    tja_heads_meta.append("TITLE:%s" % title)
+    tja_heads_meta.append("TITLE:%s" % (title))
     if subtitle != "":
         subtitle = f'From " {subtitle} "'
         if artist != "":
@@ -943,9 +948,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         tja_heads_sync.append("SEVOL:%s" % repr(SEVOL))
 
     str_info_diff_orig = f"// osu! difficulty: {version}"
-    if gamemode_idx != GAMEMODE_TAIKO:
-        str_mode = GAMEMODE_TO_STR.get(gamemode_idx, f"game mode {gamemode_idx}")
-        str_info_diff_orig += f" ({str_mode} convert)"
     tja_heads_diff.append(str_info_diff_orig)
     tja_heads_diff.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
     if level is None:

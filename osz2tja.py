@@ -37,8 +37,10 @@ def extract_osu_file_info(file) -> Dict[str, object]:
                 result["title"] = val.strip()
             elif key == "AudioFilename":
                 result["audio"] = val.strip()
+            elif key == "Mode":
+                result["mode"] = int(val)
 
-            if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio"]):
+            if all((key in result) for key in ["format_ver", "version", "difficulty", "title", "audio", "mode"]):
                 break
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
@@ -89,14 +91,14 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
     if not osu_files:
         raise ValueError(f"No .osu files found in {osus_fpath}")
 
-    osu_infos_by_song: Dict[str, List] = {}
+    osu_infos_by_song: Dict[Tuple(str, int), List] = {}
     for filename in osu_files:
         fp = TextIOWrapper(osu_zip.open(filename, "r"), encoding="utf-8")
         osu_info = extract_osu_file_info(fp)
         fp.close()
         osu_info["filename"] = filename
-        assert type(osu_info["audio"]) == str
-        osu_infos_by_song.setdefault(osu_info["audio"], []).append(osu_info)
+        assert type(osu_info["audio"] or "") == str and type(osu_info["mode"] or 0) == int
+        osu_infos_by_song.setdefault((osu_info["audio"] or "", osu_info["mode"] or 0), []).append(osu_info)
 
     osu_info_first = next(iter(osu_infos_by_song.values()))[0]
     title = osu_info_first["title"] # Use the title of the first map for naming
@@ -106,12 +108,12 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
 
     n_diffs_max_per_tja = 5
     will_split_tja = (
-        len(osu_infos_by_song.keys()) > 1
+        len(osu_infos_by_song) > 1
         or any((len(infos) > n_diffs_max_per_tja for infos in osu_infos_by_song.values()))
     )
 
     n_tjas = 0
-    for song_audio, osu_infos in osu_infos_by_song.items():
+    for (song_audio, game_mode), osu_infos in osu_infos_by_song.items():
         osu_infos.sort(key=lambda x: x["difficulty"])
         for start_idx in range(0, len(osu_infos), n_diffs_max_per_tja):
             # Get the subset of difficulties for this folder

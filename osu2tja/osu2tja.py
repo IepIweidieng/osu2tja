@@ -735,7 +735,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     preimage = None
     bgmovie = None
-    movieoffset = 0.0
+    videostart = 0.0
 
     # state vars
     osu_ver_str = ""
@@ -809,7 +809,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     elif data["event_type"] == OSU_EVENT_VIDEO:
                         if bgmovie is None and data["x_offset"] == 0 and data["y_offset"] == 0:
                             bgmovie = data["filename"]
-                            movieoffset = data["start_time"] / 1000
+                            videostart = data["start_time"]
             elif curr_sec == "TimingPoints":
                 prev_timing_point = timingpoints and timingpoints[-1] or None
                 data = get_timing_point(line, prev_timing_point)
@@ -894,7 +894,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         ms_osu_total_offset += MS_OSU_PRE_V5_MUSIC_OFFSET
     OFFSET = (-timingpoints[0]["offset"] - ms_osu_total_offset) / 1000.0
     DEMOSTART = (preview + ms_osu_total_offset) / 1000.0
-    MOVIEOFFSET = (movieoffset + ms_osu_total_offset) / 1000.0
+    MOVIEOFFSET = (videostart + ms_osu_total_offset) / 1000.0
     SONGVOL = 100 / (sevol_max / 100) if sevol_max > 100 else 100
     SEVOL = sevol_max if sevol_max < 100 else 100
 

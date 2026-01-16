@@ -92,7 +92,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 Tool created by @delguoqing
 
 - Input (`.osu`) (extracted from `.osz` by osz2tja):
-  - [x] osu file format v3&ndash;14 (those tested; warns and continues to process for other versions) (improved)
+  - [x] osu file format v3&ndash;14, v128 (those tested; warns and continues to process for other versions) (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
   - [x] std, (improved) mania, & catch mode conversion

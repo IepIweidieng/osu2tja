@@ -112,14 +112,17 @@ def format_time(t):
     return t//T_MINUTE*100000+t % T_MINUTE
 
 
-def get_base_timing_point(timing_points, t):
+def get_idx_tm_at(timing_points, t):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
     if int(math.floor(t)) < timing_points[0]["offset"]:
-        return timingpoints[0] # no copy for correctly updating hidefirst
+        return 0
 
-    idx_tm = bisect_right(timing_points, t, key=lambda tm: tm["offset"]) - 1
-    return timing_points[idx_tm] # no copy for correctly updating hidefirst
+    idx_tm = max(0, bisect_right(timing_points, t, key=lambda tm: tm["offset"]) - 1)
+    return idx_tm
+
+def get_base_timing_point(timing_points, t):
+    return timing_points[get_idx_tm_at(timing_points, t)] # no copy for correctly updating hidefirst
 
 
 def get_base_red_timing_point(timing_points, t):
@@ -259,20 +262,37 @@ def get_real_beat_cnt(tm, beat_cnt):
 # step 1: find the base timing point around t
 # step 2: calculate the fixed beat count from t to the base timing point
 # step 3: get fixed offset from fixed beat count and bpm
+# step 4: find the nearest any-color timing points, past point p and future point f
+# step 5: adjust fixed offset so that it is at or after point p and before point f
 
 
-def get_real_offset(int_offset: Union[int, float]) -> float:
+def get_real_offset(int_offset: Union[int, float], clamp: bool = True) -> float:
     int_offset = int(math.floor(int_offset))
 
     tm = get_base_red_timing_point(timingpoints, int_offset)
-    int_delta = abs(int_offset - tm["offset"])
-    sign = (int_offset - tm["offset"] > 0 and 1 or -1)
+    int_delta = int_offset - tm["offset"] # more accurate
+    sign = (int_delta and 1 or -1)
 
     t_unit_cnt = round(int_delta * tm["bpm"] * BEAT_RES / T_MINUTE)
 
     beat_cnt = t_unit_cnt / BEAT_RES
 
-    ret = tm["offset"] + beat_cnt * T_MINUTE * sign / tm["bpm"]
+    aligned_offset = tm["offset"] + beat_cnt * T_MINUTE * sign / tm["bpm"]
+
+    ret = aligned_offset
+    if clamp:
+        idx_tm_p = get_idx_tm_at(timingpoints, int_offset)
+        tm_p_offset = timingpoints[idx_tm_p]["offset"]
+        int_tm_p_offset = int(tm_p_offset)
+        if ret < tm_p_offset:
+            ret = int_tm_p_offset
+        if idx_tm_p + 1 < len(timingpoints):
+            tm_f_offset = timingpoints[idx_tm_p + 1]["offset"]
+            int_tm_f_offset = int(tm_f_offset)
+            if ret > int_tm_f_offset - 1:
+                ret = int_tm_f_offset - 1
+            if int_tm_f_offset <= int_tm_p_offset:
+                print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical integer offset")
 
     return ret
 

@@ -115,7 +115,7 @@ def format_time(t):
 def get_idx_tm_at(timing_points, t):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
-    if int(math.floor(t)) < timing_points[0]["offset"]:
+    if t < timing_points[0]["offset"]:
         return 0
 
     idx_tm = max(0, bisect_right(timing_points, t, key=lambda tm: tm["offset"]) - 1)
@@ -254,10 +254,6 @@ def init_debug_globals() -> None:
 
 init_debug_globals()
 
-# get fixed beat count
-def get_real_beat_cnt(tm, beat_cnt):
-    return round(beat_cnt * BEAT_RES, 2) / BEAT_RES
-
 # get fixed offset base by the nearest base timing point
 # step 1: find the base timing point around t
 # step 2: calculate the fixed beat count from t to the base timing point
@@ -266,33 +262,24 @@ def get_real_beat_cnt(tm, beat_cnt):
 # step 5: adjust fixed offset so that it is at or after point p and before point f
 
 
-def get_real_offset(int_offset: Union[int, float], clamp: bool = True) -> float:
-    int_offset = int(math.floor(int_offset))
-
-    tm = get_base_red_timing_point(timingpoints, int_offset)
-    int_delta = int_offset - tm["offset"] # more accurate
-    sign = (int_delta and 1 or -1)
-
-    t_unit_cnt = round(int_delta * tm["bpm"] * BEAT_RES / T_MINUTE)
-
-    beat_cnt = t_unit_cnt / BEAT_RES
-
-    aligned_offset = tm["offset"] + beat_cnt * T_MINUTE * sign / tm["bpm"]
+def get_real_offset(raw_offset: Union[int, float], clamp: bool = False) -> float:
+    tm = get_base_red_timing_point(timingpoints, raw_offset)
+    t_unit = get_t_unit(tm)
+    t_unit_cnt = get_dt_unit_cnt(t_unit , tm["offset"], raw_offset)
+    aligned_offset = tm["offset"] + t_unit_cnt * t_unit
 
     ret = aligned_offset
     if clamp:
-        idx_tm_p = get_idx_tm_at(timingpoints, int_offset)
+        idx_tm_p = get_idx_tm_at(timingpoints, raw_offset)
         tm_p_offset = timingpoints[idx_tm_p]["offset"]
-        int_tm_p_offset = int(tm_p_offset)
         if ret < tm_p_offset:
-            ret = int_tm_p_offset
+            ret = tm_p_offset
         if idx_tm_p + 1 < len(timingpoints):
             tm_f_offset = timingpoints[idx_tm_p + 1]["offset"]
-            int_tm_f_offset = int(tm_f_offset)
-            if ret > int_tm_f_offset - 1:
-                ret = int_tm_f_offset - 1
-            if int_tm_f_offset <= int_tm_p_offset:
-                print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical integer offset")
+            if ret > tm_f_offset - 1:
+                ret = tm_f_offset - 1
+            if tm_f_offset <= tm_p_offset:
+                print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical offset")
 
     return ret
 
@@ -431,7 +418,7 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
         else 0)
     type = int(ps[3])
     sound = int(ps[4])
-    offset = get_real_offset(float(ps[2]))
+    offset = get_real_offset(float(ps[2]), clamp=True)
 
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append((get_hitnote_type(sound, column), offset, column))
@@ -447,7 +434,7 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
             i = 0
             j = offset
             while j <= offset + taiko_duration + tick_spacing / 8:
-                point_offset = get_real_offset(j)
+                point_offset = get_real_offset(j, clamp=True)
                 ret.append((get_hitnote_type(slider_sounds[i], column), point_offset, column))
 
                 j += tick_spacing
@@ -456,7 +443,7 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
                 if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
                     break
         else:
-            offset_end = get_real_offset(offset + taiko_duration))
+            offset_end = get_real_offset(offset + taiko_duration, clamp=True)
             if sound & HITSND_FINISH:
                 ret.append((ONP_RENDA_DAI, offset, column))
             else:
@@ -465,12 +452,12 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_base_red_timing_point(timingpoints, offset)
-        offset_end = get_real_offset(float(ps[5].split(':', 1)[0]))
+        offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), clamp=True)
         taiko_duration = offset_end - offset
         tick_spacing = min(tmr["mspb"] / slider_tick_rate, float(taiko_duration))
         j = offset
         while j <= offset + taiko_duration + tick_spacing / 8:
-            point_offset = get_real_offset(j)
+            point_offset = get_real_offset(j, clamp=True)
             ret.append((get_hitnote_type(sound, column), point_offset, column))
 
             j += tick_spacing
@@ -479,7 +466,7 @@ def get_note(str_: str, od: float) -> List[Tuple[str, float, int]]:
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
-        offset_end = get_real_offset(float(ps[5]))
+        offset_end = get_real_offset(float(ps[5]), clamp=True)
         if sound & HITSND_FINISH:
             ret.append((ONP_IMO, offset, column))
         else:
@@ -513,7 +500,7 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
 
 def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     global tail_fix
-    if int(math.floor(begin)) == int(math.floor(end)) and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= end):
+    if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= end):
         return
 
     bar_emitted = False
@@ -530,7 +517,7 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     (numerator_q, denominator_q) = get_tsign(fraction_q)
 
     beat_cnt_q = 4 * numerator_q / denominator_q
-    end_q = begin + beat_cnt_q * mspb
+    end_q = get_real_offset(begin + beat_cnt_q * mspb)
 
     # write quantized part
     if numerator_q != 0:
@@ -580,6 +567,8 @@ def write_incomplete_bar(tm, bar_data, begin, end, tja_contents):
     if delay_time != 0:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 
+def get_t_unit(tm) -> float:
+    return T_MINUTE / tm["bpm"] / BEAT_RES
 
 def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[float, int]) -> int:
     delta = (offset1 - offset0) / t_unit
@@ -597,38 +586,34 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents, time_sig=None, limit=
         limit = end
 
     # ms per quantizing unit
-    ibegin = int(math.floor(begin))
-    iend = int(math.floor(end))
-    ilimit = int(math.floor(limit))
-
     # ensure correct detection of past-end notes
     has_subdivs = True
-    t_unit = 60.0 * 1000 / tm["bpm"] / BEAT_RES
-    if t_unit > iend - ibegin:
+    t_unit = get_t_unit(tm)
+    if t_unit > end - begin:
         has_subdivs = False
-        t_unit = iend - ibegin
+        t_unit = end - begin
 
     # ignore past-limit notes
-    while len(bar_data) > 0 and (bar_data[-1][1] >= limit or (has_subdivs and get_dt_unit_cnt(t_unit, bar_data[-1][1], iend) <= 0)):
+    while len(bar_data) > 0 and (bar_data[-1][1] >= limit or (has_subdivs and get_dt_unit_cnt(t_unit, bar_data[-1][1], end) <= 0)):
         tail_fix += 1
         bar_data = bar_data[:-1]
 
-    if ibegin == iend and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= ilimit):
+    if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0][0] >= limit):
         return False
 
     # ignore past-limit commands
-    idx_cmd_limit = bisect_left(commands_within, ilimit, key=lambda cmd: cmd[0])
+    idx_cmd_limit = bisect_left(commands_within, limit, key=lambda cmd: cmd[0])
 
     # build offset data
     offset_list = sorted(set(itertools.chain(
-        [ibegin],
-        (cmd[0] for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
-        (datum[1] for datum in bar_data),
-        [iend],
+        [begin],
+        (max(begin, cmd[0]) for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
+        (max(begin, datum[1]) for datum in bar_data),
+        [end],
     )))
 
     # calculate beat division (no known efficient general solution exists (integer factor problem); do heuristics here)
-    time_units = [(offset_list[i], get_dt_unit_cnt(t_unit, ibegin, offset_list[i])) # force aligned to begin
+    time_units = [(offset_list[i], get_dt_unit_cnt(t_unit, begin, offset_list[i])) # force aligned to begin
         for i in range(len(offset_list))]
     time_unit_deltas = [(time_units[i][0], time_units[i][1], time_units[i + 1][1] - time_units[i][1])
         for i in range(len(time_units) - 1)]
@@ -636,10 +621,10 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents, time_sig=None, limit=
     units_per_div = gcd_of_list(delta_nonzero) if len(delta_nonzero) != 0 else 1
 
     time_to_div = {t: u // units_per_div for t, u in time_units}
-    time_ddivs = [(t, d // units_per_div) for t, u, d in time_unit_deltas if u < units_per_div * time_to_div[iend]]
+    time_ddivs = [(t, d // units_per_div) for t, u, d in time_unit_deltas if u < units_per_div * time_to_div[end]]
 
     t_div = min(end - begin, units_per_div * t_unit)
-    divs_target = time_to_div[iend]
+    divs_target = time_to_div[end]
 
     # build notechart definition bar string
     bar_strs: List[str] = []
@@ -689,8 +674,8 @@ def write_bar_data(tm, bar_data, begin, end, tja_contents, time_sig=None, limit=
 
     bar_str = ''.join(bar_strs)
 
-    head = "%4d %6d %s %2d " % (combo_cnt,
-                                  format_time(int(math.floor(begin))), repr(units_per_div/BEAT_RES), len(bar_str))
+    head = "%4d %6.f %s %2d " % (combo_cnt,
+                                  format_time(begin), repr(units_per_div/BEAT_RES), len(bar_str))
 
     if show_head_info:  # show debug info?
         print_with_pended(head + bar_str, file=sys.stderr)
@@ -991,7 +976,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
         # get next object to process
         next_obj = hitobjects[obj_idx]
-        next_obj_offset = int(math.floor(next_obj[1]))
+        next_obj_offset = next_obj[1]
 
         # get next measure offset to compare
         if tm_idx < len(timingpoints):
@@ -1000,16 +985,16 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             next_measure_offset = None
 
         # check if this object falls into this measure
-        end = bar_offset_begin + bar_max_length
+        full_end = end = get_real_offset(bar_offset_begin + bar_max_length)
         if next_measure_offset is not None:
             end = min(end, next_measure_offset)
 
-        if next_obj_offset >= int(math.floor(end)):
+        if next_obj_offset >= end:
             # write_a_measure()
             measure_changed = False
-            next_measure_reached = (next_measure_offset is not None and int(math.floor(end)) == int(math.floor(next_measure_offset)))
+            next_measure_reached = (next_measure_offset is not None and end == next_measure_offset)
 
-            if int(math.floor(end)) == int(math.floor(bar_offset_begin + bar_max_length)):
+            if end == full_end:
                 tm = get_base_timing_point(timingpoints, bar_offset_begin)
                 write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
                 bar_offset_begin = get_real_offset(end)
@@ -1035,7 +1020,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     bar_offset_begin = next_measure_offset
                     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
                 else:
-                    bar_offset_begin = end
+                    bar_offset_begin = get_real_offset(end)
                 bar_max_length = measure * tm_next["mspb"]
                 if measure_changed:
                     tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
@@ -1047,10 +1032,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 obj_idx -= max(0, tail_fix)
                 tail_fix = 0
         else:
-            if next_obj[1] < bar_offset_begin:
-                bar_data.append((next_obj[0], bar_offset_begin, *next_obj[2:]))
-            else:
-                bar_data.append(next_obj)
+            bar_data.append(next_obj)
             obj_idx += 1
 
     # flush buffer

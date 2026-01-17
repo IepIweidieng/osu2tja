@@ -239,6 +239,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
     offset, rawbpmv = ps[:2]
     beats = ps[2] if len(ps) > 2 else '4'
     sevol = ps[5] if len(ps) > 5 else '100'
+    uninherited = int(ps[6]) if len(ps) > 6 else float(rawbpmv) > 0
     effects = int(ps[7] if len(ps) > 7 else '0')
 
     # fill a timing point dict
@@ -249,19 +250,17 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ggt = ((effects & OSU_TMFX_GGT) != 0),
         hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN,
     )
-    if float(rawbpmv) > 0: # BPM change
-        ret.mspb = float(rawbpmv)
+    if uninherited: # BPM change
+        ret.mspb = abs(float(rawbpmv))
         ret.bpm = 60 * 1000.0 / ret.mspb
-        ret.beats = int(beats) # measure change
-        ret.scroll = 1.0
+        ret.beats = abs(int(beats)) # measure change
+        ret.scroll = math.copysign(1.0, float(rawbpmv))
         ret.redtm = ret
-    elif float(rawbpmv) < 0: # SCROLL speed change
+    else: # SCROLL speed change
         assert prev_timing_point is not None
         merge_with_prev = (
             prev_timing_point.offset == ret.offset
-            and prev_timing_point.is_redline()
-            and prev_timing_point.ggt == ret.ggt
-            and prev_timing_point.hidefirst == ret.hidefirst)
+            and prev_timing_point.is_redline())
         if merge_with_prev:
             ret = prev_timing_point
         else:
@@ -270,13 +269,12 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
             ret.beats = prev_timing_point.beats # ignored for inherited timing points
             ret.redtm = prev_timing_point.redtm
             ret.offset = get_real_offset(ret.offset, raw=True)
-        ret.scroll = -100.0 / float(rawbpmv)
+        assert ret.redtm is not None
+        ret.scroll = -math.copysign(100.0, ret.redtm.scroll) / float(rawbpmv)
         if merge_with_prev:
             if round(ret.offset_raw) in inspect_ms:
                 print_with_pended(f"[INSPECT_MS {ret.offset_raw}] merged timing point {ret}", file=sys.stderr)
             return None # merge uninherited (red) + inherited (green) timing points
-    else:
-        assert False
 
     if round(ret.offset_raw) in inspect_ms:
         print_with_pended(f"[INSPECT_MS {ret.offset_raw}] new timing point {ret}", file=sys.stderr)
@@ -292,7 +290,7 @@ def init_globals() -> None:
     # global variables
     timingpoints = []
     balloons = []
-    slider_multiplier = None
+    slider_multiplier = 1.40
     slider_tick_rate = 4
     overall_difficulty = 5
     column_count = 1
@@ -440,12 +438,11 @@ def should_convert_slider_to_hits(tm: OsuTimingPoint, curve_len: float, reverse_
 
     beatLength: float
 
-    if timingPoint.scroll != 1.0:
-        beatLength = get_precision_adjusted_beat_length(timingPoint.scroll, timingPoint)
+    if abs(timingPoint.scroll) != 1.0: # modified behavior to support negative scroll
+        beatLength = get_precision_adjusted_beat_length(abs(timingPoint.scroll), timingPoint)
     else:
         beatLength = timingPoint.mspb
 
-    assert slider_multiplier is not None and slider_tick_rate is not None
     sliderScoringPointDistance: float = osu_base_scoring_distance * (slider_multiplier * VELOCITY_MULTIPLIER) / slider_tick_rate
 
     # The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.

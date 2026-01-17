@@ -1070,11 +1070,6 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     tja_contents.append("#START")
 
-    def is_new_measure(timing_point: OsuTimingPoint) -> bool:
-        bpm = timing_point.bpm
-        _measure = timing_point.beats
-        return bpm != curr_bpm or measure != _measure or timing_point.is_redline()
-
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
         # allows simultaneous notes in different columns
@@ -1083,7 +1078,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     while obj_idx < len(hitobjects):
         # skip volumn change and kiai
-        while tm_idx < len(timingpoints) and not is_new_measure(timingpoints[tm_idx]):
+        while tm_idx < len(timingpoints) and not timingpoints[tm_idx].is_redline():
             tm_idx += 1
 
         # get next object to process
@@ -1126,20 +1121,15 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
             if next_measure_reached:
                 tm_next = timingpoints[tm_idx]
-                measure_next = tm_next.beats
-                if measure_next != measure:
-                    measure_changed = True
-                measure = measure_next
-                if tm_next.is_redline():
-                    assert next_measure_offset is not None
-                    curr_bpm = tm_next.bpm
-                    bar_offset_begin = next_measure_offset
-                    tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
-                else:
-                    bar_offset_begin = end
+                assert next_measure_offset is not None
+                bar_offset_begin = next_measure_offset
+                if curr_bpm != tm_next.bpm:
+                    tja_contents.append(make_cmd(FMT_BPMCHANGE, tm_next.bpm))
+                curr_bpm = tm_next.bpm
                 bar_max_length = measure * tm_next.mspb
-                if measure_changed:
-                    tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
+                if measure_changed or measure != tm_next.beats:
+                    tja_contents.append(make_cmd(FMT_MEASURECHANGE, tm_next.beats, 4))
+                measure = tm_next.beats
 
                 tm_idx += 1
 

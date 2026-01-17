@@ -112,10 +112,10 @@ Tool created by @delguoqing
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir) & (new) `AUTHOR:` (for Malody)
     - [x] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (new)
   - Decoration Headers
-    - [x] First centered background event: filename → `PREIMAGE:` & `COVER:` (for Malody) (new)
-    - [ ] ~~First centered background event: filename → `BGIMAGE:`~~ (not planned)
-    - [x] First centered video event: filename → `BGMOVIE:` (new)
-    - [x] First centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
+    - [x] First horizontally centered background event: filename → `PREIMAGE:` & `COVER:` (for Malody) (new)
+    - [ ] ~~First horizontally centered background event: filename → `BGIMAGE:`~~ (not planned)
+    - [x] First horizontally centered video event: filename → `BGMOVIE:` (new)
+    - [x] First horizontally centered video event: start time → `MOVIEOFFSET:`, with osu! music offset correction (new)
     - [ ] Storyboard event → TJAPlayer3-Extended OBJ commands (not planned)
   - Sync Headers
     - [x] initial BPM → `BPM:` (for display only), (new) for each difficulty, (new) output simpliest decimal without digit count limits.

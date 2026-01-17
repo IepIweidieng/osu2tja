@@ -869,10 +869,10 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 data = get_event(line)
                 if data:
                     if data.event_type == OSU_EVENT_BG:
-                        if preimage is None and data.x_offset == 0 and data.y_offset == 0:
+                        if preimage is None and data.x_offset == 0:
                             preimage = data.filename
                     elif data.event_type == OSU_EVENT_VIDEO:
-                        if bgmovie is None and data.x_offset == 0 and data.y_offset == 0:
+                        if bgmovie is None and data.x_offset == 0:
                             bgmovie = data.filename
                             videostart = data.start_time
             elif curr_sec == "TimingPoints":

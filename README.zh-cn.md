@@ -113,10 +113,10 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）&（新功能）`AUTHOR:`（Malody 用）
     - [x] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（新功能）
   - 美术标头
-    - [x] 首个置中背景事件：文件名 → `PREIMAGE:` & `COVER:`（Malody 用）（新功能）
-    - [ ] ~~首个置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
-    - [x] 首个置中视频事件：文件名 → `BGMOVIE:`（新功能）
-    - [x] 首个置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
+    - [x] 首个左右置中背景事件：文件名 → `PREIMAGE:` & `COVER:`（Malody 用）（新功能）
+    - [ ] ~~首个左右置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
+    - [x] 首个左右置中视频事件：文件名 → `BGMOVIE:`（新功能）
+    - [x] 首个左右置中视频事件：起始时间 → `MOVIEOFFSET:`，经 osu! 校准误差修正（新功能）
     - [ ] 故事板事件 → TJAPlayer3-Extended 的 OBJ 命令（计划外）
   - 音频同步标头
     - [x] 初始 BPM → `BPM:`（纯显示用），​（新功能）​各难度可異，​（新功能）输出不限位数的最简小数

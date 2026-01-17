@@ -49,14 +49,19 @@ def extract_osu_file_info(file) -> Dict[str, object]:
     return result
 
 
-def convert_to_ogg(audio_root: str, audio_name: str) -> str:
+def get_ogg_path(audio_root: str, audio_name: str) -> Tuple[str, str, str]:
     fname, ext = os.path.splitext(audio_name)
     audio_name_ogg = f"{fname}.ogg"
-    audio_path = os.path.join(audio_root, audio_name)
     audio_path_ogg = os.path.join(audio_root, audio_name_ogg)
+    return ext, audio_name_ogg, audio_path_ogg
 
+
+def convert_to_ogg(audio_root: str, audio_name: str) -> str:
+    ext, audio_name_ogg, audio_path_ogg = get_ogg_path(audio_root, audio_name)
+    audio_path = os.path.join(audio_root, audio_name)
     if ext.lower() != ".ogg":
         if os.path.exists(audio_path_ogg):
+            os.remove(audio_path) # no longer needed
             return audio_name_ogg
         print(f"Converting `{audio_path}` -> `{audio_path_ogg}` ...", end="", flush=True)
         print_pend()
@@ -128,12 +133,16 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
             # Extract audio first
             storage_path = path.join(target_path, folder_name)
             os.makedirs(storage_path, exist_ok=True)
-            try:
-                osu_zip.extract(song_audio, storage_path)
-                song_audio_tja = convert_to_ogg(storage_path, song_audio)
-            except KeyError:
-                print(f"Warning: song audio `{song_audio}` not found. Neither copied nor converted.", file=sys.stderr)
-                song_audio_tja = song_audio
+            ext, audio_name_ogg, audio_path_ogg = get_ogg_path(storage_path, song_audio)
+            if os.path.exists(audio_path_ogg):
+                song_audio_tja = audio_name_ogg
+            else:
+                try:
+                    osu_zip.extract(song_audio, storage_path)
+                    song_audio_tja = convert_to_ogg(storage_path, song_audio)
+                except KeyError:
+                    print(f"Warning: song audio `{song_audio}` not found. Neither copied nor converted.", file=sys.stderr)
+                    song_audio_tja = song_audio
 
             # Collect other chart resources
             resources: Dict[str, str] = {}

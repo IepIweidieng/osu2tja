@@ -259,7 +259,9 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
             and prev_timing_point.is_redline()
             and prev_timing_point.ggt == ret.ggt
             and prev_timing_point.hidefirst == ret.hidefirst)
-        if not merge_with_prev:
+        if merge_with_prev:
+            ret = prev_timing_point
+        else:
             ret.mspb = prev_timing_point.mspb
             ret.bpm = prev_timing_point.bpm
             ret.beats = prev_timing_point.beats # ignored for inherited timing points

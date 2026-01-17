@@ -232,12 +232,13 @@ def get_timing_point(str, prev_timing_point=None):
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 def init_globals() -> None:
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
     # global variables
     timingpoints = []
     balloons = []
     slider_multiplier = None
     slider_tick_rate = None
+    overall_difficulty = 5
     column_count = 1
     tail_fix = 0
     gamemode_idx = GAMEMODE_STD
@@ -712,7 +713,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
         List[str], List[str], List[str], List[str], Dict[str, str]
     ]:
     init_globals()
-    global slider_multiplier, slider_tick_rate, column_count, timingpoints
+    global slider_multiplier, slider_tick_rate, overall_difficulty, column_count, timingpoints
     global balloons, tail_fix
     global osu_format_ver
     global commands_within
@@ -729,6 +730,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     subtitle = ""
     creator = ""
     artist = ""
+    artist_roman = ""
     version = ""
     preview = 0
     hitobjects: List[Tuple[str, float, int]] = []
@@ -906,7 +908,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     bar_data = []  # current bar data
 
-    bar_offset_begin = timingpoints[0]["offset"]
+    end = bar_offset_begin = timingpoints[0]["offset"]
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     bar_cnt = 1

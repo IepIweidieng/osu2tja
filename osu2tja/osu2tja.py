@@ -125,17 +125,18 @@ def get_last_red_tm(timing_points: List["OsuTimingPoint"]):
     assert tmr is not None, "Need at least one uninherited timing point"
     return tmr
 
-def get_idx_tm_at(timing_points: List["OsuTimingPoint"], t):
+def get_idx_tm_at(timing_points: List["OsuTimingPoint"], t, raw=False):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
-    idx_tm = max(0, bisect_right(timing_points, t, key=lambda tm: tm.offset) - 1)
+    key: Callable[[OsuTimingPoint], float] = (lambda tm: tm.offset_raw) if raw else (lambda tm: tm.offset)
+    idx_tm = max(0, bisect_right(timing_points, t, key=key) - 1)
     return idx_tm
 
-def get_tm_at(timing_points: List["OsuTimingPoint"], t):
-    return timing_points[get_idx_tm_at(timing_points, t)] # no copy for correctly updating hidefirst
+def get_tm_at(timing_points: List["OsuTimingPoint"], t, raw=False):
+    return timing_points[get_idx_tm_at(timing_points, t, raw)] # no copy for correctly updating hidefirst
 
-def get_red_tm_at(timing_points: List["OsuTimingPoint"], t):
-    tmr = get_tm_at(timing_points, t).redtm
+def get_red_tm_at(timing_points: List["OsuTimingPoint"], t, raw=False):
+    tmr = get_tm_at(timing_points, t, raw).redtm
     assert tmr is not None, "Need at least one uninherited timing point"
     return tmr
 
@@ -221,6 +222,7 @@ class OsuTimingPoint:
     beats: float = 4
     # greenline properties
     scroll: float = 1.0
+    offset_raw: float = 0
 
     def is_redline(self) -> bool:
         return self.redtm is None or self.redtm == self
@@ -242,6 +244,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
     # fill a timing point dict
     ret = OsuTimingPoint(
         offset = float(offset),  # time
+        offset_raw = float(offset),
         sevol = float(sevol),
         ggt = ((effects & OSU_TMFX_GGT) != 0),
         hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN,
@@ -266,7 +269,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
             ret.bpm = prev_timing_point.bpm
             ret.beats = prev_timing_point.beats # ignored for inherited timing points
             ret.redtm = prev_timing_point.redtm
-            ret.offset = get_real_offset(ret.offset)
+            ret.offset = get_real_offset(ret.offset, raw=True)
         ret.scroll = -100.0 / float(rawbpmv)
         if merge_with_prev:
             return None # merge uninherited (red) + inherited (green) timing points
@@ -305,29 +308,31 @@ def init_debug_globals() -> None:
 
 init_debug_globals()
 
-# get fixed offset base by the nearest base timing point
-# step 1: find the base timing point around t
-# step 2: calculate the fixed beat count from t to the base timing point
-# step 3: get fixed offset from fixed beat count and bpm
+# get quantized offset by the nearest base timing point
+# step 1: find the base timing point around base offset b at or before t
+# step 2: calculate the quantized beat count from t to the base timing point
+# step 3: get quantized offset from quantized beat count and bpm
 # step 4: find the nearest any-color timing points, past point p and future point f
-# step 5: adjust fixed offset so that it is at or after point p and before point f
+# step 5: adjust quantized offset so that it is at or after point p and before point f
 
 
-def get_real_offset(raw_offset: Union[int, float], clamp: bool = False) -> float:
-    tm = get_red_tm_at(timingpoints, raw_offset)
+def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float] = None, raw: bool = False) -> float:
+    if base_offset is None:
+        base_offset = dirty_offset
+    tm = get_red_tm_at(timingpoints, base_offset, raw)
     t_unit = get_t_unit(tm)
-    t_unit_cnt = get_dt_unit_cnt(t_unit , tm.offset, raw_offset)
+    t_unit_cnt = get_dt_unit_cnt(t_unit, tm.offset, dirty_offset)
     aligned_offset = tm.offset + t_unit_cnt * t_unit
 
     ret = aligned_offset
-    if clamp:
-        idx_tm_p = get_idx_tm_at(timingpoints, raw_offset)
+    if raw:
+        idx_tm_p = get_idx_tm_at(timingpoints, dirty_offset, raw)
         tm_p_offset = timingpoints[idx_tm_p].offset
         if ret < tm_p_offset:
             ret = tm_p_offset
         if idx_tm_p + 1 < len(timingpoints):
             tm_f_offset = timingpoints[idx_tm_p + 1].offset
-            if ret > tm_f_offset - 1:
+            if ret >= tm_f_offset:
                 ret = tm_f_offset - 1
             if tm_f_offset <= tm_p_offset:
                 print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical offset")
@@ -457,6 +462,7 @@ class TjaTimedNote:
     type: str
     offset: float
     column: int
+    offset_raw: float
 
 def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     global timing_point
@@ -474,12 +480,13 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         else 0)
     type = int(ps[3])
     sound = int(ps[4])
-    offset = get_real_offset(float(ps[2]), clamp=True)
+    offset_raw = float(ps[2])
+    offset = get_real_offset(offset_raw, raw=True)
 
     if type & OSU_NOTE_CIRCLE:  # circle
-        ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, column))
+        ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, column, offset_raw))
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
-        tm = get_tm_at(timingpoints, offset)
+        tm = get_tm_at(timingpoints, offset_raw, raw=True)
         curve_len = float(ps[7])
         reverse_cnt = int(ps[6])
         (should_convert, taiko_duration, tick_spacing) = should_convert_slider_to_hits(tm, curve_len, reverse_cnt)
@@ -487,11 +494,12 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         assert reverse_cnt + 1 == len(get_slider_sound(str_))
         if should_convert:
             slider_sounds = get_slider_sound(str_)
+            idx_head = len(ret)
             i = 0
-            j = offset
-            while j <= offset + taiko_duration + tick_spacing / 8:
-                point_offset = get_real_offset(j, clamp=True)
-                ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, column))
+            j = offset_raw
+            while j <= offset_raw + taiko_duration + tick_spacing / 8:
+                point_offset = get_real_offset(j, raw=True)
+                ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, column, offset_raw=j))
 
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
@@ -499,22 +507,24 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
                 if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
                     break
         else:
-            offset_end = get_real_offset(offset + taiko_duration, clamp=True)
+            offset_end_raw = offset_raw + taiko_duration
+            offset_end = get_real_offset(offset_end_raw, raw=True)
             if sound & HITSND_FINISH:
-                ret.append(TjaTimedNote(ONP_RENDA_DAI, offset, column))
+                ret.append(TjaTimedNote(ONP_RENDA_DAI, offset, column, offset_raw))
             else:
-                ret.append(TjaTimedNote(ONP_RENDA, offset, column))
-            ret.append(TjaTimedNote(ONP_END, offset_end, column))
+                ret.append(TjaTimedNote(ONP_RENDA, offset, column, offset_raw))
+            ret.append(TjaTimedNote(ONP_END, offset_end, column, offset_end_raw))
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
-        tmr = get_red_tm_at(timingpoints, offset)
-        offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), clamp=True)
+        tmr = get_red_tm_at(timingpoints, offset_raw, raw=True)
+        offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), raw=True)
         taiko_duration = offset_end - offset
         tick_spacing = min(tmr.mspb / slider_tick_rate, float(taiko_duration))
-        j = offset
-        while j <= offset + taiko_duration + tick_spacing / 8:
-            point_offset = get_real_offset(j, clamp=True)
-            ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, column))
+        idx_head = len(ret)
+        j = offset_raw
+        while j <= offset_raw + taiko_duration + tick_spacing / 8:
+            point_offset = get_real_offset(j, raw=True)
+            ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, column, offset_raw=j))
 
             j += tick_spacing
 
@@ -522,12 +532,13 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
-        offset_end = get_real_offset(float(ps[5]), clamp=True)
+        offset_end_raw = float(ps[5])
+        offset_end = get_real_offset(offset_end_raw, raw=True)
         if sound & HITSND_FINISH:
-            ret.append(TjaTimedNote(ONP_IMO, offset, column))
+            ret.append(TjaTimedNote(ONP_IMO, offset, column, offset_raw))
         else:
-            ret.append(TjaTimedNote(ONP_BALLOON, offset, column))
-        ret.append(TjaTimedNote(ONP_END, offset_end, column))
+            ret.append(TjaTimedNote(ONP_BALLOON, offset, column, offset_raw))
+        ret.append(TjaTimedNote(ONP_END, offset_end, column, offset_end_raw))
         # how many hit will break a ballon
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
@@ -887,7 +898,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 idx_last = 0
                 for obj in data:
                     # fix out-of-order objects for converted osu!mania holds
-                    idx_last = bisect_right(hitobjects, obj.offset, lo=idx_last, key=lambda x: x.offset)
+                    idx_last = bisect_right(hitobjects, obj.offset_raw, lo=idx_last, key=lambda x: x.offset_raw)
                     hitobjects.insert(idx_last, obj)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
@@ -1054,7 +1065,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             next_measure_offset = None
 
         # check if this object falls into this measure
-        full_end = end = get_real_offset(bar_offset_begin + bar_max_length)
+        full_end = end = get_real_offset(bar_offset_begin + bar_max_length, base_offset=bar_offset_begin)
         if next_measure_offset is not None:
             end = min(end, next_measure_offset)
 
@@ -1063,13 +1074,12 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             measure_changed = False
             next_measure_reached = (end == next_measure_offset)
 
+            tm = get_tm_at(timingpoints, bar_offset_begin)
             if end == full_end:
-                tm = get_tm_at(timingpoints, bar_offset_begin)
                 write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
-                bar_offset_begin = get_real_offset(end)
+                bar_offset_begin = end
             elif next_measure_reached:  # collect an incomplete bar?
                 if tm_idx > 0: # not the start of the initial bar
-                    tm = get_tm_at(timingpoints, bar_offset_begin)
                     write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
                 measure_changed = True
             else:
@@ -1090,7 +1100,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                     bar_offset_begin = next_measure_offset
                     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
                 else:
-                    bar_offset_begin = get_real_offset(end)
+                    bar_offset_begin = end
                 bar_max_length = measure * tm_next.mspb
                 if measure_changed:
                     tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
@@ -1121,7 +1131,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("filename", help="source .osu file")
     parser.add_argument("-d", "--debug", action="store_true",
-        help="display extra info")
+        help="display extra info of converted measures")
     parser.add_argument("-g", "--guess-measure", "--guess", action="store_true",
         help="deprecated option intended for forcing skipping predefined integer ratio look-up (now removed) for bar length. Has no effects.")
     args = parser.parse_args()

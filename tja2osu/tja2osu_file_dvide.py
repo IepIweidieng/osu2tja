@@ -82,27 +82,28 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
             if line == WATER_MARK:
                 continue
             line_no_comment, comment_delim, comment = line.partition(b"//")
-            cmd, cmd_arg = parse_tja_command(line_no_comment)
-            if cmd == b"START":
+            cmd = parse_tja_command(line_no_comment)
+            if cmd is None:
+                hdr = parse_tja_header(line_no_comment)
+                if hdr is not None:
+                    if hdr.name == b"COURSE":
+                        if hdr.arg:
+                            course = get_course_by_number(hdr.arg)
+                            after_course = True
+                            continue
+                    elif hdr.name == b"STYLE":
+                        style = get_style(hdr.arg) or style
+                        continue
+            elif cmd.name == b"START":
                 started = True
                 line = b"#START"
                 if comment_delim:
                     line += b" " + comment_delim + comment # rebuild line
-                side_str = cmd_arg.strip()
+                side_str = cmd.args[0].strip()
                 if side_str.startswith(b"P") and side_str[1:].isdigit():
                     player_side = int(side_str[1:]) - 1
                 else:
                     player_side = 0
-            elif cmd is None:
-                hdr, hdr_arg = parse_tja_header(line_no_comment)
-                if hdr == b"COURSE":
-                    if hdr_arg is not None:
-                        course = get_course_by_number(hdr_arg)
-                        after_course = True
-                        continue
-                elif hdr == b"STYLE":
-                    style = get_style(hdr_arg) or style
-                    continue
 
             if started or cmd is not None:
                 chartdef_data.append(line)
@@ -111,7 +112,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
             else:
                 common_data.append(line)
 
-            if cmd == b"END":
+            if cmd is not None and cmd.name == b"END":
                 write_chartdef()
                 started = False
         except Exception:
@@ -146,24 +147,23 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
         if line == WATER_MARK:
             continue
         line_no_comment, _, _ = line.partition(b"//")
-        cmd, cmd_arg = parse_tja_command(line_no_comment)
-        if cmd == b"BRANCHSTART":
-            has_branch = True
-            which = None
-        elif cmd in (b"E", b"N", b"M"):
-            which = cmd
-        elif cmd in (b"BRANCHEND", b"END"):
-            which = None
-        if cmd in (b"BRANCHSTART", b"N", b"E", b"M", b"BRANCHEND", b"SECTION", b"LEVELHOLD"):
-            continue
-
+        cmd = parse_tja_command(line_no_comment)
         if cmd is None:
-            vname, vval = parse_tja_header(line_no_comment)
-            if vname == b"COURSE":
-                vval_str = vval
-                branch_data[0].append(b"COURSE:" + vval_str + b"(Kurouto)")
-                branch_data[1].append(b"COURSE:" + vval_str + b"(Futsuu)")
-                branch_data[2].append(b"COURSE:" + vval_str + b"(Tatsujin)")
+            v = parse_tja_header(line_no_comment)
+            if v is not None and v.name == b"COURSE":
+                branch_data[0].append(b"COURSE:" + v.arg + b"(Kurouto)")
+                branch_data[1].append(b"COURSE:" + v.arg + b"(Futsuu)")
+                branch_data[2].append(b"COURSE:" + v.arg + b"(Tatsujin)")
+                continue
+        else:
+            if cmd.name == b"BRANCHSTART":
+                has_branch = True
+                which = None
+            elif cmd.name in (b"E", b"N", b"M"):
+                which = cmd.name
+            elif cmd.name in (b"BRANCHEND", b"END"):
+                which = None
+            if cmd.name in (b"BRANCHSTART", b"N", b"E", b"M", b"BRANCHEND", b"SECTION", b"LEVELHOLD"):
                 continue
 
         if which is None:

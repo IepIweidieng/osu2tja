@@ -6,17 +6,24 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from common.utils import print_with_pended
+from osu2tja.osu2tja import EHideFirst, OsuTimingPoint
 
 import argparse
 from bisect import bisect_right
 import codecs
+from dataclasses import dataclass
 import math
 import re
 import sys
 import traceback
-from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, cast
+from typing import Dict, Generic, List, Optional, OrderedDict, Sequence, TextIO, Tuple, TypeVar, Union, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
+
+TimingPoints: List[OsuTimingPoint]
+TimingPointsRed: List[OsuTimingPoint]
+bar_data: List[Union[str, "TjaCmd"]]
+lasting_note: Optional["OsuHitObject"]
 
 def init_globals() -> None:
     global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
@@ -137,10 +144,10 @@ def check_unsupported(filename):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     END_cnt = 0
     for line in fobj:
-        cmd, cmd_arg = parse_tja_command(line)
-        assert cmd != BRANCHSTART.decode(), "don't support branch"
-        END_cnt += (cmd != END.decode())
-        assert END_cnt < 1 or cmd != START.decode(), "don't support multiple fumen."
+        cmd = parse_tja_command(line)
+        assert cmd.name != BRANCHSTART.decode(), "don't support branch"
+        END_cnt += (cmd.name != END.decode())
+        assert END_cnt < 1 or cmd.name != START.decode(), "don't support multiple fumen."
 
 Str = TypeVar('Str', str, bytes)
 
@@ -151,12 +158,16 @@ str_pat_tja_header = r'^[ \t]*([^ \t:]*)[ \t]*:(.*)$'
 pat_tja_header = re.compile(str_pat_tja_header)
 bpat_tja_header = re.compile(str_pat_tja_header.encode())
 
-def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
+@dataclass
+class TjaHdr(Generic[Str]):
+    name: Str
+    arg: Str
+
+def parse_tja_header(line: Str) -> Optional[TjaHdr]:
     match = cast(re.Pattern[Str], bpat_tja_header if type(line) == bytes else pat_tja_header).match(line)
     if match is None:
-        return None, type(line)()
-    hdr, hdr_arg = match.groups()
-    return hdr, hdr_arg
+        return None
+    return TjaHdr(*match.groups())
 
 def parse_tja_complex(str_) -> complex:
     str_ = str_.lower().rstrip()
@@ -212,33 +223,35 @@ def get_meta_data(filename):
     for lineno, line in enumerate(fobj):
         try:
             line = line.rstrip(b"\r\n")
-            vname, vval_raw = parse_tja_header(line)
-            vval = rm_jiro_comment(vval_raw).rstrip()
-            if vname == b"TITLE": TITLE = convert_str(vval_raw, ENCODING)
-            elif vname == b"SUBTITLE": SUBTITLE = convert_str(vval_raw, ENCODING)
-            elif vname == b"ARTIST": ARTIST = convert_str(vval_raw, ENCODING)
-            elif vname == b"GENRE": GENRE = parse_tja_genre(convert_str(vval_raw, ENCODING))
-            elif vname == b"BPM": BPM = float(vval)
-            elif vname == b"WAVE": WAVE = convert_str(vval, ENCODING)
-            elif vname == b"OFFSET": OFFSET = float(vval)
-            elif vname == b"DEMOSTART": DEMOSTART = float(vval)
-            elif vname == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(vval)
-            elif vname in (b"MAKER", b"AUTHOR"): MAKER = convert_str(vval_raw, ENCODING)
-            elif vname == b"SONGVOL": SONGVOL = float(vval)
-            elif vname == b"SEVOL": SEVOL = float(vval)
-            elif vname == b"COURSE": COURSE = get_course_by_number(convert_str(vval, ENCODING))
-            elif vname == b"LEVEL": LEVEL = float(vval)
-            elif vname in (b"PREIMAGE", b"COVER"): PREIMAGE = convert_str(vval, ENCODING)
-            elif vname == b"BGIMAGE": BGIMAGE = convert_str(vval, ENCODING)
-            elif vname == b"BGMOVIE": BGMOVIE = convert_str(vval, ENCODING)
-            elif vname == b"MOVIEOFFSET": MOVIEOFFSET = float(vval)
-            elif vname is not None and (vname+b':') not in unknowns:
-                line_printable = convert_str(line.removesuffix(b'\n'), ENCODING)
-                print_with_pended(f"Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
-                unknowns.add(vname+b':')
-            else: # try metadata in comments
+            v = parse_tja_header(line)
+            if v is None: # try metadata in comments
                 creator = line.partition(b"//created by ")[2].strip()
                 if creator: CREATOR = convert_str(creator, ENCODING)
+                continue
+            varg_raw = v.arg
+            v.arg = rm_jiro_comment(v.arg).rstrip()
+            if v.name == b"TITLE": TITLE = convert_str(varg_raw, ENCODING)
+            elif v.name == b"SUBTITLE": SUBTITLE = convert_str(varg_raw, ENCODING)
+            elif v.name == b"ARTIST": ARTIST = convert_str(varg_raw, ENCODING)
+            elif v.name == b"GENRE": GENRE = parse_tja_genre(convert_str(varg_raw, ENCODING))
+            elif v.name == b"BPM": BPM = float(v.arg)
+            elif v.name == b"WAVE": WAVE = convert_str(v.arg, ENCODING)
+            elif v.name == b"OFFSET": OFFSET = float(v.arg)
+            elif v.name == b"DEMOSTART": DEMOSTART = float(v.arg)
+            elif v.name == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(v.arg)
+            elif v.name in (b"MAKER", b"AUTHOR"): MAKER = convert_str(varg_raw, ENCODING)
+            elif v.name == b"SONGVOL": SONGVOL = float(v.arg)
+            elif v.name == b"SEVOL": SEVOL = float(v.arg)
+            elif v.name == b"COURSE": COURSE = get_course_by_number(convert_str(v.arg, ENCODING))
+            elif v.name == b"LEVEL": LEVEL = float(v.arg)
+            elif v.name in (b"PREIMAGE", b"COVER"): PREIMAGE = convert_str(v.arg, ENCODING)
+            elif v.name == b"BGIMAGE": BGIMAGE = convert_str(v.arg, ENCODING)
+            elif v.name == b"BGMOVIE": BGMOVIE = convert_str(v.arg, ENCODING)
+            elif v.name == b"MOVIEOFFSET": MOVIEOFFSET = float(v.arg)
+            elif (v.name+b':') not in unknowns:
+                line_printable = convert_str(line.removesuffix(b'\n'), ENCODING)
+                print_with_pended(f"Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
+                unknowns.add(v.name+b':')
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)
             print_with_pended(f"Error parsing header in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
@@ -251,19 +264,20 @@ MS_OSU_MUSIC_OFFSET = 15
 def add_default_timing_point():
     global curr_time
 
-    tm = {}
-    tm["offset"] = -(OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET)
-    tm["redline"] = True
-    tm["scroll"] = 1.0
-    tm["measure"] = 4.0
-    tm["GGT"] = False
-    tm["hidefirst"] = False
-    tm["bpm"] = BPM
+    tm = OsuTimingPoint(
+        offset = -(OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET),
+        redline = True,
+        scroll = 1.0,
+        beats = 4.0,
+        ggt = False,
+        hidefirst = EHideFirst.SHOWN,
+        bpm = BPM,
+    )
 
     TimingPoints.append(tm)
     TimingPointsRed.append(tm)
 
-    curr_time = tm["offset"]
+    curr_time = tm.offset
 
 CIRCLE = 1
 SLIDER = 2
@@ -288,9 +302,9 @@ def get_osu_type(snd):
     if snd in ('7', '9', 'D'): return SPINNER if lasting_note is None else None
     # roll end and unrecognized note symbols
     if snd == '8':
-        if lasting_note is not None and lasting_note[0] == SLIDER:
+        if lasting_note is not None and lasting_note.type == SLIDER:
             return SLIDER_END
-        elif lasting_note is not None and lasting_note[0] == SPINNER:
+        elif lasting_note is not None and lasting_note.type == SPINNER:
             return SPINNER_END
         print_with_pended(f"Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
@@ -322,12 +336,20 @@ str_pat_tja_command = r'^[ \t]*#([^ \t]*[A-Z_]+)[ \t]?(.*)$'
 pat_tja_command = re.compile(str_pat_tja_command)
 bpat_tja_command = re.compile(str_pat_tja_command.encode())
 
-def parse_tja_command(line: Str) -> Tuple[Optional[Str], Str]:
+@dataclass
+class TjaCmd(Generic[Str]):
+    name: Str
+    args: Sequence
+
+    def __init__(self, name, *args):
+        object.__setattr__(self, 'name', name)
+        object.__setattr__(self, 'args', args)
+
+def parse_tja_command(line: Str) -> Optional[TjaCmd]:
     match = cast(re.Pattern[Str], bpat_tja_command if type(line) == bytes else pat_tja_command).match(line)
     if match is None:
-        return None, type(line)()
-    cmd, cmd_arg = match.groups()
-    return cmd, cmd_arg
+        return None
+    return TjaCmd(*match.groups())
 
 def get_all(filename):
     global has_started, curr_time, lasting_note
@@ -342,20 +364,20 @@ def get_all(filename):
         try:
             line = line.decode("latin-1").strip()
             line = rm_jiro_comment(line).rstrip()
-            hdr, hdr_arg = parse_tja_header(line)
+            hdr = parse_tja_header(line)
             if hdr is not None:
                 # no need to handle
                 continue
-            cmd, cmd_arg = parse_tja_command(line)
+            cmd = parse_tja_command(line)
             if cmd is not None:
-                if not has_started and cmd == START:
+                if not has_started and cmd.name == START:
                     has_started = True
                     if HEADSCROLL != 1.0:
                         real_do_cmd((SCROLL, HEADSCROLL))
                     continue
-                if cmd == END:
+                if cmd.name == END:
                     break
-                handle_cmd(line, cmd, cmd_arg)
+                handle_cmd(line, cmd)
                 continue
             handle_note(line)
         except Exception:
@@ -372,7 +394,7 @@ def get_all(filename):
 
     # prevent bar lines at and after #END (probably missing and implicit)
     tm = get_last_red_tm()
-    real_do_cmd((MEASURE, math.ceil(min(max(tm["measure"], tm["bpm"], 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
+    real_do_cmd((MEASURE, math.ceil(min(max(tm.beats, tm.bpm, 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
 # get fixed offset base by the nearest base timing points
@@ -391,34 +413,34 @@ def get_real_offset(int_offset):
         aligned_offset = int_offset
     else:
         tm = get_red_tm_at(int_offset)
-        int_tm_offset = int(tm["offset"])
-        tpb = 60000 / tm["bpm"]
-        int_delta = int_offset - tm["offset"] # more accurate
+        int_tm_offset = int(tm.offset)
+        tpb = 60000 / tm.bpm
+        int_delta = int_offset - tm.offset # more accurate
         sign = (int_delta > 0 and 1 or -1)
 
-        t_unit_cnt = round(abs(int_delta) * tm["bpm"] * BEAT_RES / 60000)
+        t_unit_cnt = round(abs(int_delta) * tm.bpm * BEAT_RES / 60000)
 
         beat_cnt = t_unit_cnt / BEAT_RES
-        aligned_offset = int_tm_offset + beat_cnt * 60000 * sign / tm["bpm"]
+        aligned_offset = int_tm_offset + beat_cnt * 60000 * sign / tm.bpm
 
         if debug_mode:
             print_with_pended(tm, file=sys.stderr)
             print(t_unit_cnt, file=sys.stderr)
             print("DELTA = ", int_delta, file=sys.stderr)
             print("GET BEAT CNT", int_delta/tpb, t_unit_cnt/BEAT_RES, file=sys.stderr)
-            print(int_offset, "-->", int_tm_offset + beat_cnt * 60000 / tm["bpm"], file=sys.stderr)
-            print(int(int_tm_offset + beat_cnt * 60000 / tm["bpm"]), file=sys.stderr)
+            print(int_offset, "-->", int_tm_offset + beat_cnt * 60000 / tm.bpm, file=sys.stderr)
+            print(int(int_tm_offset + beat_cnt * 60000 / tm.bpm), file=sys.stderr)
 
-            print("CMP", int(int_tm_offset+beat_cnt * 60000 * sign / tm["bpm"]), int(2663+60000/tm["bpm"]*beat_cnt), file=sys.stderr)
+            print("CMP", int(int_tm_offset+beat_cnt * 60000 * sign / tm.bpm), int(2663+60000/tm.bpm*beat_cnt), file=sys.stderr)
 
     ret = aligned_offset
     idx_tm_p = get_idx_tm_at(int_offset)
-    tm_p_offset = TimingPoints[idx_tm_p]["offset"]
+    tm_p_offset = TimingPoints[idx_tm_p].offset
     int_tm_p_offset = int(tm_p_offset)
     if ret < tm_p_offset:
         ret = int_tm_p_offset
     if idx_tm_p + 1 < len(TimingPoints):
-        tm_f_offset = TimingPoints[idx_tm_p + 1]["offset"]
+        tm_f_offset = TimingPoints[idx_tm_p + 1].offset
         int_tm_f_offset = int(tm_f_offset)
         if ret > int_tm_f_offset - 1:
             ret = int_tm_f_offset - 1
@@ -427,58 +449,67 @@ def get_real_offset(int_offset):
 
     return ret
    
-def handle_cmd(line: str, cmd_name: str, cmd_arg: str) -> None:
-    cmd = None
-    if cmd_name == BPMCHANGE:
-        cmd = (cmd_name, float(cmd_arg))
-    elif cmd_name == MEASURE:
-        arg1, arg2 = cmd_arg.split('/')
-        cmd = (cmd_name, 4.0*float(arg1.strip()) / float(arg2.strip()))
-    elif cmd_name == SCROLL:
-        cmd = (cmd_name, parse_tja_complex(cmd_arg))
-    elif cmd_name == DELAY:
-        cmd = (cmd_name, float(cmd_arg))
+def handle_cmd(line: str, cmd: TjaCmd) -> None:
+    if cmd.name == BPMCHANGE:
+        cmd = TjaCmd(cmd.name, float(cmd.args[0]))
+    elif cmd.name == MEASURE:
+        arg1, arg2 = cmd.args[0].split('/')
+        cmd = TjaCmd(cmd.name, 4.0*float(arg1.strip()) / float(arg2.strip()))
+    elif cmd.name == SCROLL:
+        cmd = TjaCmd(cmd.name, parse_tja_complex(cmd.args[0]))
+    elif cmd.name == DELAY:
+        cmd = TjaCmd(cmd.name, float(cmd.args[0]))
     else: # default handling
-        cmd = (cmd_name, cmd_arg)
+        cmd = TjaCmd(cmd.name, cmd.args[0])
 
-    if bar_data == [] or cmd_name == MEASURE:
+    if bar_data == [] or cmd.name == MEASURE:
         real_do_cmd(cmd)
     else:
         bar_data.append(cmd)
 
-def real_do_cmd(cmd):
+def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
     global curr_time
+
+    if not isinstance(cmd, TjaCmd):
+        cmd = TjaCmd(*cmd)
+    assert isinstance(cmd, TjaCmd)
 
     if debug_mode:
         print_with_pended("handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
-    if cmd[0] == DELAY:
-        curr_time += cmd[1] * 1000
+    if cmd.name == DELAY:
+        curr_time += cmd.args[0] * 1000
         return
     
     # handel timing point change command    
-    if cmd[0] == BPMCHANGE:
-        get_or_create_curr_red_tm()["bpm"] = cmd[1]
-    elif cmd[0] == MEASURE: # processed before notes
+    if cmd.name == BPMCHANGE:
+        get_or_create_curr_red_tm().bpm = cmd.args[0]
+    elif cmd.name == MEASURE: # processed before notes
         if len(bar_data) != 0:
             print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
-            get_last_red_tm()["measure"] = cmd[1]
+            get_last_red_tm().beats = cmd.args[0]
         else:
-            get_or_create_curr_red_tm()["measure"] = cmd[1]
-    elif cmd[0] == SCROLL:
-        get_or_create_curr_tm()["scroll"] = abs(cmd[1])
-    elif cmd[0] == GOGOSTART:
-        get_or_create_curr_tm()["GGT"] = True
-    elif cmd[0] == GOGOEND:
-        get_or_create_curr_tm()["GGT"] = False
-    elif cmd[0] == BARLINEOFF:
-        get_or_create_curr_tm()["hidefirst"] = True
-    elif cmd[0] == BARLINEON:
-        get_or_create_curr_tm()["hidefirst"] = False
-    elif ('#'+cmd[0]) not in unknowns:
+            get_or_create_curr_red_tm().beats = cmd.args[0]
+    elif cmd.name == SCROLL:
+        get_or_create_curr_tm().scroll = abs(cmd.args[0])
+    elif cmd.name == GOGOSTART:
+        get_or_create_curr_tm().ggt = True
+    elif cmd.name == GOGOEND:
+        get_or_create_curr_tm().ggt = False
+    elif cmd.name == BARLINEOFF:
+        get_or_create_curr_tm().hidefirst = EHideFirst.HIDDEN
+    elif cmd.name == BARLINEON:
+        get_or_create_curr_tm().hidefirst = EHideFirst.SHOWN
+    elif ('#'+cmd.name) not in unknowns:
         print_with_pended(f"Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
-        unknowns.add('#'+cmd[0])
+        unknowns.add('#'+cmd.name)
+
+@dataclass
+class OsuHitObject:
+    type: int
+    sound: int
+    offset: float
 
 def add_a_note(snd, offset):
     global lasting_note
@@ -489,9 +520,10 @@ def add_a_note(snd, offset):
         return
     if osu_type is None:
         return
-    HitObjects.append((osu_type, osu_sound, offset))
+    obj = OsuHitObject(osu_type, osu_sound, offset)
+    HitObjects.append(obj)
     if osu_type in (SLIDER, SPINNER):
-        lasting_note = (osu_type, snd, offset)
+        lasting_note = obj
     if osu_type in (SLIDER_END, SPINNER_END):
         lasting_note = None
     if debug_mode:
@@ -505,56 +537,57 @@ def get_last_red_tm():
         
 def get_idx_tm_at(t):
     assert len(TimingPoints) > 0, "Need at least one timing point"
-    return max(0, bisect_right(TimingPoints, t, key=lambda tm: tm["offset"]) - 1)
+    return max(0, bisect_right(TimingPoints, t, key=lambda tm: tm.offset) - 1)
 
 def get_tm_at(t):
     return TimingPoints[get_idx_tm_at(t)]
 
 def get_red_tm_at(t):
     assert len(TimingPointsRed) > 0, "Need at least one uninherited timing point"
-    return TimingPointsRed[max(0, bisect_right(TimingPointsRed, int(t), key=lambda tm: tm["offset"]) - 1)]
-   
+    return TimingPointsRed[max(0, bisect_right(TimingPointsRed, int(t), key=lambda tm: tm.offset) - 1)]
+
 def create_new_tm(has_red: bool = False):
     global curr_time
 
     last_tm = get_last_tm()
     last_red_tm = get_last_red_tm()
     
-    tm = {}
-    tm["offset"] = curr_time
+    tm = OsuTimingPoint(
+        offset = curr_time,
+        redline = has_red, # can upgrade to red + green later if not having red
+        scroll = last_tm and last_tm.scroll or 1.0,
+        beats = last_tm.beats,
+        ggt = last_tm.ggt,
+        hidefirst = last_tm.hidefirst,
+        bpm = last_red_tm.bpm,
+    )
     if debug_mode:
-        print_with_pended("CREATE NEW TM", tm["offset"], file=sys.stderr)
-    tm["redline"] = has_red # can upgrade to red + green later if not having red
-    tm["scroll"] = last_tm and last_tm["scroll"] or 1.0
-    tm["measure"] = last_tm["measure"]
-    tm["GGT"] = last_tm["GGT"]
-    tm["hidefirst"] = last_tm["hidefirst"]
-    tm["bpm"] = last_red_tm["bpm"]
+        print_with_pended("CREATE NEW TM", tm, file=sys.stderr)
     
     TimingPoints.append(tm)
     if has_red:
         TimingPointsRed.append(tm)
-        curr_time = tm["offset"]
+        curr_time = tm.offset
 
     return tm
 
 def get_or_create_curr_tm(need_red: bool = False):
     global curr_time
     tm = get_last_tm()
-    if int(curr_time) != int(tm["offset"]):
+    if int(curr_time) != int(tm.offset):
         tm = create_new_tm(need_red)
-    elif need_red and not tm["redline"]: # needs to upgrade to red + green
-        tm["redline"] = True
+    elif need_red and not tm.redline: # needs to upgrade to red + green
+        tm.redline = True
         TimingPointsRed.append(tm)
     return tm
 
 def get_or_create_curr_red_tm():
     return get_or_create_curr_tm(True)
 
-def get_t_unit(tm, tot_note):
+def get_t_unit(tm: OsuTimingPoint, tot_note):
     if debug_mode:
-        print_with_pended(tm["bpm"], tot_note, file=sys.stderr)
-    return tm["measure"] * 60000.0 / (tm["bpm"] * tot_note)
+        print_with_pended(tm.bpm, tot_note, file=sys.stderr)
+    return tm.beats * 60000.0 / (tm.bpm * tot_note)
 
 def handle_a_bar():
     global bar_data, curr_time
@@ -562,7 +595,7 @@ def handle_a_bar():
     #debug
     global last_debug
     if last_debug is None:
-        last_debug = TimingPoints[0]["offset"]
+        last_debug = TimingPoints[0].offset
     #debug
 
     tot_note = 0
@@ -572,12 +605,12 @@ def handle_a_bar():
 
     if debug_mode:
         print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
-        pure_data = [x for x in bar_data if x[0].isdigit()]
+        pure_data = [x for x in bar_data if isinstance(x, str) and x[0].isdigit()]
         p1= "%6d %2.1f %2d %s" % (int(curr_time), \
-                get_last_red_tm()["measure"], len(pure_data), \
+                get_last_red_tm().beats, len(pure_data), \
                 "".join(pure_data))
 
-        p2= "%s %s" % (repr(get_last_red_tm()["bpm"]), \
+        p2= "%s %s" % (repr(get_last_red_tm().bpm), \
                 repr(get_t_unit(get_last_red_tm(), max(1, tot_note)) * max(1, tot_note)))
         print_with_pended(p1, file=sys.stderr)
 
@@ -610,16 +643,16 @@ def handle_a_bar():
     # handle bar line visibility
     tmr = get_last_red_tm()
     tm = get_last_tm()
-    if tm["hidefirst"]: # still hidden
-        real_do_cmd((MEASURE, tmr["measure"])) # insert bar line
+    if tm.hidefirst.is_hidden(): # still hidden
+        real_do_cmd((MEASURE, tmr.beats)) # insert bar line
         real_do_cmd((BARLINEOFF,)) # hide bar line
-    elif tmr["hidefirst"]: # no longer hidden
-        real_do_cmd((MEASURE, tmr["measure"])) # insert bar line
+    elif tmr.hidefirst.is_hidden(): # no longer hidden
+        real_do_cmd((MEASURE, tmr.beats)) # insert bar line
         real_do_cmd((BARLINEON,)) # unhide bar line
     # convert x.x measure to incomplete measure
-    if abs(round(tmr["measure"]) - tmr["measure"]) > 0.001:
-        bak = tmr["measure"]
-        tmr["measure"] = math.ceil(round(bak, 3)) # a big enough measure for osu
+    if abs(round(tmr.beats) - tmr.beats) > 0.001:
+        bak = tmr.beats
+        tmr.beats = math.ceil(round(bak, 3)) # a big enough measure for osu
         real_do_cmd((MEASURE, bak)) # remeasure, for tja
 
 def handle_note(line):
@@ -825,20 +858,20 @@ def write_TimingPoints(fout: TextIO) -> None:
     volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
     res: List[Tuple[int, str]] = []
     for tm in TimingPoints:
-        if tm["measure"] / tm["bpm"] < 0:
+        if tm.beats / tm.bpm < 0:
             continue # ignore negative sections (assumed to be overlapped by later positive sections)
-        time = int(tm["offset"])
+        time = int(tm.offset)
         while len(res) > 0 and res[-1][0] > time:
             res.pop() # override overlapped positive sections
-        meter = max(1, int(round(tm["measure"])))
-        fx = tm["GGT"] + 8 * tm["hidefirst"]
-        if tm["redline"]:
-            beat_dur = min(max(abs(60000.0 / tm["bpm"]), 6E-298), 6E+298)
+        meter = max(1, int(round(tm.beats)))
+        fx = tm.ggt + 8 * tm.hidefirst.is_hidden()
+        if tm.redline:
+            beat_dur = min(max(abs(60000.0 / tm.bpm), 6E-298), 6E+298)
             res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}"))
-        if not tm["redline"] or tm["scroll"] != 1.0:
-            beat_dur = -100 / tm["scroll"]
+        if not tm.redline or tm.scroll != 1.0:
+            beat_dur = -100 / tm.scroll
             res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}"))
-        tm["offset"] = int(tm["offset"])
+        tm.offset = int(tm.offset)
 
     # res is sorted
     for _, line in res:
@@ -850,38 +883,38 @@ def write_HitObjects(fout: TextIO) -> None:
     lasting_note = None
     res: List[Tuple[int, str]] = []
     for ho in HitObjects:
-        beg_offset = get_real_offset(ho[2])
-        if int(beg_offset) != int(ho[2]):
+        beg_offset = get_real_offset(ho.offset)
+        if int(beg_offset) != int(ho.offset):
             if debug_mode:
                 print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
-        if ho[0] == CIRCLE:
+        if ho.type == CIRCLE:
             assert lasting_note is None, "this is abnormal"
-            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1])))
-        elif ho[0] == SLIDER:
-            assert lasting_note is None, "this is abnormal"
-            lasting_note = ho
-        elif ho[0] == SPINNER:
+            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type, ho.sound)))
+        elif ho.type == SLIDER:
             assert lasting_note is None, "this is abnormal"
             lasting_note = ho
-        elif ho[0] == SLIDER_END:
+        elif ho.type == SPINNER:
+            assert lasting_note is None, "this is abnormal"
+            lasting_note = ho
+        elif ho.type == SLIDER_END:
             assert lasting_note is not None and \
-                    lasting_note[0] == SLIDER
+                    lasting_note.type == SLIDER
             ln = lasting_note
-            if ho[2] > ln[2]: # skip non-positive duration rolls
-                tmr = get_red_tm_at(int(ln[2]))
-                tmg = get_tm_at(int(ln[2])) # green if red + green, otherwise red
-                curve_len = 100 * (ho[2] - ln[2]) * tmr["bpm"]  * SliderMultiplier * tmg["scroll"] / 60000
+            if ho.offset > ln.offset: # skip non-positive duration rolls
+                tmr = get_red_tm_at(int(ln.offset))
+                tmg = get_tm_at(int(ln.offset)) # green if red + green, otherwise red
+                curve_len = 100 * (ho.offset - ln.offset) * tmr.bpm  * SliderMultiplier * tmg.scroll / 60000
                 res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
-                        int(get_real_offset(ln[2])), ln[0], ln[1], \
+                        int(get_real_offset(ln.offset)), ln.type, ln.sound, \
                         int(CircleX+curve_len), CircleY, 1, curve_len)))
             lasting_note = None
-        elif ho[0] == SPINNER_END:
+        elif ho.type == SPINNER_END:
             assert lasting_note is not None and \
-                    lasting_note[0] == SPINNER, "this is abnormal"
+                    lasting_note.type == SPINNER, "this is abnormal"
             ln = lasting_note
-            if ho[2] > ln[2]: # skip non-positive length rolls
-                res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
-                        ln[0], ln[1], int(get_real_offset(ho[2])))))
+            if ho.offset > ln.offset: # skip non-positive length rolls
+                res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln.offset)), \
+                        ln.type, ln.sound, int(get_real_offset(ho.offset)))))
             lasting_note = None
 
     res.sort(key=lambda x: x[0])

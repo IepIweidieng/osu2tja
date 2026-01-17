@@ -272,10 +272,14 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
             ret.offset = get_real_offset(ret.offset, raw=True)
         ret.scroll = -100.0 / float(rawbpmv)
         if merge_with_prev:
+            if round(ret.offset_raw) in inspect_ms:
+                print_with_pended(f"[INSPECT_MS {ret.offset_raw}] merged timing point {ret}", file=sys.stderr)
             return None # merge uninherited (red) + inherited (green) timing points
     else:
         assert False
 
+    if round(ret.offset_raw) in inspect_ms:
+        print_with_pended(f"[INSPECT_MS {ret.offset_raw}] new timing point {ret}", file=sys.stderr)
     return ret
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
@@ -301,9 +305,11 @@ def init_globals() -> None:
     chart_resources = {}
 
 def init_debug_globals() -> None:
-    global show_head_info, combo_cnt
+    global show_head_info, output_trace_info, inspect_ms, combo_cnt
     # debug args
     show_head_info = False
+    output_trace_info = False
+    inspect_ms = {}
     combo_cnt = 0
 
 init_debug_globals()
@@ -330,13 +336,19 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
         tm_p_offset = timingpoints[idx_tm_p].offset
         if ret < tm_p_offset:
             ret = tm_p_offset
+        if round(dirty_offset) in inspect_ms:
+            print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset left-clamp: {dirty_offset - tm_p_offset} from past: {timingpoints[idx_tm_p]}", file=sys.stderr)
         if idx_tm_p + 1 < len(timingpoints):
             tm_f_offset = timingpoints[idx_tm_p + 1].offset
             if ret >= tm_f_offset:
                 ret = tm_f_offset - 1
+            if round(dirty_offset) in inspect_ms:
+                print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset right-clamp: {tm_f_offset - dirty_offset} to future: {timingpoints[idx_tm_p + 1]}", file=sys.stderr)
             if tm_f_offset <= tm_p_offset:
                 print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical offset")
 
+    if round(dirty_offset) in inspect_ms:
+        print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset -> {tm.offset} + {t_unit_cnt} * {t_unit} = {aligned_offset} -> {ret}", file=sys.stderr)
     return ret
 
 
@@ -485,6 +497,8 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
 
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, column, offset_raw))
+        if round(offset_raw) in inspect_ms:
+            print_with_pended(f"[INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
         tm = get_tm_at(timingpoints, offset_raw, raw=True)
         curve_len = float(ps[7])
@@ -500,6 +514,8 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             while j <= offset_raw + taiko_duration + tick_spacing / 8:
                 point_offset = get_real_offset(j, raw=True)
                 ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, column, offset_raw=j))
+                if round(offset_raw) in inspect_ms:
+                    print_with_pended(f"[INSPECT_MS {offset_raw}] slider start {ret[idx_head]}, tick: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
@@ -515,6 +531,9 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
                 ret.append(TjaTimedNote(ONP_RENDA, offset, column, offset_raw))
             ret.append(TjaTimedNote(ONP_END, offset_end, column, offset_end_raw))
 
+        if round(offset_raw) in inspect_ms:
+            print_with_pended(f"[INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
+
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_red_tm_at(timingpoints, offset_raw, raw=True)
         offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), raw=True)
@@ -525,6 +544,8 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         while j <= offset_raw + taiko_duration + tick_spacing / 8:
             point_offset = get_real_offset(j, raw=True)
             ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, column, offset_raw=j))
+            if round(offset_raw) in inspect_ms:
+                print_with_pended(f"[INSPECT_MS {offset_raw}] hold start {ret[idx_head]}, tick: {ret[-1]}, tmr: {tmr}", file=sys.stderr)
 
             j += tick_spacing
 
@@ -546,6 +567,9 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             else 5) * swell_hit_multiplier
         hits = int(max(1, (offset_end - offset) / 1000 * hit_multiplier))
         balloons.append(hits)
+
+        if round(offset_raw) in inspect_ms:
+            print_with_pended(f"[INSPECT_MS {offset_raw}] spinner start {ret[-2]}, end: {ret[-1]}, hits: {hits}", file=sys.stderr)
 
     return ret
 
@@ -592,6 +616,9 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         if write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q)):
             bar_emitted = True
 
+    if output_trace_info:
+        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {mspb}ms = {begin + beat_cnt_q * mspb}ms -> end_q {end_q}ms")
+
     # data for unquantized part
     bar_data = bar_data[-tail_fix:] if tail_fix > 0 else []
     tail_fix = 0
@@ -625,6 +652,9 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         if bar_emitted and not tm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
 
+    if output_trace_info:
+        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {mspb}ms = {end_q + beat_cnt_unq * mspb}ms -> end_unq = {end_unq}ms")
+
     # write delay part
     delay_time = end - end_unq
     # Note: #DELAY value can be in any sign
@@ -633,6 +663,8 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     # for playing in jiro, use "BPMCHANGEによるズレ調整器" by CurryDry0608hk
     if delay_time != 0:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
+        if output_trace_info:
+            tja_contents.append(f"// [incomplete delay] {end_unq}ms + {delay_time}ms = {end_unq + delay_time}ms -> end {end}ms")
 
 def get_t_unit(tm: OsuTimingPoint) -> float:
     return T_MINUTE / tm.bpm / BEAT_RES
@@ -1076,10 +1108,14 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
             tm = get_tm_at(timingpoints, bar_offset_begin)
             if end == full_end:
+                if output_trace_info:
+                    tja_contents.append(f"// write_bar_data: {bar_offset_begin}~{end}ms, timing point: {tm}")
                 write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
                 bar_offset_begin = end
             elif next_measure_reached:  # collect an incomplete bar?
                 if tm_idx > 0: # not the start of the initial bar
+                    if output_trace_info:
+                        tja_contents.append(f"// write_incomplete_bar: {bar_offset_begin}~{end}ms, timing point: {tm}")
                     write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
                 measure_changed = True
             else:
@@ -1132,12 +1168,18 @@ def main():
     parser.add_argument("filename", help="source .osu file")
     parser.add_argument("-d", "--debug", action="store_true",
         help="display extra info of converted measures")
+    parser.add_argument("-t", "--trace", action="store_true",
+        help="log measure conversion info into generated tja")
+    parser.add_argument("-i", "--inspect", metavar="ms", type=float, nargs='+', default=[],
+        help="display extra info of osu objects placed at specified millisecond offsets")
     parser.add_argument("-g", "--guess-measure", "--guess", action="store_true",
         help="deprecated option intended for forcing skipping predefined integer ratio look-up (now removed) for bar length. Has no effects.")
     args = parser.parse_args()
 
-    global show_head_info
+    global show_head_info, output_trace_info, inspect_ms
     show_head_info = args.debug
+    output_trace_info = args.trace
+    inspect_ms = set(args.inspect)
 
     # check filename
     if not args.filename.lower().endswith(".osu"):

@@ -117,23 +117,27 @@ def gcd_of_list(l):
 def format_time(t):
     return t//T_MINUTE*100000+t % T_MINUTE
 
+def get_last_tm(timing_points: List["OsuTimingPoint"]):
+    return timing_points[-1]
+
+def get_last_red_tm(timing_points: List["OsuTimingPoint"]):
+    tmr = get_last_tm(timing_points).redtm
+    assert tmr is not None, "Need at least one uninherited timing point"
+    return tmr
 
 def get_idx_tm_at(timing_points: List["OsuTimingPoint"], t):
     assert len(timing_points) > 0, "Need at least one timing point"
     # A note can appear even the first timing point
-    if t < timing_points[0].offset:
-        return 0
-
     idx_tm = max(0, bisect_right(timing_points, t, key=lambda tm: tm.offset) - 1)
     return idx_tm
 
-def get_base_timing_point(timing_points: List["OsuTimingPoint"], t):
+def get_tm_at(timing_points: List["OsuTimingPoint"], t):
     return timing_points[get_idx_tm_at(timing_points, t)] # no copy for correctly updating hidefirst
 
-
-def get_base_red_timing_point(timing_points: List["OsuTimingPoint"], t):
-    red_timing_points = [d for d in timing_points if d.redline == True]
-    return get_base_timing_point(red_timing_points, t)
+def get_red_tm_at(timing_points: List["OsuTimingPoint"], t):
+    tmr = get_tm_at(timing_points, t).redtm
+    assert tmr is not None, "Need at least one uninherited timing point"
+    return tmr
 
 # ----------------------
 # parse single line
@@ -208,7 +212,7 @@ class EHideFirst(Enum):
 class OsuTimingPoint:
     offset: float
     sevol: float = 100
-    redline: bool = True
+    redtm: Optional["OsuTimingPoint"] = None
     ggt: bool = False
     hidefirst: EHideFirst = EHideFirst.SHOWN
     # redline or inherited properties
@@ -217,6 +221,9 @@ class OsuTimingPoint:
     beats: float = 4
     # greenline properties
     scroll: float = 1.0
+
+    def is_redline(self) -> bool:
+        return self.redtm is None or self.redtm == self
 
 def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) -> Optional[OsuTimingPoint]:
     if str is None:
@@ -244,11 +251,11 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ret.bpm = 60 * 1000.0 / ret.mspb
         ret.beats = int(beats) # measure change
         ret.scroll = 1.0
-        ret.redline = True
+        ret.redtm = ret
     elif float(rawbpmv) < 0: # SCROLL speed change
         assert prev_timing_point is not None
         if (prev_timing_point.offset == ret.offset
-            and prev_timing_point.redline
+            and prev_timing_point.is_redline()
             and prev_timing_point.ggt == ret.ggt
             and prev_timing_point.hidefirst == ret.hidefirst
             ):
@@ -257,7 +264,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
             ret.mspb = prev_timing_point.mspb
             ret.bpm = prev_timing_point.bpm
             ret.beats = prev_timing_point.beats # ignored for inherited timing points
-            ret.redline = False
+            ret.redtm = prev_timing_point.redtm
             ret.offset = get_real_offset(ret.offset)
         ret.scroll = -100.0 / float(rawbpmv)
     else:
@@ -304,7 +311,7 @@ init_debug_globals()
 
 
 def get_real_offset(raw_offset: Union[int, float], clamp: bool = False) -> float:
-    tm = get_base_red_timing_point(timingpoints, raw_offset)
+    tm = get_red_tm_at(timingpoints, raw_offset)
     t_unit = get_t_unit(tm)
     t_unit_cnt = get_dt_unit_cnt(t_unit , tm.offset, raw_offset)
     aligned_offset = tm.offset + t_unit_cnt * t_unit
@@ -469,7 +476,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, column))
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
-        tm = get_base_timing_point(timingpoints, offset)
+        tm = get_tm_at(timingpoints, offset)
         curve_len = float(ps[7])
         reverse_cnt = int(ps[6])
         (should_convert, taiko_duration, tick_spacing) = should_convert_slider_to_hits(tm, curve_len, reverse_cnt)
@@ -497,7 +504,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             ret.append(TjaTimedNote(ONP_END, offset_end, column))
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
-        tmr = get_base_red_timing_point(timingpoints, offset)
+        tmr = get_red_tm_at(timingpoints, offset)
         offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), clamp=True)
         taiko_duration = offset_end - offset
         tick_spacing = min(tmr.mspb / slider_tick_rate, float(taiko_duration))
@@ -1020,7 +1027,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
     def is_new_measure(timing_point: OsuTimingPoint) -> bool:
         bpm = timing_point.bpm
         _measure = timing_point.beats
-        return bpm != curr_bpm or measure != _measure or timing_point.redline
+        return bpm != curr_bpm or measure != _measure or timing_point.is_redline()
 
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
@@ -1054,12 +1061,12 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
             next_measure_reached = (end == next_measure_offset)
 
             if end == full_end:
-                tm = get_base_timing_point(timingpoints, bar_offset_begin)
+                tm = get_tm_at(timingpoints, bar_offset_begin)
                 write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
                 bar_offset_begin = get_real_offset(end)
             elif next_measure_reached:  # collect an incomplete bar?
                 if tm_idx > 0: # not the start of the initial bar
-                    tm = get_base_timing_point(timingpoints, bar_offset_begin)
+                    tm = get_tm_at(timingpoints, bar_offset_begin)
                     write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
                 measure_changed = True
             else:
@@ -1074,7 +1081,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
                 if measure_next != measure:
                     measure_changed = True
                 measure = measure_next
-                if tm_next.redline:
+                if tm_next.is_redline():
                     assert next_measure_offset is not None
                     curr_bpm = tm_next.bpm
                     bar_offset_begin = next_measure_offset
@@ -1097,7 +1104,7 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     # flush buffer
     if len(bar_data) > 0:
-        write_bar_data(get_base_timing_point(timingpoints, bar_offset_begin),
+        write_bar_data(get_tm_at(timingpoints, bar_offset_begin),
                        bar_data, bar_offset_begin, end, tja_contents)
 
     tja_contents.append("#END")

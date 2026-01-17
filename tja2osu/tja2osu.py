@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from common.utils import print_with_pended
-from osu2tja.osu2tja import EHideFirst, OsuTimingPoint
+from osu2tja.osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
 
 import argparse
 from bisect import bisect_right
@@ -21,7 +21,6 @@ from typing import Dict, Generic, List, Optional, OrderedDict, Sequence, TextIO,
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 TimingPoints: List[OsuTimingPoint]
-TimingPointsRed: List[OsuTimingPoint]
 bar_data: List[Union[str, "TjaCmd"]]
 lasting_note: Optional["OsuHitObject"]
 
@@ -53,7 +52,7 @@ def init_globals() -> None:
 
     global AudioFilename, Title, Source, Tags, Artist, Creator, Version
     global AudioLeadIn, CountDown, SampleSet, StackLeniency, Mode, LetterboxInBreaks, PreviewTime
-    global TimingPoints, TimingPointsRed, HitObjects
+    global TimingPoints, HitObjects
     global HPDrainRate, CircleSize, OverallDifficulty, ApproachRate, SliderMultiplier, SliderTickRate, CircleX, CircleY
     # osu data
     AudioFilename = ""
@@ -71,7 +70,6 @@ def init_globals() -> None:
     LetterboxInBreaks = 0
     PreviewTime = -1
     TimingPoints = []
-    TimingPointsRed = []
     HitObjects = []
     HPDrainRate = 7
     CircleSize = 5
@@ -266,16 +264,15 @@ def add_default_timing_point():
 
     tm = OsuTimingPoint(
         offset = -(OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET),
-        redline = True,
         scroll = 1.0,
         beats = 4.0,
         ggt = False,
         hidefirst = EHideFirst.SHOWN,
         bpm = BPM,
     )
+    tm.redtm = tm
 
     TimingPoints.append(tm)
-    TimingPointsRed.append(tm)
 
     curr_time = tm.offset
 
@@ -393,7 +390,7 @@ def get_all(filename):
         add_a_note('8', curr_time)
 
     # prevent bar lines at and after #END (probably missing and implicit)
-    tm = get_last_red_tm()
+    tm = get_last_red_tm(TimingPoints)
     real_do_cmd((MEASURE, math.ceil(min(max(tm.beats, tm.bpm, 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
     real_do_cmd((BARLINEOFF,)) # hide its bar line
 
@@ -412,7 +409,7 @@ def get_real_offset(int_offset):
     if BEAT_RES <= 0:
         aligned_offset = int_offset
     else:
-        tm = get_red_tm_at(int_offset)
+        tm = get_red_tm_at(TimingPoints, int_offset)
         int_tm_offset = int(tm.offset)
         tpb = 60000 / tm.bpm
         int_delta = int_offset - tm.offset # more accurate
@@ -434,7 +431,7 @@ def get_real_offset(int_offset):
             print("CMP", int(int_tm_offset+beat_cnt * 60000 * sign / tm.bpm), int(2663+60000/tm.bpm*beat_cnt), file=sys.stderr)
 
     ret = aligned_offset
-    idx_tm_p = get_idx_tm_at(int_offset)
+    idx_tm_p = get_idx_tm_at(TimingPoints, int_offset)
     tm_p_offset = TimingPoints[idx_tm_p].offset
     int_tm_p_offset = int(tm_p_offset)
     if ret < tm_p_offset:
@@ -488,7 +485,7 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
     elif cmd.name == MEASURE: # processed before notes
         if len(bar_data) != 0:
             print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
-            get_last_red_tm().beats = cmd.args[0]
+            get_last_red_tm(TimingPoints).beats = cmd.args[0]
         else:
             get_or_create_curr_red_tm().beats = cmd.args[0]
     elif cmd.name == SCROLL:
@@ -529,56 +526,39 @@ def add_a_note(snd, offset):
     if debug_mode:
         print_with_pended(HitObjects[-1], file=sys.stderr)
 
-def get_last_tm():
-    return TimingPoints[-1]
-
-def get_last_red_tm():
-    return TimingPointsRed[-1]
-        
-def get_idx_tm_at(t):
-    assert len(TimingPoints) > 0, "Need at least one timing point"
-    return max(0, bisect_right(TimingPoints, t, key=lambda tm: tm.offset) - 1)
-
-def get_tm_at(t):
-    return TimingPoints[get_idx_tm_at(t)]
-
-def get_red_tm_at(t):
-    assert len(TimingPointsRed) > 0, "Need at least one uninherited timing point"
-    return TimingPointsRed[max(0, bisect_right(TimingPointsRed, int(t), key=lambda tm: tm.offset) - 1)]
-
 def create_new_tm(has_red: bool = False):
     global curr_time
 
-    last_tm = get_last_tm()
-    last_red_tm = get_last_red_tm()
+    last_tm = get_last_tm(TimingPoints)
+    last_red_tm = get_last_red_tm(TimingPoints)
     
     tm = OsuTimingPoint(
         offset = curr_time,
-        redline = has_red, # can upgrade to red + green later if not having red
+        redtm = last_red_tm, # can upgrade to red + green later if not having red
         scroll = last_tm and last_tm.scroll or 1.0,
         beats = last_tm.beats,
         ggt = last_tm.ggt,
         hidefirst = last_tm.hidefirst,
         bpm = last_red_tm.bpm,
     )
+    if has_red:
+        tm.redtm = tm
     if debug_mode:
         print_with_pended("CREATE NEW TM", tm, file=sys.stderr)
     
     TimingPoints.append(tm)
     if has_red:
-        TimingPointsRed.append(tm)
         curr_time = tm.offset
 
     return tm
 
 def get_or_create_curr_tm(need_red: bool = False):
     global curr_time
-    tm = get_last_tm()
+    tm = get_last_tm(TimingPoints)
     if int(curr_time) != int(tm.offset):
         tm = create_new_tm(need_red)
-    elif need_red and not tm.redline: # needs to upgrade to red + green
-        tm.redline = True
-        TimingPointsRed.append(tm)
+    elif need_red and not tm.is_redline(): # needs to upgrade to red + green
+        tm.redtm = tm
     return tm
 
 def get_or_create_curr_red_tm():
@@ -607,11 +587,11 @@ def handle_a_bar():
         print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
         pure_data = [x for x in bar_data if isinstance(x, str) and x[0].isdigit()]
         p1= "%6d %2.1f %2d %s" % (int(curr_time), \
-                get_last_red_tm().beats, len(pure_data), \
+                get_last_red_tm(TimingPoints).beats, len(pure_data), \
                 "".join(pure_data))
 
-        p2= "%s %s" % (repr(get_last_red_tm().bpm), \
-                repr(get_t_unit(get_last_red_tm(), max(1, tot_note)) * max(1, tot_note)))
+        p2= "%s %s" % (repr(get_last_red_tm(TimingPoints).bpm), \
+                repr(get_t_unit(get_last_red_tm(TimingPoints), max(1, tot_note)) * max(1, tot_note)))
         print_with_pended(p1, file=sys.stderr)
 
     #debug
@@ -621,7 +601,7 @@ def handle_a_bar():
     #debug
     
     if not tot_note: # empty or command-only measure
-        curr_time += get_t_unit(get_last_red_tm(), 1)
+        curr_time += get_t_unit(get_last_red_tm(TimingPoints), 1)
     else:
         for data in bar_data:
             if isinstance(data, str): #note
@@ -630,10 +610,10 @@ def handle_a_bar():
                     add_a_note(data, curr_time)
                     if print_each_note:
                         print_with_pended(note_cnt, data, curr_time,
-                            bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(), tot_note),
-                            get_t_unit(get_last_red_tm(), tot_note),
+                            bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(TimingPoints), tot_note),
+                            get_t_unit(get_last_red_tm(TimingPoints), tot_note),
                             file=sys.stderr)
-                curr_time += get_t_unit(get_last_red_tm(), tot_note)           
+                curr_time += get_t_unit(get_last_red_tm(TimingPoints), tot_note)           
             else: #cmd
                 real_do_cmd(data)
     bar_data = [] 
@@ -641,8 +621,8 @@ def handle_a_bar():
     if print_each_note:
         print_with_pended("after bar, curr_time= %f", curr_time, file=sys.stderr)
     # handle bar line visibility
-    tmr = get_last_red_tm()
-    tm = get_last_tm()
+    tmr = get_last_red_tm(TimingPoints)
+    tm = get_last_tm(TimingPoints)
     if tm.hidefirst.is_hidden(): # still hidden
         real_do_cmd((MEASURE, tmr.beats)) # insert bar line
         real_do_cmd((BARLINEOFF,)) # hide bar line
@@ -865,10 +845,10 @@ def write_TimingPoints(fout: TextIO) -> None:
             res.pop() # override overlapped positive sections
         meter = max(1, int(round(tm.beats)))
         fx = tm.ggt + 8 * tm.hidefirst.is_hidden()
-        if tm.redline:
+        if tm.is_redline():
             beat_dur = min(max(abs(60000.0 / tm.bpm), 6E-298), 6E+298)
             res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},1,{fx}"))
-        if not tm.redline or tm.scroll != 1.0:
+        if not tm.is_redline() or tm.scroll != 1.0:
             beat_dur = -100 / tm.scroll
             res.append((time, f"{time},{beat_dur},{meter},1,0,{volume},0,{fx}"))
         tm.offset = int(tm.offset)
@@ -901,8 +881,8 @@ def write_HitObjects(fout: TextIO) -> None:
                     lasting_note.type == SLIDER
             ln = lasting_note
             if ho.offset > ln.offset: # skip non-positive duration rolls
-                tmr = get_red_tm_at(int(ln.offset))
-                tmg = get_tm_at(int(ln.offset)) # green if red + green, otherwise red
+                tmr = get_red_tm_at(TimingPoints, int(ln.offset))
+                tmg = get_tm_at(TimingPoints, int(ln.offset)) # green if red + green, otherwise red
                 curve_len = 100 * (ho.offset - ln.offset) * tmr.bpm  * SliderMultiplier * tmg.scroll / 60000
                 res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
                         int(get_real_offset(ln.offset)), ln.type, ln.sound, \

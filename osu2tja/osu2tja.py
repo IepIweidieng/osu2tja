@@ -254,19 +254,20 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ret.redtm = ret
     elif float(rawbpmv) < 0: # SCROLL speed change
         assert prev_timing_point is not None
-        if (prev_timing_point.offset == ret.offset
+        merge_with_prev = (
+            prev_timing_point.offset == ret.offset
             and prev_timing_point.is_redline()
             and prev_timing_point.ggt == ret.ggt
-            and prev_timing_point.hidefirst == ret.hidefirst
-            ):
-            ret = prev_timing_point # merge uninherited (red) + inherited (green) timing points
-        else:
+            and prev_timing_point.hidefirst == ret.hidefirst)
+        if not merge_with_prev:
             ret.mspb = prev_timing_point.mspb
             ret.bpm = prev_timing_point.bpm
             ret.beats = prev_timing_point.beats # ignored for inherited timing points
             ret.redtm = prev_timing_point.redtm
             ret.offset = get_real_offset(ret.offset)
         ret.scroll = -100.0 / float(rawbpmv)
+        if merge_with_prev:
+            return None # merge uninherited (red) + inherited (green) timing points
     else:
         assert False
 

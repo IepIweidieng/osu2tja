@@ -1067,6 +1067,11 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     tja_contents.append("#START")
 
+    # ensure correct initial timing
+    tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
+    if measure != 4:
+        tja_contents.append(make_cmd(FMT_MEASURECHANGE, measure, 4))
+
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
         # allows simultaneous notes in different columns

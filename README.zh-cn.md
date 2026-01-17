@@ -133,7 +133,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
     - [x] 转盘：时长 → `BALLOON:`（以官方公式改进以计入 `OverallDifficulty:`（可能仍会差 1、2 打））
 - TJA 命令
   - [x] 非继承时间点：BPM → `#BPMCHANGE`，（改进）取绝对值
-  - [x] 非继承时间点：小节拍数 → `#MEASURE`，（改进）取绝对值
+  - [x] 非继承时间点：小节拍数 → `#MEASURE`，（改进）取绝对值，（新修正）防止歌曲不以 4/4 拍号开始时谱面不同步
   - [x] 不完整小节 → （改进）量化 `#MEASURE` + 未量化 `#MEASURE` + `#DELAY`（崩溃修正 —— @delguoqing；改进至小数毫秒精度，适用于 TJAPlayer3 系列与 OpenTaiko），（新修正）防止未量化部分包含未来小节的命令与音符
     - （新修正）防止输出的小节使用错误的时间点而造成谱面不同步甚至无穷回圈
   - [x] `SliderMultiplier:` → 整个谱面的基本 `#SCROLL` 倍率（新功能）

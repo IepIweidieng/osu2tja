@@ -132,7 +132,7 @@ Tool created by @delguoqing
     - [x] Spinner: Time length → `BALLOON:` (improved using the official formula to account for `OverallDifficulty:` (might still off by 1 or 2 hits))
 - TJA Commands
   - [x] Uninherited timing point: BPM → `#BPMCHANGE`, (improved) use absolute value
-  - [x] Uninherited timing point: Beats per bar → `#MEASURE`, (improved) use absolute value
+  - [x] Uninherited timing point: Beats per bar → `#MEASURE`, (improved) use absolute value, (new bug fix) prevent chart from desyncing when song does not start with 4/4 time signature
   - [x] Incomplete bar → (improved) quantized `#MEASURE` + unquantized `#MEASURE` + `#DELAY` (crash fixed — @delguoqing; improved to ms with decimal place accuracy for TJAPlayer3 series and OpenTaiko), (new bug fix) prevent the unquanized part from including commands and notes from future measures
     - (new bug fix) prevent the output measure from using wrong timing point and causing chart desyncs or even infinite loops
   - [x] `SliderMultiplier:` → Base `#SCROLL` multiplier for whole chart (new)

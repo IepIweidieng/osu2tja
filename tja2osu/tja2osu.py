@@ -130,32 +130,33 @@ def convert_str(bytes_: bytes, enc_guessed: Optional[str] = None) -> str:
 def check_unsupported(filename):
     return
     assert isinstance(filename, str)
-    rtassert(filename.endswith(".tja"), "filename should ends with .tja")
+    assert filename.endswith(".tja"), "filename should ends with .tja"
     try: fobj = open(filename, "rb")
-    except IOError: rtassert(False, "can't open tja file.")
+    except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     END_cnt = 0
     for line in fobj:
         cmd, cmd_arg = parse_tja_command(line)
-        rtassert(cmd != BRANCHSTART.decode(), "don't support branch")
+        assert cmd != BRANCHSTART.decode(), "don't support branch"
         END_cnt += (cmd != END.decode())
-        rtassert(END_cnt < 1 or cmd != START.decode(), "don't support multiple fumen.")
+        assert END_cnt < 1 or cmd != START.decode(), "don't support multiple fumen."
 
 Str = TypeVar('Str', str, bytes)
 
 def rm_jiro_comment(str_: Str) -> Str:
-    return str_.partition(b'//' if type(str_) == bytes else '//')[0]
+    return str_.partition(cast(Str, b'//' if type(str_) == bytes else '//'))[0]
 
 str_pat_tja_header = r'^[ \t]*([^ \t:]*)[ \t]*:(.*)$'
 pat_tja_header = re.compile(str_pat_tja_header)
 bpat_tja_header = re.compile(str_pat_tja_header.encode())
 
 def parse_tja_header(line: Str) -> Tuple[Optional[Str], Str]:
-    match = (bpat_tja_header if type(line) == bytes else pat_tja_header).match(line)
+    match = cast(re.Pattern[Str], bpat_tja_header if type(line) == bytes else pat_tja_header).match(line)
     if match is None:
         return None, type(line)()
-    return match.groups()
+    hdr, hdr_arg = match.groups()
+    return hdr, hdr_arg
 
 def parse_tja_complex(str_) -> complex:
     str_ = str_.lower().rstrip()
@@ -165,7 +166,7 @@ def parse_tja_complex(str_) -> complex:
 
 def get_course_by_number(str_: Str) -> str:
     if not str_.isdigit():
-        return convert_str(str_) if type(str_) == bytes else str_
+        return convert_str(str_) if type(str_) == bytes else cast(str, str_)
     num = int(str_)
     if num <= 0: return "Easy"
     elif num == 1: return "Normal"
@@ -202,9 +203,9 @@ def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
-    rtassert(filename.endswith(".tja"), "filename should ends with .tja")
+    assert filename.endswith(".tja"), "filename should ends with .tja"
     try: fobj = open(filename, "rb")
-    except IOError: rtassert(False, "can't open tja file.")
+    except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         ENCODING = "utf-8-sig"
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
@@ -322,15 +323,16 @@ pat_tja_command = re.compile(str_pat_tja_command)
 bpat_tja_command = re.compile(str_pat_tja_command.encode())
 
 def parse_tja_command(line: Str) -> Tuple[Optional[Str], Str]:
-    match = (bpat_tja_command if type(line) == bytes else pat_tja_command).match(line)
+    match = cast(re.Pattern[Str], bpat_tja_command if type(line) == bytes else pat_tja_command).match(line)
     if match is None:
         return None, type(line)()
-    return match.groups()
+    cmd, cmd_arg = match.groups()
+    return cmd, cmd_arg
 
 def get_all(filename):
     global has_started, curr_time, lasting_note
     try: fobj = open(filename, "rb")
-    except IOError: rtassert(False, "can't open tja file.")
+    except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
 
@@ -853,17 +855,17 @@ def write_HitObjects(fout: TextIO) -> None:
             if debug_mode:
                 print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
         if ho[0] == CIRCLE:
-            rtassert(lasting_note is None, "this is abnormal")
+            assert lasting_note is None, "this is abnormal"
             res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho[0], ho[1])))
         elif ho[0] == SLIDER:
-            rtassert(lasting_note is None, "this is abnormal")
+            assert lasting_note is None, "this is abnormal"
             lasting_note = ho
         elif ho[0] == SPINNER:
-            rtassert(lasting_note is None, "this is abnormal")
+            assert lasting_note is None, "this is abnormal"
             lasting_note = ho
         elif ho[0] == SLIDER_END:
-            rtassert(lasting_note is not None and \
-                    lasting_note[0] == SLIDER)
+            assert lasting_note is not None and \
+                    lasting_note[0] == SLIDER
             ln = lasting_note
             if ho[2] > ln[2]: # skip non-positive duration rolls
                 tmr = get_red_tm_at(int(ln[2]))
@@ -874,8 +876,8 @@ def write_HitObjects(fout: TextIO) -> None:
                         int(CircleX+curve_len), CircleY, 1, curve_len)))
             lasting_note = None
         elif ho[0] == SPINNER_END:
-            rtassert(lasting_note is not None and \
-                    lasting_note[0] == SPINNER, "this is abnormal")
+            assert lasting_note is not None and \
+                    lasting_note[0] == SPINNER, "this is abnormal"
             ln = lasting_note
             if ho[2] > ln[2]: # skip non-positive length rolls
                 res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln[2])), \
@@ -890,7 +892,7 @@ def write_HitObjects(fout: TextIO) -> None:
 def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     init_globals()
     assert isinstance(filename, str)
-    rtassert(filename.endswith(".tja"), "filename should ends with .tja")
+    assert filename.endswith(".tja"), "filename should ends with .tja"
     check_unsupported(filename)
 
     # real work
@@ -909,11 +911,6 @@ def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     init_debug_globals()
     return chart_resources
 
-
-def rtassert(b, str=""):
-    if not b:
-        print_with_pended(str, file=sys.stderr)
-        exit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

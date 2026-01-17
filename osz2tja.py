@@ -6,7 +6,7 @@ from common.utils import print_with_pended, print_pend, print_unpend
 from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Tuple
 from os import path
 import os
 import sys
@@ -91,14 +91,16 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
     if not osu_files:
         raise ValueError(f"No .osu files found in {osus_fpath}")
 
-    osu_infos_by_song: Dict[Tuple(str, int), List] = {}
+    osu_infos_by_song: Dict[Tuple[str, int], List] = {}
     for filename in osu_files:
         fp = TextIOWrapper(osu_zip.open(filename, "r"), encoding="utf-8")
         osu_info = extract_osu_file_info(fp)
         fp.close()
         osu_info["filename"] = filename
-        assert type(osu_info["audio"] or "") == str and type(osu_info["mode"] or 0) == int
-        osu_infos_by_song.setdefault((osu_info["audio"] or "", osu_info["mode"] or 0), []).append(osu_info)
+        osu_info["audio"] = osu_info["audio"] or ""
+        osu_info["mode"] = osu_info["mode"] or 0
+        assert type(osu_info["audio"]) == str and type(osu_info["mode"]) == int
+        osu_infos_by_song.setdefault((osu_info["audio"], osu_info["mode"]), []).append(osu_info)
 
     osu_info_first = next(iter(osu_infos_by_song.values()))[0]
     title = osu_info_first["title"] # Use the title of the first map for naming

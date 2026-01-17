@@ -4,12 +4,11 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from . import tja2osu
+    from tja2osu import get_course_by_number, parse_tja_command, parse_tja_header, tja2osu
 except ImportError:
-    try:
-        import tja2osu.tja2osu
-    except ImportError:
-        import tja2osu
+    from tja2osu.tja2osu import get_course_by_number, parse_tja_command, parse_tja_header, tja2osu
+assert callable(tja2osu)
+
 from common.utils import print_with_pended, print_pend, print_unpend
 
 import argparse
@@ -83,7 +82,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
             if line == WATER_MARK:
                 continue
             line_no_comment, comment_delim, comment = line.partition(b"//")
-            cmd, cmd_arg = tja2osu.parse_tja_command(line_no_comment)
+            cmd, cmd_arg = parse_tja_command(line_no_comment)
             if cmd == b"START":
                 started = True
                 line = b"#START"
@@ -95,10 +94,10 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
                 else:
                     player_side = 0
             elif cmd is None:
-                hdr, hdr_arg = tja2osu.parse_tja_header(line_no_comment)
+                hdr, hdr_arg = parse_tja_header(line_no_comment)
                 if hdr == b"COURSE":
                     if hdr_arg is not None:
-                        course = tja2osu.get_course_by_number(hdr_arg)
+                        course = get_course_by_number(hdr_arg)
                         after_course = True
                         continue
                 elif hdr == b"STYLE":
@@ -147,7 +146,7 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
         if line == WATER_MARK:
             continue
         line_no_comment, _, _ = line.partition(b"//")
-        cmd, cmd_arg = tja2osu.parse_tja_command(line_no_comment)
+        cmd, cmd_arg = parse_tja_command(line_no_comment)
         if cmd == b"BRANCHSTART":
             has_branch = True
             which = None
@@ -159,7 +158,7 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
             continue
 
         if cmd is None:
-            vname, vval = tja2osu.parse_tja_header(line_no_comment)
+            vname, vval = parse_tja_header(line_no_comment)
             if vname == b"COURSE":
                 vval_str = vval
                 branch_data[0].append(b"COURSE:" + vval_str + b"(Kurouto)")
@@ -239,7 +238,7 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         print(f"Converting `{fpath_tja_i}` to `{fname_osu_i}` ...", end="", flush=True)
         print_pend()
         try:
-            rescs = tja2osu.tja2osu(fpath_tja_i, fout)
+            rescs = tja2osu(fpath_tja_i, fout)
             resources.update(rescs)
         except Exception:
             print_with_pended(traceback.format_exc(), file=sys.stderr)

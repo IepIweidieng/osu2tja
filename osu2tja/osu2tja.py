@@ -1073,10 +1073,10 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
                 if curr_bpm != tm_next.bpm:
                     tja_contents.append(make_cmd(FMT_BPMCHANGE, tm_next.bpm))
                 curr_bpm = tm_next.bpm
-                bar_max_length = measure * tm_next.mspb
                 if measure_changed or measure != tm_next.beats:
                     tja_contents.append(make_cmd(FMT_MEASURECHANGE, tm_next.beats, 4))
                 measure = tm_next.beats
+                bar_max_length = measure * tm_next.mspb
 
                 tm_idx += 1
 

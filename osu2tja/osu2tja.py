@@ -1022,7 +1022,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
     # for end of chart
     last_play_event = max(hitobjects[-1].offset if len(hitobjects) > 0 else 0,
-        commands_within[-1].offset if len(commands_within) > 0 else 0)
+        timingpoints[-1].offset if len(timingpoints) > 0 else 0)
     ms_chart_end_padding_max = 1000
 
     obj_idx_begin = 0

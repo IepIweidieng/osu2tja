@@ -5,26 +5,23 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from common.tja import TjaCmd, get_course_by_number, parse_tja_command, parse_tja_header
 from common.utils import print_with_pended
-try:
-    from osu2tja.osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
-except ImportError:
-    from osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
+from common.osu import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
 
 import argparse
-from bisect import bisect_right
 import codecs
 from dataclasses import dataclass
 import math
 import re
 import sys
 import traceback
-from typing import Dict, Generic, List, Optional, OrderedDict, Sequence, TextIO, Tuple, TypeVar, Union, cast
+from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, Union, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 TimingPoints: List[OsuTimingPoint]
-bar_data: List[Union[str, "TjaCmd"]]
+bar_data: List[Union[str, TjaCmd]]
 lasting_note: Optional["OsuHitObject"]
 
 def init_globals() -> None:
@@ -155,20 +152,6 @@ Str = TypeVar('Str', str, bytes)
 def rm_jiro_comment(str_: Str) -> Str:
     return str_.partition(cast(Str, b'//' if type(str_) == bytes else '//'))[0]
 
-str_pat_tja_header = r'^[ \t]*([^ \t:]*)[ \t]*:(.*)$'
-pat_tja_header = re.compile(str_pat_tja_header)
-bpat_tja_header = re.compile(str_pat_tja_header.encode())
-
-@dataclass
-class TjaHdr(Generic[Str]):
-    name: Str
-    arg: Str
-
-def parse_tja_header(line: Str) -> Optional[TjaHdr]:
-    match = cast(re.Pattern[Str], bpat_tja_header if type(line) == bytes else pat_tja_header).match(line)
-    if match is None:
-        return None
-    return TjaHdr(*match.groups())
 
 def parse_tja_complex(str_) -> complex:
     str_ = str_.lower().rstrip()
@@ -176,16 +159,7 @@ def parse_tja_complex(str_) -> complex:
         str_ = str_.removesuffix('i') + 'j'
     return complex(str_)
 
-def get_course_by_number(num: Union[float, Str]) -> str:
-    if isinstance(num, str) and not num.isdigit():
-        return convert_str(num) if type(num) == bytes else cast(str, num)
-    num = int(num)
-    if num <= 0: return "Easy"
-    elif num == 1: return "Normal"
-    elif num == 2: return "Hard"
-    elif num == 3: return "Oni"
-    elif num == 4: return "Edit"
-    else: return "Edit%d" % (num-4)
+
 
 def parse_tja_genre(genres: str) -> List[str]:
     res: List[str] = []
@@ -332,24 +306,6 @@ def get_osu_sound(snd):
     elif snd == 'D': return CLAP
     else: return EMPTY # empty or unknown and warned
 
-str_pat_tja_command = r'^[ \t]*#([^ \t]*[A-Z_]+)[ \t]?(.*)$'
-pat_tja_command = re.compile(str_pat_tja_command)
-bpat_tja_command = re.compile(str_pat_tja_command.encode())
-
-@dataclass
-class TjaCmd(Generic[Str]):
-    name: Str
-    args: Sequence
-
-    def __init__(self, name, *args):
-        object.__setattr__(self, 'name', name)
-        object.__setattr__(self, 'args', args)
-
-def parse_tja_command(line: Str) -> Optional[TjaCmd]:
-    match = cast(re.Pattern[Str], bpat_tja_command if type(line) == bytes else pat_tja_command).match(line)
-    if match is None:
-        return None
-    return TjaCmd(*match.groups())
 
 def get_all(filename):
     global has_started, curr_time, lasting_note

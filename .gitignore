@@ -10,5 +10,5 @@
 /Songs
 /test
 /Output
-/osu2tja/__pycache__
+*/__pycache__
 /OpenTaiko

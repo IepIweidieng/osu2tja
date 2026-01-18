@@ -1,4 +1,3 @@
-
 from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum

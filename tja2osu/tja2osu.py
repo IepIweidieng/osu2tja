@@ -1,5 +1,3 @@
-# $Id$
-
 # sys.path hack
 import os
 import sys
@@ -16,7 +14,7 @@ import math
 import re
 import sys
 import traceback
-from typing import Dict, List, Optional, OrderedDict, TextIO, Tuple, TypeVar, Union, cast
+from typing import Dict, List, Optional, TextIO, Tuple, TypeVar, Union, cast
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 

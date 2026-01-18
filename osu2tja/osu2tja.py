@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # sys.path hack
 import os
 import sys

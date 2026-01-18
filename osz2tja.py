@@ -1,12 +1,13 @@
-import argparse
-import shutil
-import textwrap
-import traceback
 from common.osu import OSU_VER_STR_PREFIX, get_diffrank_by_name
 from common.tja import get_course_by_number
 from common.utils import print_with_pended, print_pend, print_unpend
 from osu2tja.osu2tja import osu2tja
 from tja2osu.tja2osu_file_dvide import tja2osus
+
+import argparse
+import shutil
+import textwrap
+import traceback
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List, Literal, Tuple
 from os import path

@@ -29,7 +29,6 @@ class EHideFirst(Enum):
 class OsuTimingPoint:
     offset: float
     sevol: float = 100
-    redtm: Optional["OsuTimingPoint"] = None
     ggt: bool = False
     hidefirst: EHideFirst = EHideFirst.SHOWN
     # redline or inherited properties
@@ -39,6 +38,8 @@ class OsuTimingPoint:
     # greenline properties
     scroll: float = 1.0
     offset_raw: float = 0
+    # redline pointer
+    redtm: Optional["OsuTimingPoint"] = None
 
     def is_redline(self) -> bool:
         return self.redtm is None or self.redtm == self

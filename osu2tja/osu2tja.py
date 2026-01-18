@@ -549,14 +549,14 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     beat_cnt_q = 4 * numerator_q / denominator_q
     end_q = get_real_offset(begin + beat_cnt_q * mspb)
 
+    if output_trace_info:
+        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {mspb}ms = {begin + beat_cnt_q * mspb}ms -> end_q {end_q}ms")
+
     # write quantized part
     if numerator_q != 0:
         tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_q, denominator_q))
         if write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q)):
             bar_emitted = True
-
-    if output_trace_info:
-        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {mspb}ms = {begin + beat_cnt_q * mspb}ms -> end_q {end_q}ms")
 
     # data for unquantized part
     bar_data = bar_data[-tail_fix:] if tail_fix > 0 else []
@@ -576,6 +576,9 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     beat_cnt_unq = 4 * numerator_unq / denominator_unq
     end_unq = end_q + beat_cnt_unq * mspb
 
+    if output_trace_info:
+        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {mspb}ms = {end_q + beat_cnt_unq * mspb}ms -> end_unq = {end_unq}ms")
+
     # write quantized part
     if not (numerator_unq == 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
@@ -591,19 +594,16 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         if bar_emitted and not tm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
 
-    if output_trace_info:
-        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {mspb}ms = {end_q + beat_cnt_unq * mspb}ms -> end_unq = {end_unq}ms")
-
     # write delay part
     delay_time = end - end_unq
     # Note: #DELAY value can be in any sign
+    if output_trace_info:
+        tja_contents.append(f"// [incomplete delay] {end_unq}ms + {delay_time}ms = {end_unq + delay_time}ms -> end {end}ms")
 
     # Note: jiro will ignore delays shorter than 0.001s, but tjap3 simulators do not
     # for playing in jiro, use "BPMCHANGEによるズレ調整器" by CurryDry0608hk
     if delay_time != 0:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
-        if output_trace_info:
-            tja_contents.append(f"// [incomplete delay] {end_unq}ms + {delay_time}ms = {end_unq + delay_time}ms -> end {end}ms")
 
 def get_t_unit(tm: OsuTimingPoint) -> float:
     return T_MINUTE / tm.bpm / BEAT_RES

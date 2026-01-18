@@ -5,7 +5,7 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.tja import TjaCmd, get_course_by_number, parse_tja_command, parse_tja_header
+from common.tja import TjaCmd, convert_str, get_course_by_number, parse_tja_command, parse_tja_header
 from common.utils import print_with_pended
 from common.osu import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
 
@@ -111,26 +111,6 @@ BARLINEON = "BARLINEON"
 DELAY = "DELAY"
 SCROLL = "SCROLL"
 
-ENCODINGS_KNOWN = ["utf-8-sig", "gbk", "shift-jis", "big5"]
-
-# guess str
-def try_decode(bytes_: bytes, enc_guessed: Optional[str] = None) -> Tuple[Optional[str], str]:
-    ret = OrderedDict()
-    for enc in ([enc_guessed] if enc_guessed else []) + ENCODINGS_KNOWN:
-        try:
-            ret[enc] = bytes_.decode(enc)
-        except UnicodeError:
-            pass
-    
-    enc_guessed, decoded = None, bytes_.decode("latin-1")
-    for enc, dec in ret.items():
-        if enc_guessed is None or len(dec) < len(decoded):
-            enc_guessed, decoded = enc, dec
-    return enc_guessed, decoded
-
-def convert_str(bytes_: bytes, enc_guessed: Optional[str] = None) -> str:
-    _, decoded = try_decode(bytes_, enc_guessed)
-    return decoded
 
 def check_unsupported(filename):
     return
@@ -158,7 +138,6 @@ def parse_tja_complex(str_) -> complex:
     if str_.endswith('i'):
         str_ = str_.removesuffix('i') + 'j'
     return complex(str_)
-
 
 
 def parse_tja_genre(genres: str) -> List[str]:

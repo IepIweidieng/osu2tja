@@ -1,12 +1,35 @@
 from dataclasses import dataclass
 import re
-from typing import Generic, Optional, Sequence, TypeVar, Union, cast
+from typing import Generic, Optional, OrderedDict, Sequence, Tuple, TypeVar, Union, cast
 
 Str = TypeVar('Str', str, bytes)
 
+# guess str
+ENCODINGS_KNOWN = ["utf-8-sig", "gbk", "shift-jis", "big5"]
+
+
+def try_decode(bytes_: bytes, enc_guessed: Optional[str] = None) -> Tuple[Optional[str], str]:
+    ret = OrderedDict()
+    for enc in ([enc_guessed] if enc_guessed else []) + ENCODINGS_KNOWN:
+        try:
+            ret[enc] = bytes_.decode(enc)
+        except UnicodeError:
+            pass
+
+    enc_guessed, decoded = None, bytes_.decode("latin-1")
+    for enc, dec in ret.items():
+        if enc_guessed is None or len(dec) < len(decoded):
+            enc_guessed, decoded = enc, dec
+    return enc_guessed, decoded
+
+
+def convert_str(bytes_: bytes, enc_guessed: Optional[str] = None) -> str:
+    _, decoded = try_decode(bytes_, enc_guessed)
+    return decoded
+
 
 def get_course_by_number(num: Union[float, Str]) -> str:
-    if isinstance(num, str) and not num.isdigit():
+    if (isinstance(num, str) or isinstance(num, bytes)) and not num.isdigit():
         return convert_str(num) if type(num) == bytes else cast(str, num)
     num = int(num)
     if num <= 0:

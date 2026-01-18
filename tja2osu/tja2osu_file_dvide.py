@@ -4,9 +4,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from tja2osu import tja2osu
-except ImportError:
     from tja2osu.tja2osu import tja2osu
+except ImportError:
+    from tja2osu import tja2osu
 assert callable(tja2osu)
 
 from common.tja import get_course_by_number, parse_tja_command, parse_tja_header

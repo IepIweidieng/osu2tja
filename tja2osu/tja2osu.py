@@ -6,7 +6,10 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from common.utils import print_with_pended
-from osu2tja.osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
+try:
+    from osu2tja.osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
+except ImportError:
+    from osu2tja import EHideFirst, OsuTimingPoint, get_idx_tm_at, get_last_red_tm, get_last_tm, get_red_tm_at, get_tm_at
 
 import argparse
 from bisect import bisect_right
@@ -173,10 +176,10 @@ def parse_tja_complex(str_) -> complex:
         str_ = str_.removesuffix('i') + 'j'
     return complex(str_)
 
-def get_course_by_number(str_: Str) -> str:
-    if not str_.isdigit():
-        return convert_str(str_) if type(str_) == bytes else cast(str, str_)
-    num = int(str_)
+def get_course_by_number(num: Union[float, Str]) -> str:
+    if isinstance(num, str) and not num.isdigit():
+        return convert_str(num) if type(num) == bytes else cast(str, num)
+    num = int(num)
     if num <= 0: return "Easy"
     elif num == 1: return "Normal"
     elif num == 2: return "Hard"

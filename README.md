@@ -53,7 +53,7 @@ osz2tja will create a folder in `[output_folder]` for each generated `.tja` file
 ### Features
 
 - **Batch conversion** of `.osz` files to `.tja` files. (@MoshirMoshir)
-- Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5)
+- Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5), (improved) considering osu! difficulty names.
 - Beatmaps with **more than 5 difficulties** are split into multiple `.tja` files (e.g., `title - 1`, `title - 2`). (@MoshirMoshir; improved to suffix only when necessary)
 - Beatmaps with **multiple song audio files** (unrankable but seen in loved beatmaps) or **multiple game modes** are also split into multiple `.tja` files. (new)
 - **Automatically copy** song audio files (@SamLangTen; **automatic OGG conversion** — @k2angel), (new) as well as background image and other files used by the chart.
@@ -123,7 +123,7 @@ Tool created by @delguoqing
       - The `OFFSET:` is set to the beginning time position of the last beat non-after the audio to mimic osu! behavior. It was the earliest of the first note or the timing point in delguoqing's version.
       - Ranked osu! beatmaps have roughly +15ms music offset than perfect sync due to the historical reasons. Ranked format v4 and earlier beatmaps have additional -24ms music offset (-9ms in total).
   - Difficulty Headers
-    - [x] `Version:` → TJA comment (for reference only) (new)
+    - [x] `Version:` → `COURSE:` & TJA comment (new)
     - [ ] `Version:` → `NOTESDESIGNER<n>:` (for difficulties by guest chart creators) (TODO)
     - [ ] `Creator:` → `NOTESDESIGNER<n>:` (otherwise) (TODO)
     - [x] Difficulties sorted by `OverallDifficulty:` → `COURSE:` (@SamLangTen; automated — @MoshirMoshir; improved to include `COURSE:Edit`)

@@ -814,7 +814,36 @@ class TjaTimedCmd:
         self.formatter = formatter
         self.args = args
 
-def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audio_name: Optional[str]) -> Tuple[
+
+diffrank_to_name: Dict[float, Sequence[str]] = {
+    -1: ("beginner", "shokyuu"),
+    0: ("easy", "kantan", "cup", "ez", "past", "whisper"),
+    0.5: ("basic", "bsc"),
+    1: ("normal", "futsuu", "salad", "nm", "medium", "novice", "nov", "present", "acoustic"),
+    1.5: ("advanced", "adv"),
+    2: ("hard", "muzukashii", "muzu", "platter", "difficult", "hd", "future", "ultra"),
+    2.5: ("hyper"),
+    3: ("insane", "oni", "rain", "extreme", "another", "mx", "shd", "exhaust", "exh", "eternal", "acoustic"),
+    3.5: ("expert"),
+    4: ("extra", "edit", "ura", "inner", "overdose", "edit", "black", "challenge",
+        "sc", "ex", "beyond", "inf", "grv", "mxm", "ult", "ultra", "master", "chaos", "special", "phantasm"),
+    4.25: ("master"),
+    4.5: ("extreme", "hell", "deluge", "leggendaria", "hvn", "vvd", "xcd", "re:master", "ultima", "world's", "lunatic", "glitch", "crash"),
+}
+
+def get_diffrank_by_name(name: Optional[str]) -> float:
+    if name is not None:
+        try:
+            return float(name)
+        except ValueError:
+            words = set(name.lower().split())
+            for rank, keywords in diffrank_to_name.items():
+                if any(((kw in words) for kw in keywords)):
+                    return rank
+    return 3
+
+
+def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Optional[Union[int, float]] = None, audio_name: Optional[str] = None) -> Tuple[
         List[str], List[str], List[str], List[str], Dict[str, str]
     ]:
     init_globals()
@@ -1056,7 +1085,13 @@ def osu2tja(fp: IO[str], course: Union[str, int], level: Union[int, float], audi
 
     str_info_diff_orig = f"// osu! difficulty: {version}"
     tja_heads_diff.append(str_info_diff_orig)
-    tja_heads_diff.append(f"COURSE:{course}") # TODO: GUESS DIFFICULTY
+    if course is None:
+        try:
+            from tja2osu import get_course_by_number # workaround for circular import
+        except ImportError:
+            from tja2osu.tja2osu import get_course_by_number
+        course = get_course_by_number(get_diffrank_by_name(version))
+    tja_heads_diff.append(f"COURSE:{course}")
     if level is None:
         level = osu2tja_level(overall_difficulty)
     tja_heads_diff.append(f"LEVEL:{level}")  # TODO: GUESS LEVEL
@@ -1181,7 +1216,7 @@ def main():
     # try to open file
     try:
         fp = codecs.open(args.filename, "r", "utf8")
-        head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp, 3, 9, None) # defaulted course and level
+        head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp)
         head_sync_main = head_sync
     except IOError:
         print("Can't open file `%s`" % args.filename, file=sys.stderr)

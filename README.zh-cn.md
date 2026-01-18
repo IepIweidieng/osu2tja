@@ -53,7 +53,7 @@ osz2tja 会在 `[output_folder]` 中为每个生成的 `.tja` 文件创建一个
 ### 功能
 
 - **批量转换** `.osz` 谱面文件为 `.tja` 谱面文件。（@MoshirMoshir）
-- 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个）
+- 自动映射 osu! 难度（每个 `.tja` 最多 5 个）为 TJA 的 **Edit**（里魔王）、**Oni**（魔王）、**Hard**（困难）、**Normal**（普通）和 **Easy**（简单）难度。（@MoshirMoshir；改进至 5 个），（改进）会考虑 osu! 难度名。
 - **超过 5 个难度**的 Beatmap 会拆为多份 `.tja`（例如 `title - 1`、`title - 2`）。（@MoshirMoshir；改进至必要时才加后缀）
 - **有多个音乐文件**（不可上架，但可見于部分社区喜爱（Loved）谱面）的 Beatmaps 或**有多个游戏模式**也会拆为多份 `.tja`。（新功能）
 - **自动复制**谱面所使用的音频文件（@SamLangTen；**自动 OGG 转换** —— @k2angel）、（新功能）以及背景图片、与其它文件。
@@ -124,7 +124,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
       - `OFFSET:` 取音乐开始为止最后一拍的开始时间，仿 osu!（稳定版）。delguoqing 版是取最早的音符或时间点。
       - 由於历史原因，osu! 上架谱面与完全校准相比有約 +15 毫秒的音乐误差。使用 format v4 与更早版本的上架谱面有额外的 -24 毫秒音乐误差（共 -9 毫秒）。
   - 难度标头
-    - [x] `Version:` → TJA 注释（纯参考用）（新功能）
+    - [x] `Version:` → `COURSE:` & TJA 注释（新功能）
     - [ ] `Version:` → `NOTESDESIGNER<n>:`（客串制谱者的难度）（TODO）
     - [ ] `Creator:` → `NOTESDESIGNER<n>:`（其他）（TODO）
     - [x] 难度按 `OverallDifficulty:` 排序 → `COURSE:`（@SamLangTen；自动化 —— @MoshirMoshir；改进为含 `COURSE:Edit`）

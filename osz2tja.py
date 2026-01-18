@@ -3,7 +3,8 @@ import shutil
 import textwrap
 import traceback
 from common.utils import print_with_pended, print_pend, print_unpend
-from osu2tja.osu2tja import OSU_VER_STR_PREFIX, osu2tja
+from osu2tja.osu2tja import OSU_VER_STR_PREFIX, get_diffrank_by_name, osu2tja
+from tja2osu.tja2osu import get_course_by_number
 from tja2osu.tja2osu_file_dvide import tja2osus
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List, Literal, Tuple
@@ -86,6 +87,38 @@ def convert_to_ogg(audio_root: str, audio_name: str) -> str:
 bad_chars_for_path = {'\\', '/', ':', '*', '?', '"', '<', '>', '|', '.', '{', '}'}
 
 
+n_diffs_max_per_tja = 5
+
+def get_rank_type_error(diffranks: List[float], difftypes: List[int]) -> float:
+    return sum((diffrank - difftype) ** 2 for diffrank, difftype in zip(diffranks, difftypes))
+
+def get_best_difftypes(diffranks: List[float]) -> List[int]:
+    # try add difficulty gaps and find the best fit
+    # final best
+    difftypes = [n_diffs_max_per_tja - 1 - i for i in range(len(diffranks))]
+    error = get_rank_type_error(diffranks, difftypes)
+    for _ in range(n_diffs_max_per_tja - len(diffranks)):
+        # best for current gap count
+        difftypes_i = difftypes[:]
+        error_i = error
+        has_gap_i = False
+        for idx_gap in range(len(diffranks)):
+            # value for current gap
+            difftypes_j = [v - 1 if i >= idx_gap else v for i, v in enumerate(difftypes)]
+            error_j = get_rank_type_error(diffranks, difftypes_j)
+            if error_j <= error_i:
+                difftypes_i = difftypes_j
+                error_i = error_j
+                has_gap_i = True
+        if not has_gap_i:
+            break
+        else:
+            difftypes = difftypes_i
+            error = error_i
+
+    return difftypes
+
+
 def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
     if not is_zipfile(osus_fpath):
         raise ValueError(f"{osus_fpath} is not a valid zip file")
@@ -113,7 +146,6 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
         ch if ch not in bad_chars_for_path else '_'
         for ch in osu_info_first["title_ascii"]))
 
-    n_diffs_max_per_tja = 5
     will_split_tja = (
         len(osu_infos_by_song) > 1
         or any((len(infos) > n_diffs_max_per_tja for infos in osu_infos_by_song.values()))
@@ -121,7 +153,9 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
 
     n_tjas = 0
     for (song_audio, game_mode), osu_infos in osu_infos_by_song.items():
-        osu_infos.sort(key=lambda x: x["difficulty"])
+        for osu_info in osu_infos:
+            osu_info["diffrank"] = get_diffrank_by_name(osu_info["version"])
+        osu_infos.sort(key=lambda x: (x["diffrank"], x["difficulty"]))
         for start_idx in range(0, len(osu_infos), n_diffs_max_per_tja):
             # Get the subset of difficulties for this folder
             selected_infos = osu_infos[start_idx:start_idx + n_diffs_max_per_tja]
@@ -152,10 +186,9 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
             print(f"Converting `{osus_fname}` to `{tja_fname}` ...", end="", flush=True)
             print_pend()
 
-            # Adjust difficulties for this folder
-            difficulties = ["Edit", "Oni", "Hard", "Normal", "Easy"]
-            if len(selected_infos) <= 4:
-                difficulties = difficulties[1:1+len(selected_infos)]
+            # Assign difficulty types for this folder
+            difftypes = get_best_difftypes([info["diffrank"] for info in selected_infos])
+            difficulties = [get_course_by_number(v) for v in difftypes]
 
             head_meta: List[str] = []
             head_sync_main: List[str] = []

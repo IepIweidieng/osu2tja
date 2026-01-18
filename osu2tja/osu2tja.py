@@ -228,7 +228,7 @@ timingpoints: List[OsuTimingPoint]
 commands_within: List["TjaTimedCmd"]
 
 def init_globals() -> None:
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, tail_fix, gamemode_idx, osu_format_ver, commands_within
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver, commands_within
     # global variables
     timingpoints = []
     balloons = []
@@ -236,7 +236,6 @@ def init_globals() -> None:
     slider_tick_rate = 4
     overall_difficulty = 5
     column_count = 1
-    tail_fix = 0
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
     commands_within = []
@@ -528,12 +527,9 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
 # use #MEASURE to write the quantized and unquantized parts as 2 bars, and use #DELAY to fix the remaining time error.
 
 
-def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents):
-    global tail_fix
+def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents) -> Optional[int]:
     if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end):
-        return
-
-    bar_emitted = False
+        return None
 
     mspb = T_MINUTE / tm.bpm
     my_beat_cnt = (end - begin) * tm.bpm / T_MINUTE
@@ -553,14 +549,14 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {mspb}ms = {begin + beat_cnt_q * mspb}ms -> end_q {end_q}ms")
 
     # write quantized part
+    objs_written_q = None
     if numerator_q != 0:
         tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_q, denominator_q))
-        if write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q)):
-            bar_emitted = True
+        objs_written_q = write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q))
 
     # data for unquantized part
-    bar_data = bar_data[-tail_fix:] if tail_fix > 0 else []
-    tail_fix = 0
+    if objs_written_q is not None:
+        bar_data = bar_data[objs_written_q:]
     my_beat_cnt_unq = my_beat_cnt - beat_cnt_q
     min_beat_cnt_unq = min_beat_cnt - beat_cnt_q
 
@@ -580,6 +576,7 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {mspb}ms = {end_q + beat_cnt_unq * mspb}ms -> end_unq = {end_unq}ms")
 
     # write quantized part
+    objs_written_unq = None
     if not (numerator_unq == 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
         # Note: numerator and denominator can both have decimal places
@@ -588,10 +585,10 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
             beat_cnt_unq = 4 * numerator_unq / denominator_unq
             end_unq = end_q + beat_cnt_unq * mspb
         tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_unq, denominator_unq))
-        if bar_emitted and not tm.hidefirst.is_hidden():
+        if objs_written_q is not None and not tm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEOFF))
-        write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
-        if bar_emitted and not tm.hidefirst.is_hidden():
+        objs_written_unq = write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
+        if objs_written_q is not None and not tm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
 
     # write delay part
@@ -605,6 +602,10 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     if delay_time != 0:
         tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 
+    if objs_written_q is None and objs_written_unq is None:
+        return None
+    return (objs_written_q or 0) + (objs_written_unq or 0)
+
 def get_t_unit(tm: OsuTimingPoint) -> float:
     return T_MINUTE / tm.bpm / BEAT_RES
 
@@ -615,9 +616,9 @@ def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[fl
 
 def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents,
     time_sig: Optional[Tuple[float, float]] = None, limit=None
-    ):
+    ) -> Optional[int]:
     global show_head_info
-    global combo_cnt, tail_fix
+    global combo_cnt
     global commands_within
 
     if time_sig is None:
@@ -635,11 +636,10 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
     # ignore past-limit notes
     while len(bar_data) > 0 and (bar_data[-1].offset >= limit or (has_subdivs and get_dt_unit_cnt(t_unit, bar_data[-1].offset, end) <= 0)):
-        tail_fix += 1
         bar_data = bar_data[:-1]
 
     if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= limit):
-        return False
+        return None
 
     # ignore past-limit commands
     idx_cmd_limit = bisect_left(commands_within, limit, key=lambda cmd: cmd.offset)
@@ -699,7 +699,6 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
     # remove processed notechart objects
     commands_within = commands_within[idx_cmd:]
-    # bar_data = bar_data[idx_bar_data:] # useless
 
     # bar-terminating symbol (1-symbol beat length if comes solely, otherwise zero length)
     bar_strs.append(',')
@@ -719,7 +718,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
         print_with_pended(head + bar_str, file=sys.stderr)
 
     tja_contents.append(bar_str)
-    return True
+    return idx_bar_data
 
 
 def osu2tja_level(star_osu: float) -> float:
@@ -762,7 +761,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     ]:
     init_globals()
     global slider_multiplier, slider_tick_rate, overall_difficulty, column_count, timingpoints
-    global balloons, tail_fix
+    global balloons
     global osu_format_ver
     global commands_within
     global gamemode_idx
@@ -1026,7 +1025,8 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         commands_within[-1].offset if len(commands_within) > 0 else 0)
     ms_chart_end_padding_max = 1000
 
-    while obj_idx < len(hitobjects) or tm_idx < len(timingpoints) or len(bar_data) > 0 or len(commands_within) > 0:
+    obj_idx_begin = 0
+    while obj_idx < len(hitobjects) or tm_idx < len(timingpoints) or obj_idx > obj_idx_begin or len(commands_within) > 0:
         # get next object to process
         next_obj = hitobjects[obj_idx] if obj_idx < len(hitobjects) else None
 
@@ -1045,7 +1045,6 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
         # collect object
         if next_obj is not None and next_obj.offset < end:
-            bar_data.append(next_obj)
             obj_idx += 1
             continue
 
@@ -1066,25 +1065,23 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
             end = chart_end
             chart_end_reached = True
 
+        objs_written = None
         measure_changed = False
         if end == full_end:
             if output_trace_info:
                 tja_contents.append(f"// write_bar_data: {bar_offset_begin}~{end}ms, timing point: {tm}")
-            write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
+            objs_written = write_bar_data(tm, hitobjects[obj_idx_begin:obj_idx], bar_offset_begin, end, tja_contents)
             bar_offset_begin = end
         else:  # collect an incomplete bar?
             if tm_idx > 0: # not the start of the initial bar
                 if output_trace_info:
                     tja_contents.append(f"// write_incomplete_bar: {bar_offset_begin}~{end}ms, timing point: {tm}")
-                write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
+                objs_written = write_incomplete_bar(tm, hitobjects[obj_idx_begin:obj_idx], bar_offset_begin, end, tja_contents)
                 measure_changed = True
 
-        # reprocess rejected objs later
-        if tail_fix:
-            obj_idx -= max(0, tail_fix)
-            tail_fix = 0
-
-        bar_data = []
+        if objs_written is not None:
+            obj_idx_begin += objs_written
+        obj_idx = obj_idx_begin
 
         if chart_end_reached and obj_idx >= len(hitobjects) and len(commands_within) == 0:
             break

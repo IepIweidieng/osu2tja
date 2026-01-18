@@ -151,6 +151,7 @@ Tool created by @delguoqing
   - [x] Inherited timing point: Slider velocity change & (improved) Uninherited timing point: sign of BPM → `#SCROLL` (uncapped range), (improved) allow negative values
   - [x] Timing point: Kiai time → `#GOGOSTART` & `#GOGOEND`
   - [x] Timing point: Omit first bar line → `#BARLINEOFF` & `#BARLINEON` (new)
+  - [x] Latest note or timing point position + maximum 1 second padding → `#END` (improved)
 - TJA Note Definition
   - Timing
     - [x] relative time offset to bar start and end → beat division

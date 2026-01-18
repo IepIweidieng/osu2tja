@@ -959,8 +959,6 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     end = bar_offset_begin = timingpoints[0].offset
     bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
-    bar_cnt = 1
-
     if gamemode_idx != GAMEMODE_TAIKO:
         str_mode = GAMEMODE_TO_STR.get(gamemode_idx, f"game mode {gamemode_idx}")
         title += f" [{str_mode}]"
@@ -1023,75 +1021,86 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         if ho1.offset > ho2.offset or (ho1.offset == ho2.offset and ho1.column == ho2.column):
             print_with_pended(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
-    while obj_idx < len(hitobjects):
+    # for end of chart
+    last_play_event = max(hitobjects[-1].offset if len(hitobjects) > 0 else 0,
+        commands_within[-1].offset if len(commands_within) > 0 else 0)
+    ms_chart_end_padding_max = 1000
+
+    while obj_idx < len(hitobjects) or tm_idx < len(timingpoints) or len(bar_data) > 0 or len(commands_within) > 0:
+        # get next object to process
+        next_obj = hitobjects[obj_idx] if obj_idx < len(hitobjects) else None
+
+        # get next measure offset to compare
         # skip volumn change and kiai
         while tm_idx < len(timingpoints) and not timingpoints[tm_idx].is_redline():
             tm_idx += 1
-
-        # get next object to process
-        next_obj = hitobjects[obj_idx]
-        next_obj_offset = next_obj.offset
-
-        # get next measure offset to compare
-        if tm_idx < len(timingpoints):
-            next_measure_offset = timingpoints[tm_idx].offset
-        else:
-            next_measure_offset = None
+        next_redtm = timingpoints[tm_idx] if tm_idx < len(timingpoints) else None
 
         # check if this object falls into this measure
         full_end = end = get_real_offset(bar_offset_begin + bar_max_length, base_offset=bar_offset_begin)
-        if next_measure_offset is not None:
-            end = min(end, next_measure_offset)
+        next_redtm_reached = False
+        if next_redtm is not None and end >= next_redtm.offset:
+            end = next_redtm.offset
+            next_redtm_reached = True
 
-        if next_obj_offset >= end:
-            # write_a_measure()
-            measure_changed = False
-            next_measure_reached = (end == next_measure_offset)
-
-            tm = get_tm_at(timingpoints, bar_offset_begin)
-            if end == full_end:
-                if output_trace_info:
-                    tja_contents.append(f"// write_bar_data: {bar_offset_begin}~{end}ms, timing point: {tm}")
-                write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
-                bar_offset_begin = end
-            elif next_measure_reached:  # collect an incomplete bar?
-                if tm_idx > 0: # not the start of the initial bar
-                    if output_trace_info:
-                        tja_contents.append(f"// write_incomplete_bar: {bar_offset_begin}~{end}ms, timing point: {tm}")
-                    write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
-                measure_changed = True
-            else:
-                assert False, "BAR END POS ERROR"
-
-            bar_data = []
-            bar_cnt += 1
-
-            if next_measure_reached:
-                tm_next = timingpoints[tm_idx]
-                assert next_measure_offset is not None
-                bar_offset_begin = next_measure_offset
-                if curr_bpm != tm_next.bpm:
-                    tja_contents.append(make_cmd(FMT_BPMCHANGE, tm_next.bpm))
-                curr_bpm = tm_next.bpm
-                if measure_changed or measure != tm_next.beats:
-                    tja_contents.append(make_cmd(FMT_MEASURECHANGE, tm_next.beats, 4))
-                measure = tm_next.beats
-                bar_max_length = measure * tm_next.mspb
-
-                tm_idx += 1
-
-            # reprocess rejected objs later
-            if tail_fix:
-                obj_idx -= max(0, tail_fix)
-                tail_fix = 0
-        else:
+        # collect object
+        if next_obj is not None and next_obj.offset < end:
             bar_data.append(next_obj)
             obj_idx += 1
+            continue
 
-    # flush buffer
-    if len(bar_data) > 0:
-        write_bar_data(get_tm_at(timingpoints, bar_offset_begin),
-                       bar_data, bar_offset_begin, end, tja_contents)
+        # write measure
+        tm = get_tm_at(timingpoints, bar_offset_begin)
+
+        # check end of chart
+        t_unit = get_t_unit(tm)
+        chart_end = math.inf # unused value
+        for padding in [bar_max_length, t_unit * BEAT_RES, ms_chart_end_padding_max]:
+            chart_end = get_real_offset(last_play_event + padding, base_offset=bar_offset_begin)
+            if chart_end > last_play_event and chart_end <= last_play_event + ms_chart_end_padding_max:
+                break
+        else:
+            chart_end = last_play_event + ms_chart_end_padding_max
+        chart_end_reached = False
+        if end >= chart_end:
+            end = chart_end
+            chart_end_reached = True
+
+        measure_changed = False
+        if end == full_end:
+            if output_trace_info:
+                tja_contents.append(f"// write_bar_data: {bar_offset_begin}~{end}ms, timing point: {tm}")
+            write_bar_data(tm, bar_data, bar_offset_begin, end, tja_contents)
+            bar_offset_begin = end
+        else:  # collect an incomplete bar?
+            if tm_idx > 0: # not the start of the initial bar
+                if output_trace_info:
+                    tja_contents.append(f"// write_incomplete_bar: {bar_offset_begin}~{end}ms, timing point: {tm}")
+                write_incomplete_bar(tm, bar_data, bar_offset_begin, end, tja_contents)
+                measure_changed = True
+
+        # reprocess rejected objs later
+        if tail_fix:
+            obj_idx -= max(0, tail_fix)
+            tail_fix = 0
+
+        bar_data = []
+
+        if chart_end_reached and obj_idx >= len(hitobjects) and len(commands_within) == 0:
+            break
+
+        if next_redtm_reached:
+            assert next_redtm is not None
+            bar_offset_begin = next_redtm.offset
+            if curr_bpm != next_redtm.bpm:
+                tja_contents.append(make_cmd(FMT_BPMCHANGE, next_redtm.bpm))
+            curr_bpm = next_redtm.bpm
+            if measure_changed or measure != next_redtm.beats:
+                tja_contents.append(make_cmd(FMT_MEASURECHANGE, next_redtm.beats, 4))
+            measure = next_redtm.beats
+            bar_max_length = measure * next_redtm.mspb
+
+            tm_idx += 1
 
     tja_contents.append("#END")
     init_debug_globals()

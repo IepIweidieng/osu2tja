@@ -6,9 +6,10 @@
 *.exe
 *.o
 *.so
+__pycache__/
+*.pyc
 
+/tmp
+/out
 /Songs
-/test
 /Output
-*/__pycache__
-/OpenTaiko

@@ -156,8 +156,8 @@ Tool created by @delguoqing
   - Timing
     - [x] relative time offset to bar start and end → beat division
     - [x] Mid-bar inter-note command insertion (improved, new)
-    - [ ] ms-level timing accuracy (TODO)
-      - Currently everything is pre-quantized to 1/192nds (1/48 beats) (improved).
+    - [x] 2ms timing accuracy (new)
+      - Note and timing points are quantized to 2's power divisions of 1/192nds (1/48 beats) within 2ms according to the current BPM.
   - Note Symbols
     - [x] (std mode) short slider to circles (improved using the official algorithm)
     - [x] (mania mode) hold to circles (new)

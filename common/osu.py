@@ -35,6 +35,7 @@ class OsuTimingPoint:
     mspb: float = T_MINUTE / 120
     bpm: float = 120
     beats: float = 4
+    beat_res: int = 192 // 4 # 1/192nd
     # greenline properties
     scroll: float = 1.0
     offset_raw: float = 0

@@ -190,25 +190,27 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         offset_raw = float(offset),
         sevol = float(sevol),
         ggt = ((effects & OSU_TMFX_GGT) != 0),
-        hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN,
     )
     if uninherited: # BPM change
         ret.mspb = abs(float(rawbpmv))
         ret.bpm = 60 * 1000.0 / ret.mspb
         ret.beats = abs(int(beats)) # measure change
         ret.scroll = math.copysign(1.0, float(rawbpmv))
+        ret.hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN
         ret.redtm = ret
     else: # SCROLL speed change
         assert prev_timing_point is not None
         merge_with_prev = (
-            prev_timing_point.offset == ret.offset
-            and prev_timing_point.is_redline())
+            prev_timing_point.offset_raw == ret.offset_raw
+            and prev_timing_point.is_redline()
+            and prev_timing_point.ggt == ret.ggt)
         if merge_with_prev:
             ret = prev_timing_point
         else:
             ret.mspb = prev_timing_point.mspb
             ret.bpm = prev_timing_point.bpm
             ret.beats = prev_timing_point.beats # ignored for inherited timing points
+            ret.hidefirst = prev_timing_point.hidefirst # ignored? (use redtm.hidefirst instead)
             ret.redtm = prev_timing_point.redtm
             ret.offset = get_real_offset(ret.offset, raw=True)
         assert ret.redtm is not None
@@ -585,10 +587,11 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
             beat_cnt_unq = 4 * numerator_unq / denominator_unq
             end_unq = end_q + beat_cnt_unq * mspb
         tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_unq, denominator_unq))
-        if objs_written_q is not None and not tm.hidefirst.is_hidden():
+        assert tm.redtm is not None
+        if objs_written_q is not None and not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEOFF))
         objs_written_unq = write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
-        if objs_written_q is not None and not tm.hidefirst.is_hidden():
+        if objs_written_q is not None and not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
 
     # write delay part
@@ -704,11 +707,12 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     bar_strs.append(',')
 
     # unhide bar line after first measure of hidefirst timing point
-    if tm.hidefirst == EHideFirst.TO_UNHIDE: # true, unhide at measure end
+    assert tm.redtm is not None
+    if tm.redtm.hidefirst == EHideFirst.TO_UNHIDE: # true, unhide at measure end
         bar_strs.append("\n")
         bar_strs.append(make_cmd(FMT_BARLINEON))
         bar_strs.append("\n")
-        tm.hidefirst = EHideFirst.UNHIDDEN
+        tm.redtm.hidefirst = EHideFirst.UNHIDDEN
     bar_str = ''.join(bar_strs)
 
     head = "%4d %6.f %s %2d " % (combo_cnt,
@@ -927,15 +931,16 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         if tm.ggt != cur_ggt:
             commands_within.append(TjaTimedCmd(tm.offset,
                                     tm.ggt and FMT_GOGOSTART or FMT_GOGOEND))
-        if (tm.hidefirst.is_hidden()) != (cur_hidefirst.is_hidden()):
+        assert tm.redtm is not None
+        if (tm.redtm.hidefirst.is_hidden()) != (cur_hidefirst.is_hidden()):
             # command position if no measures between timing points
             commands_within.append(TjaTimedCmd(tm.offset,
-                                    tm.hidefirst.is_hidden() and FMT_BARLINEOFF or FMT_BARLINEON))
+                                    tm.redtm.hidefirst.is_hidden() and FMT_BARLINEOFF or FMT_BARLINEON))
         if tm.sevol > sevol_max:
             sevol_max = tm.sevol
         cur_scroll = scroll
         cur_ggt = tm.ggt
-        cur_hidefirst = tm.hidefirst
+        cur_hidefirst = tm.redtm.hidefirst
 
     BPM = timingpoints[0].bpm
     ms_osu_total_offset = MS_OSU_MUSIC_OFFSET

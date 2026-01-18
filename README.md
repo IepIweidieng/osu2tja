@@ -42,6 +42,12 @@ python osz2tja.py [input_folder] [output_folder]
 Example:
 
 ```bash
+python osz2tja.py
+```
+
+or
+
+```bash
 python osz2tja.py a_folder b_folder
 ```
 
@@ -69,6 +75,12 @@ python tja2osz.py [input_folder] [output_folder]
 ```
 
 Example:
+
+```bash
+python tja2osz.py
+```
+
+or
 
 ```bash
 python tja2osz.py a_folder b_folder

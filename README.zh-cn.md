@@ -42,6 +42,12 @@ python osz2tja.py [input_folder] [output_folder]
 示例：
 
 ```bash
+python osz2tja.py
+```
+
+或
+
+```bash
 python osz2tja.py a_folder b_folder
 ```
 
@@ -69,6 +75,12 @@ python tja2osz.py [input_folder] [output_folder]
 ```
 
 示例：
+
+```bash
+python tja2osz.py
+```
+
+或
 
 ```bash
 python tja2osz.py a_folder b_folder

@@ -145,8 +145,9 @@ Tool created by @delguoqing
 - TJA Commands
   - [x] Uninherited timing point: BPM → `#BPMCHANGE`, (improved) use absolute value
   - [x] Uninherited timing point: Beats per bar → `#MEASURE`, (improved) use absolute value, (new bug fix) prevent chart from desyncing when song does not start with 4/4 time signature
-  - [x] Incomplete bar → (improved) quantized `#MEASURE` + unquantized `#MEASURE` + `#DELAY` (crash fixed — @delguoqing; improved to ms with decimal place accuracy for TJAPlayer3 series and OpenTaiko), (new bug fix) prevent the unquanized part from including commands and notes from future measures
-    - (new bug fix) prevent the output measure from using wrong timing point and causing chart desyncs or even infinite loops
+  - [x] Incomplete bar → (improved) quantized `#MEASURE` + unquantized `#MEASURE` (crash fixed — @delguoqing; improved to ms with decimal place accuracy for TJAPlayer3 series and OpenTaiko), (new bug fix) prevent the unquanized part from including commands and notes from future measures
+    - (new bug fix) prevent the output measure or last notes from using wrong timing point and causing chart desyncs or even infinite loops
+  - [x] Timing error due to incomplete bar or (improved) osu! timing rounding → fixed with `#DELAY`
   - [x] `SliderMultiplier:` → Base `#SCROLL` multiplier for whole chart (new)
   - [x] Inherited timing point: Slider velocity change & (improved) Uninherited timing point: sign of BPM → `#SCROLL` (uncapped range), (improved) allow negative values
   - [x] Timing point: Kiai time → `#GOGOSTART` & `#GOGOEND`
@@ -158,6 +159,8 @@ Tool created by @delguoqing
     - [x] Mid-bar inter-note command insertion (improved, new)
     - [x] 2ms timing accuracy (new)
       - Note and timing points are quantized to 2's power divisions of 1/192nds (1/48 beats) within 2ms according to the current BPM.
+    - [x] osu! and TJAPlayer3 timing rounding error simulation (new)
+      - TODO: Also simulate TaikoJiro 1 timing rounding error for better chart compatibility
   - Note Symbols
     - [x] (std mode) short slider to circles (improved using the official algorithm)
     - [x] (mania mode) hold to circles (new)

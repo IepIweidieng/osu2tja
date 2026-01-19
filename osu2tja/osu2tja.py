@@ -3,11 +3,10 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.osu import OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
+from common.osu import OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
 from common.tja import get_course_by_number
 from common.utils import print_with_pended
 
-from array import array
 from bisect import bisect_left, bisect_right
 from copy import copy
 from dataclasses import dataclass
@@ -170,14 +169,21 @@ def get_event(line: str) -> Optional[OsuEvent]:
 
 BEAT_RES_MS = 2
 
-def get_beat_res(bpm: float) -> int:
+def get_beat_res(mspb: float) -> int:
     beat_res = 192 // 4 # start with 1/192nd
     # scale beat_res by power of 2 so that t_unit <= MS_BEAT_RES
-    t_unit = T_MINUTE / bpm / beat_res
+    t_unit = mspb / beat_res
     log = int(math.floor(math.log2(t_unit / BEAT_RES_MS)))
     if log > 0:
         beat_res = beat_res << log
     return beat_res
+
+def get_t_unit(tm: OsuTimingPoint) -> float:
+    return tm.mspb / tm.beat_res
+
+def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[float, int]) -> int:
+    delta = (offset1 - offset0) / t_unit
+    return int(round(delta))
 
 def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) -> Optional[OsuTimingPoint]:
     if str is None:
@@ -205,7 +211,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ret.mspb = abs(float(rawbpmv))
         ret.bpm = 60 * 1000.0 / ret.mspb
         ret.beats = abs(int(beats)) # measure change
-        ret.beat_res = get_beat_res(ret.bpm)
+        ret.beat_res = get_beat_res(ret.mspb)
         ret.scroll = math.copysign(1.0, float(rawbpmv))
         ret.hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN
         ret.redtm = ret
@@ -242,7 +248,7 @@ timingpoints: List[OsuTimingPoint]
 commands_within: List["TjaTimedCmd"]
 
 def init_globals() -> None:
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver, commands_within
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver
     # global variables
     timingpoints = []
     balloons = []
@@ -252,7 +258,10 @@ def init_globals() -> None:
     column_count = 1
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
+
+    global commands_within, tja_time
     commands_within = []
+    tja_time = 0
 
     global chart_resources
     chart_resources = {}
@@ -367,7 +376,7 @@ def get_precision_adjusted_beat_length(sliderVelocity: float, timingControlPoint
 
     # Note: In stable, the division occurs on floats, but with compiler optimisations turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
     bpmMultiplier: float = (
-        min(max(array('f', [-sliderVelocityAsBeatLength])[0], 10), 10000) / 100.0
+        min(max(f32(-sliderVelocityAsBeatLength), 10), 10000) / 100.0
         if sliderVelocityAsBeatLength < 0
         else 1)
 
@@ -472,7 +481,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
 
-                if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
+                if almost_equals(tick_spacing, 0):
                     break
         else:
             offset_end_raw = offset_raw + taiko_duration
@@ -501,7 +510,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
 
             j += tick_spacing
 
-            if math.isclose(tick_spacing, 0, rel_tol=0, abs_tol=1e-7):
+            if almost_equals(tick_spacing, 0):
                 break
 
     elif type & OSU_NOTE_SPINNER:  # spinner
@@ -537,30 +546,28 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
 
     return (numerator, denominator)
 
+
 # handle an incomplete bar
-# use #MEASURE to write the quantized and unquantized parts as 2 bars, and use #DELAY to fix the remaining time error.
+# use #MEASURE to write the quantized and unquantized parts as 2 bars
+# the remaining time error will be fixed later by aligning tja precision time to osu precision time
 
 
 def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents) -> Optional[int]:
-    if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end):
-        return None
-
-    mspb = T_MINUTE / tm.bpm
-    my_beat_cnt = (end - begin) * tm.bpm / T_MINUTE
+    my_beat_cnt = (end - begin) / tm.mspb
 
     # this is accurate
     time_bar_data_last = bar_data[-1].offset if len(bar_data) > 0 else begin
-    min_beat_cnt = (time_bar_data_last - begin) * tm.bpm / T_MINUTE
+    min_beat_cnt = (time_bar_data_last - begin) / tm.mspb
 
     # calculate #MEASURE for quantized part
     fraction_q = Fraction(int(tm.beat_res * my_beat_cnt), 4 * tm.beat_res)
     (numerator_q, denominator_q) = get_tsign(fraction_q)
 
     beat_cnt_q = 4 * numerator_q / denominator_q
-    end_q = get_real_offset(begin + beat_cnt_q * mspb)
+    end_q = get_real_offset(begin + beat_cnt_q * tm.mspb)
 
     if output_trace_info:
-        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {mspb}ms = {begin + beat_cnt_q * mspb}ms -> end_q {end_q}ms")
+        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {tm.mspb}ms = {begin + beat_cnt_q * tm.mspb}ms -> end_q {end_q}ms")
 
     # write quantized part
     objs_written_q = None
@@ -584,49 +591,31 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
         # re-simplify the fraction
         (numerator_unq, denominator_unq) = get_tsign(Fraction(numerator_unq, denominator_unq))
     beat_cnt_unq = 4 * numerator_unq / denominator_unq
-    end_unq = end_q + beat_cnt_unq * mspb
+    end_unq = end_q + beat_cnt_unq * tm.mspb
 
     if output_trace_info:
-        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {mspb}ms = {end_q + beat_cnt_unq * mspb}ms -> end_unq = {end_unq}ms")
+        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {tm.mspb}ms = {end_q + beat_cnt_unq * tm.mspb}ms -> end_unq = {end_unq}ms")
 
-    # write quantized part
+    # write unquantized part
     objs_written_unq = None
     if not (numerator_unq == 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
         # Note: numerator and denominator can both have decimal places
         if numerator_unq == 0:
-            (numerator_unq, denominator_unq) = (1, 4 * max(1, mspb))
+            (numerator_unq, denominator_unq) = (1, 4 * max(1, tm.mspb))
             beat_cnt_unq = 4 * numerator_unq / denominator_unq
-            end_unq = end_q + beat_cnt_unq * mspb
+            end_unq = end_q + beat_cnt_unq * tm.mspb
         tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_unq, denominator_unq))
         assert tm.redtm is not None
-        if objs_written_q is not None and not tm.redtm.hidefirst.is_hidden():
+        if not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEOFF))
         objs_written_unq = write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
-        if objs_written_q is not None and not tm.redtm.hidefirst.is_hidden():
+        if not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
-
-    # write delay part
-    delay_time = end - end_unq
-    # Note: #DELAY value can be in any sign
-    if output_trace_info:
-        tja_contents.append(f"// [incomplete delay] {end_unq}ms + {delay_time}ms = {end_unq + delay_time}ms -> end {end}ms")
-
-    # Note: jiro will ignore delays shorter than 0.001s, but tjap3 simulators do not
-    # for playing in jiro, use "BPMCHANGEによるズレ調整器" by CurryDry0608hk
-    if delay_time != 0:
-        tja_contents.append(make_cmd(FMT_DELAY, delay_time / 1000.0))
 
     if objs_written_q is None and objs_written_unq is None:
         return None
     return (objs_written_q or 0) + (objs_written_unq or 0)
-
-def get_t_unit(tm: OsuTimingPoint) -> float:
-    return T_MINUTE / tm.bpm / tm.beat_res
-
-def get_dt_unit_cnt(t_unit: float, offset0: Union[float, int], offset1: Union[float, int]) -> int:
-    delta = (offset1 - offset0) / t_unit
-    return int(round(delta))
 
 
 def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents,
@@ -634,7 +623,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     ) -> Optional[int]:
     global show_head_info
     global combo_cnt
-    global commands_within
+    global commands_within, tja_time
 
     if time_sig is None:
         time_sig = (tm.beats, 4)
@@ -650,19 +639,27 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
         t_unit = end - begin
 
     # ignore past-limit notes
-    while len(bar_data) > 0 and (bar_data[-1].offset >= limit or (has_subdivs and get_dt_unit_cnt(t_unit, bar_data[-1].offset, end) <= 0)):
-        bar_data = bar_data[:-1]
-
-    if begin == end and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= limit):
-        return None
+    for idx_note_limit in range(len(bar_data), 0, -1):
+        last = bar_data[idx_note_limit - 1]
+        if (last.offset < limit
+            and (not has_subdivs or get_dt_unit_cnt(t_unit, last.offset, end) > 0)
+            and get_tm_at(timingpoints, last.offset_raw, raw=True).redtm == tm.redtm
+            ):
+            break
+    else:
+        idx_note_limit = 0
 
     # ignore past-limit commands
     idx_cmd_limit = bisect_left(commands_within, limit, key=lambda cmd: cmd.offset)
+
+    if begin == end and idx_note_limit == 0 and idx_cmd_limit == 0:
+        return None
+
     # build offset data
     offset_list = sorted(set(itertools.chain(
         [begin],
         (max(begin, cmd.offset) for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
-        (max(begin, datum.offset) for datum in bar_data),
+        (max(begin, datum.offset) for _, datum in zip(range(idx_note_limit), bar_data)),
         [end],
     )))
 
@@ -699,7 +696,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
         if delta_divs > 0:
             # Insert a note (simultaneous notes are not supported)
             note_type = ONP_NONE
-            while idx_bar_data < len(bar_data) and bar_data[idx_bar_data].offset <= offset:
+            while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
                 note_type = bar_data[idx_bar_data].type
                 idx_bar_data += 1
             if note_type in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
@@ -718,13 +715,11 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     # bar-terminating symbol (1-symbol beat length if comes solely, otherwise zero length)
     bar_strs.append(',')
 
-    # unhide bar line after first measure of hidefirst timing point
-    assert tm.redtm is not None
-    if tm.redtm.hidefirst == EHideFirst.TO_UNHIDE: # true, unhide at measure end
-        bar_strs.append("\n")
-        bar_strs.append(make_cmd(FMT_BARLINEON))
-        bar_strs.append("\n")
-        tm.redtm.hidefirst = EHideFirst.UNHIDDEN
+    # simulate TJAP3 rounding error
+    t_div_tja = 4 * T_MINUTE / 16 / tm.bpm * (time_sig[0] / time_sig[1]) * (16 / max(1, divs))
+    for _ in range(max(1, divs)):
+        tja_time += t_div_tja
+
     bar_str = ''.join(bar_strs)
 
     head = "%4d %6.f %s %2d/%2d " % (combo_cnt,
@@ -779,7 +774,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     global slider_multiplier, slider_tick_rate, overall_difficulty, column_count, timingpoints
     global balloons
     global osu_format_ver
-    global commands_within
+    global commands_within, tja_time
     global gamemode_idx
 
     tja_heads_meta: List[str] = []
@@ -933,7 +928,6 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         else slider_multiplier / 1.40)
     cur_scroll = 1.0
     cur_ggt = False
-    cur_hidefirst = EHideFirst.SHOWN
     sevol_max = 0
     for tm in timingpoints:
         scroll = tm.scroll * base_scroll
@@ -943,16 +937,10 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         if tm.ggt != cur_ggt:
             commands_within.append(TjaTimedCmd(tm.offset,
                                     tm.ggt and FMT_GOGOSTART or FMT_GOGOEND))
-        assert tm.redtm is not None
-        if (tm.redtm.hidefirst.is_hidden()) != (cur_hidefirst.is_hidden()):
-            # command position if no measures between timing points
-            commands_within.append(TjaTimedCmd(tm.offset,
-                                    tm.redtm.hidefirst.is_hidden() and FMT_BARLINEOFF or FMT_BARLINEON))
         if tm.sevol > sevol_max:
             sevol_max = tm.sevol
         cur_scroll = scroll
         cur_ggt = tm.ggt
-        cur_hidefirst = tm.redtm.hidefirst
 
     BPM = timingpoints[0].bpm
     ms_osu_total_offset = MS_OSU_MUSIC_OFFSET
@@ -963,17 +951,6 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     MOVIEOFFSET = (videostart + ms_osu_total_offset) / 1000.0
     SONGVOL = 100 / (sevol_max / 100) if sevol_max > 100 else 100
     SEVOL = sevol_max if sevol_max < 100 else 100
-
-    scroll = timingpoints[0].scroll
-    tm_idx = 0  # current timing point index
-    obj_idx = 0  # current hit object index
-    measure = timingpoints[0].beats  # current measure
-    curr_bpm = BPM  # current bpm
-
-    bar_data: List[TjaTimedNote] = []  # current bar data
-
-    end = bar_offset_begin = timingpoints[0].offset
-    bar_max_length = 1.0 * measure * T_MINUTE / curr_bpm  # current bar length
 
     if gamemode_idx != GAMEMODE_TAIKO:
         str_mode = GAMEMODE_TO_STR.get(gamemode_idx, f"game mode {gamemode_idx}")
@@ -1026,6 +1003,20 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
     tja_contents.append("#START")
 
+    tm_idx = 0  # current timing point index
+    obj_idx = 0  # current hit object index
+    scroll = timingpoints[0].scroll
+    measure = timingpoints[0].beats  # current measure
+    curr_bpm = BPM  # current bpm
+    curr_barlineon = True
+
+    # current measure states
+    obj_idx_begin = 0
+    # simulate osu rounding error
+    tja_time = bar_offset_end = bar_offset_begin = timingpoints[0].offset
+    for _ in range(int(measure)):
+        bar_offset_end += timingpoints[0].mspb
+
     # ensure correct initial timing
     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
     if measure != 4:
@@ -1042,7 +1033,6 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         timingpoints[-1].offset if len(timingpoints) > 0 else 0)
     ms_chart_end_padding_max = 1000
 
-    obj_idx_begin = 0
     while obj_idx < len(hitobjects) or tm_idx < len(timingpoints) or obj_idx > obj_idx_begin or len(commands_within) > 0:
         # get next object to process
         next_obj = hitobjects[obj_idx] if obj_idx < len(hitobjects) else None
@@ -1054,24 +1044,29 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         next_redtm = timingpoints[tm_idx] if tm_idx < len(timingpoints) else None
 
         # check if this object falls into this measure
-        full_end = end = get_real_offset(bar_offset_begin + bar_max_length, base_offset=bar_offset_begin)
+        end = bar_offset_end
+        # bar end aligned to integer or uninherited timing point
+        # https://github.com/ppy/osu/issues/28317
         next_redtm_reached = False
-        if next_redtm is not None and end >= next_redtm.offset:
+        if next_redtm is not None and not almost_bigger(next_redtm.offset, end):
             end = next_redtm.offset
             next_redtm_reached = True
+        else:
+            iend = math.copysign(math.ceil(abs(end)), end)
+            if almost_equals(end, iend):
+                end = iend
 
         # collect object
         if next_obj is not None and next_obj.offset < end:
             obj_idx += 1
             continue
 
-        # write measure
         tm = get_tm_at(timingpoints, bar_offset_begin)
 
         # check end of chart
         t_unit = get_t_unit(tm)
         chart_end = math.inf # unused value
-        for padding in [bar_max_length, t_unit * tm.beat_res, ms_chart_end_padding_max]:
+        for padding in [measure * tm.mspb, t_unit * tm.beat_res, ms_chart_end_padding_max]:
             chart_end = get_real_offset(last_play_event + padding, base_offset=bar_offset_begin)
             if chart_end > last_play_event and chart_end <= last_play_event + ms_chart_end_padding_max:
                 break
@@ -1082,13 +1077,19 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
             end = chart_end
             chart_end_reached = True
 
+        # write current measure
         objs_written = None
         measure_changed = False
-        if end == full_end:
+        assert tm.redtm is not None
+        tmr = tm.redtm
+        if curr_barlineon != (not tmr.hidefirst.is_hidden()):
+            curr_barlineon = not tmr.hidefirst.is_hidden()
+            tja_contents.append(make_cmd(FMT_BARLINEON if curr_barlineon else FMT_BARLINEOFF))
+
+        if end == bar_offset_end:
             if output_trace_info:
                 tja_contents.append(f"// write_bar_data: {bar_offset_begin}~{end}ms, timing point: {tm}")
             objs_written = write_bar_data(tm, hitobjects[obj_idx_begin:obj_idx], bar_offset_begin, end, tja_contents)
-            bar_offset_begin = end
         else:  # collect an incomplete bar?
             if tm_idx > 0: # not the start of the initial bar
                 if output_trace_info:
@@ -1098,23 +1099,47 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
         if objs_written is not None:
             obj_idx_begin += objs_written
+            # unhide bar line after first measure of hidefirst timing point
+            if tmr.hidefirst == EHideFirst.TO_UNHIDE: # true, unhide at measure end
+                tja_contents.append(make_cmd(FMT_BARLINEON))
+                tmr.hidefirst = EHideFirst.UNHIDDEN
+                curr_barlineon = True
         obj_idx = obj_idx_begin
 
         if chart_end_reached and obj_idx >= len(hitobjects) and len(commands_within) == 0:
+        # go to the next measure
             break
 
         if next_redtm_reached:
             assert next_redtm is not None
-            bar_offset_begin = next_redtm.offset
-            if curr_bpm != next_redtm.bpm:
-                tja_contents.append(make_cmd(FMT_BPMCHANGE, next_redtm.bpm))
-            curr_bpm = next_redtm.bpm
-            if measure_changed or measure != next_redtm.beats:
-                tja_contents.append(make_cmd(FMT_MEASURECHANGE, next_redtm.beats, 4))
-            measure = next_redtm.beats
-            bar_max_length = measure * next_redtm.mspb
+            tm = next_redtm
+            end = tm.offset
 
             tm_idx += 1
+
+        if curr_bpm != tm.bpm:
+            tja_contents.append(make_cmd(FMT_BPMCHANGE, tm.bpm))
+            curr_bpm = tm.bpm
+        if measure_changed or measure != tm.beats:
+            tja_contents.append(make_cmd(FMT_MEASURECHANGE, tm.beats, 4))
+            measure = tm.beats
+        bar_max_length = measure * tm.mspb
+
+        # simulate osu rounding error
+        bar_offset_end = bar_offset_begin = end
+        bar_offset_end += bar_max_length
+
+        if not almost_equals(tja_time, bar_offset_begin):
+            if output_trace_info:
+                tja_contents.append(f"// TJA time {tja_time}ms -> osu time {bar_offset_begin}ms")
+            # Note: jiro will ignore delays shorter than 0.001s, but tjap3 simulators do not
+            # for playing in jiro, use "BPMCHANGEによるズレ調整器" by CurryDry0608hk
+            ms_delay = bar_offset_begin - tja_time
+            tja_contents.append(make_cmd(FMT_DELAY, ms_delay / 1000))
+            tja_time = bar_offset_begin
+            # if rewinded, ensure the rewinded part has the correct BPM applied
+            if ms_delay < 0:
+                tja_contents.append(make_cmd(FMT_BPMCHANGE, tm.bpm))
 
     tja_contents.append("#END")
     init_debug_globals()

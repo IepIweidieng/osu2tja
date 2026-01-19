@@ -1,3 +1,4 @@
+from array import array
 from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum
@@ -73,6 +74,21 @@ def get_red_tm_at(timing_points: List[OsuTimingPoint], t, raw=False):
     assert tmr is not None, "Need at least one uninherited timing point"
     return tmr
 
+def f32(val: float):
+    return array('f', [val])[0]
+
+# https://github.com/ppy/osu-framework/blob/master/osu.Framework/Utils/Precision.cs
+EPSILON_F32 = f32(1e-3)
+EPSILON_F64 = 1e-7
+
+def definitely_bigger(v1, v2, error = EPSILON_F64):
+    return v1 - error > v2
+
+def almost_bigger(v1, v2, error = EPSILON_F64):
+    return v1 > v2 - error
+
+def almost_equals(v1, v2, error = EPSILON_F64):
+    return abs(v1 - v2) <= error
 
 diffrank_to_name: Dict[float, Sequence[str]] = {
     -1: ("beginner", "shokyuu"),

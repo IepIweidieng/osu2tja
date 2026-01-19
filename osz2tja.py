@@ -284,7 +284,7 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str, tmp_folder: str
                 dir_out = os.path.join(output_folder, fname)
                 print(f"Converted `{path_tja}` to `{fname}/*.osu`s.")
                 shutil.make_archive(dir_out, 'zip', dir_out)
-                os.rename(f"{dir_out}.zip", f"{dir_out}.osz")
+                os.replace(f"{dir_out}.zip", f"{dir_out}.osz")
                 print(f"Converted `{dir_out}/` to `{fname}.osz`.")
             except Exception:
                 traceback.print_exc()

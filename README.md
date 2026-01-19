@@ -51,8 +51,8 @@ or
 python osz2tja.py a_folder b_folder
 ```
 
-- `[input_folder]` is where your `.osz` files are located. Defaults to `Songs` if omitted.
-- `[output_folder]` is where the converted `.tja` files and audio files will be saved. Defaults to `Output` if omitted.
+- `[input_folder]` is where your `.osz` files are located. If omited, defaults to `Songs` in the same directory as `osz2tja.py`.
+- `[output_folder]` is where the converted `.tja` files and audio files will be saved. If omitted, defaults to `Output` in the same directory as `osz2tja.py`.
 
 osz2tja will create a folder in `[output_folder]` for each generated `.tja` file.
 
@@ -86,8 +86,8 @@ or
 python tja2osz.py a_folder b_folder
 ```
 
-- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). Defaults to `Songs` if omitted.
-- `[output_folder]` is where the converted `.osu` files and audio files will be saved. Defaults to `Output` if omitted.
+- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). If omitted, defaults to `Songs` in the same directory as `tja2osz.py`.
+- `[output_folder]` is where the converted `.osu` files and audio files will be saved. If omitted, defaults to `Output` in the same directory as `tja2osz.py`.
 
 tja2osz will create a folder in `[output_folder]` for each processed `.tja` file. This folder will contain converted `.osu` files and audio file. tja2osz will also create an `.osz` file in `[output_folder]` for these `.osu` files.
 

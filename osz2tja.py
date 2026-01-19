@@ -299,6 +299,9 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str, tmp_folder: str
 def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
     ext_in = '.tja' if mode == 'tja2osz' else '.osz'
     ext_out = '.osu' if mode == 'tja2osz' else '.tja'
+
+    script_name = path.basename(__file__)
+    root_dir = path.dirname(path.abspath(__file__))
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''\
         Convert {ext_in} files to {ext_out} files and copy the audio to "<output_folder>/<song_folder>/".
@@ -306,11 +309,10 @@ def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    root_dir = path.dirname(path.abspath(__file__))
     parser.add_argument('input_folder', nargs='?', default=path.join(root_dir, 'Songs'),
-        help=f'where your {ext_in} files are located (default: Songs)')
+        help=f'where your {ext_in} files are located (default: Songs) (Songs is in the same directory as {script_name})')
     parser.add_argument('output_folder', nargs='?', default=path.join(root_dir, 'Output'),
-        help=f'where the converted {ext_out} files will be saved (default: Output)')
+        help=f'where the converted {ext_out} files will be saved (default: Output) (Output is in the same directory as {script_name})')
     args = parser.parse_args()
 
     print(f"Input folder: {path.abspath(args.input_folder)}")
@@ -325,4 +327,4 @@ if __name__ == "__main__":
     try:
         osz2tja2osz_main('osz2tja')
     finally:
-        input("Conversion done. Press any key to exit...")
+        input("Done. Press the Enter key to exit...")

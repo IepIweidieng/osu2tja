@@ -257,13 +257,15 @@ def tja2osus(fpath_tja: str, target_path: str, tmp_path: str) -> None:
             print(f"Warning: Referenced {rtype} file `{rfpath_src}` not found. Not copied.", file=sys.stderr)
 
 def main():
+    script_name = os.path.basename(__file__)
+    root_dir = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent('''\
+        description=textwrap.dedent(f'''\
         Convert a general .tja file to multiple .osu files and copy the audio to "out/<song_folder>/".
         Intermediate single-notechart branch-less .tja files are written to "tmp/<song_folder>/"
+        "out" and "tmp" are in the same directory as {script_name}.
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    root_dir = os.path.dirname(os.path.abspath(__file__))
     parser.add_argument("filename",
         help="source .tja file. Allows multiple notechart definitions and branch commands.")
     args = parser.parse_args()
@@ -273,4 +275,4 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        input("Conversion done. Press any key to exit...")
+        input("Done. Press the Enter key to exit...")

@@ -886,4 +886,4 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        input("Conversion done. Press any key to exit...")
+        input("Done. Press the Enter key to exit...")

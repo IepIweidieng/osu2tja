@@ -321,4 +321,7 @@ def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
         batch_convert_osz2tja(args.input_folder, args.output_folder)
 
 if __name__ == "__main__":
-    osz2tja2osz_main('osz2tja')
+    try:
+        osz2tja2osz_main('osz2tja')
+    finally:
+        input("Conversion done. Press any key to exit...")

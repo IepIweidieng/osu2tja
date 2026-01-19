@@ -256,7 +256,7 @@ def tja2osus(fpath_tja: str, target_path: str="out") -> None:
         except FileNotFoundError:
             print(f"Warning: Referenced {rtype} file `{rfpath_src}` not found. Not copied.", file=sys.stderr)
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent('''\
         Convert a general .tja file to multiple .osu files and copy the audio to "out/<song_folder>/".
@@ -267,3 +267,9 @@ if __name__ == "__main__":
         help="source .tja file. Allows multiple notechart definitions and branch commands.")
     args = parser.parse_args()
     tja2osus(args.filename)
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        input("Conversion done. Press any key to exit...")

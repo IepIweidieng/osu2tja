@@ -861,7 +861,8 @@ def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     return chart_resources
 
 
-if __name__ == "__main__":
+def main():
+    global BEAT_RES, debug_mode, print_each_note
     parser = argparse.ArgumentParser(
         description='Convert a single-notechart branch-less .tja file to .osu format and print the result.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -880,3 +881,9 @@ if __name__ == "__main__":
     debug_mode = args.debug or ("debug" in args.options)
     print_each_note = args.verbose
     tja2osu(args.filename, sys.stdout)
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        input("Conversion done. Press any key to exit...")

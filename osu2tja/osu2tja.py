@@ -1166,4 +1166,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        input("Conversion done. Press any key to exit...")

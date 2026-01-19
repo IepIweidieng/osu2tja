@@ -9,7 +9,7 @@
 __pycache__/
 *.pyc
 
-/tmp
-/out
-/Songs
-/Output
+tmp/
+out/
+/Songs/
+/Output/

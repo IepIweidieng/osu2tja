@@ -271,7 +271,7 @@ def batch_convert_osz2tja(input_folder: str, output_folder: str):
         for file in skipped_files:
             print(f"- {file}")
 
-def batch_convert_tja2osz(input_folder: str, output_folder: str):
+def batch_convert_tja2osz(input_folder: str, output_folder: str, tmp_folder: str):
     skipped_files = []
     for dirpath, dirnames, names in os.walk(input_folder):
         for filename in names:
@@ -280,7 +280,7 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str):
             if ext != ".tja":
                 continue
             try:
-                tja2osus(path_tja, output_folder)
+                tja2osus(path_tja, output_folder, tmp_folder)
                 dir_out = os.path.join(output_folder, fname)
                 print(f"Converted `{path_tja}` to `{fname}/*.osu`s.")
                 shutil.make_archive(dir_out, 'zip', dir_out)
@@ -306,17 +306,18 @@ def osz2tja2osz_main(mode: Literal['osz2tja', 'tja2osz']) -> None:
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('input_folder', nargs='?', default='Songs',
+    root_dir = path.dirname(path.abspath(__file__))
+    parser.add_argument('input_folder', nargs='?', default=path.join(root_dir, 'Songs'),
         help=f'where your {ext_in} files are located (default: Songs)')
-    parser.add_argument('output_folder', nargs='?', default='Output',
+    parser.add_argument('output_folder', nargs='?', default=path.join(root_dir, 'Output'),
         help=f'where the converted {ext_out} files will be saved (default: Output)')
     args = parser.parse_args()
 
-    print(f"Input folder: {args.input_folder}")
-    print(f"Output folder: {args.output_folder}")
+    print(f"Input folder: {path.abspath(args.input_folder)}")
+    print(f"Output folder: {path.abspath(args.output_folder)}")
 
     if mode == "tja2osz":
-        batch_convert_tja2osz(args.input_folder, args.output_folder)
+        batch_convert_tja2osz(args.input_folder, args.output_folder, path.join(root_dir, 'tmp'))
     else:
         batch_convert_osz2tja(args.input_folder, args.output_folder)
 

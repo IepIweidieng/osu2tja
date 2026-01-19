@@ -197,9 +197,9 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
     return file_list
 
 
-def tja2osus(fpath_tja: str, target_path: str="out") -> None:
+def tja2osus(fpath_tja: str, target_path: str, tmp_path: str) -> None:
     dirname_dest, ext = os.path.splitext(os.path.basename(fpath_tja))
-    dir_tmp = os.path.join("tmp", dirname_dest)
+    dir_tmp = os.path.join(tmp_path, dirname_dest)
     os.makedirs(dir_tmp, exist_ok=True)
     all_file_list = []
     print(f"Splitting `{fpath_tja}` ...", end="", flush=True)
@@ -263,10 +263,11 @@ def main():
         Intermediate single-notechart branch-less .tja files are written to "tmp/<song_folder>/"
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    root_dir = os.path.dirname(os.path.abspath(__file__))
     parser.add_argument("filename",
         help="source .tja file. Allows multiple notechart definitions and branch commands.")
     args = parser.parse_args()
-    tja2osus(args.filename)
+    tja2osus(args.filename, os.path.join(root_dir, "out"), os.path.join(root_dir, "tmp"))
 
 if __name__ == "__main__":
     try:

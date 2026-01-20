@@ -376,8 +376,8 @@ def get_real_offset(int_offset):
     if idx_tm_p + 1 < len(TimingPoints):
         tm_f_offset = TimingPoints[idx_tm_p + 1].offset
         int_tm_f_offset = int(tm_f_offset)
-        if ret > int_tm_f_offset - 1:
-            ret = int_tm_f_offset - 1
+        if ret >= int_tm_f_offset:
+            ret = max(int_tm_p_offset, int_tm_f_offset - 1)
         if int_tm_f_offset <= int_tm_p_offset:
             print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical integer offset")
 

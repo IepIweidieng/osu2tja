@@ -303,7 +303,7 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
         if idx_tm_p + 1 < len(timingpoints):
             tm_f_offset = timingpoints[idx_tm_p + 1].offset
             if ret >= tm_f_offset:
-                ret = tm_f_offset - 1
+                ret = max(tm_p_offset, tm_f_offset - 1)
             if round(dirty_offset) in inspect_ms:
                 print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset right-clamp: {tm_f_offset - dirty_offset} to future: {timingpoints[idx_tm_p + 1]}", file=sys.stderr)
             if tm_f_offset <= tm_p_offset:

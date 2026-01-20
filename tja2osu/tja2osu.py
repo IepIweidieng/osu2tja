@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, TextIO, Tuple, TypeVar, Union, cast
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 TimingPoints: List[OsuTimingPoint]
+HitObjects: List[OsuHitObject]
 bar_data: List[Union[str, TjaCmd]]
 lasting_note: Optional["OsuHitObject"]
 
@@ -802,7 +803,7 @@ def write_HitObjects(fout: TextIO) -> None:
         beg_offset = get_real_offset(ho.offset)
         if int(beg_offset) != int(ho.offset):
             if debug_mode:
-                print_with_pended("OFFSET FIXED", int(beg_offset), int(ho[2]), file=sys.stderr)
+                print_with_pended("OFFSET FIXED", int(beg_offset), int(ho.offset), file=sys.stderr)
         if ho.type == CIRCLE:
             assert lasting_note is None, "this is abnormal"
             res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type, ho.sound)))

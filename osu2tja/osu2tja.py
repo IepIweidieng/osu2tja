@@ -1014,8 +1014,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     obj_idx_begin = 0
     # simulate osu rounding error
     tja_time = bar_offset_end = bar_offset_begin = timingpoints[0].offset
-    for _ in range(int(measure)):
-        bar_offset_end += timingpoints[0].mspb
+    bar_offset_end += measure * timingpoints[0].mspb
 
     # ensure correct initial timing
     tja_contents.append(make_cmd(FMT_BPMCHANGE, curr_bpm))
@@ -1123,11 +1122,10 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         if measure_changed or measure != tm.beats:
             tja_contents.append(make_cmd(FMT_MEASURECHANGE, tm.beats, 4))
             measure = tm.beats
-        bar_max_length = measure * tm.mspb
 
         # simulate osu rounding error
         bar_offset_end = bar_offset_begin = end
-        bar_offset_end += bar_max_length
+        bar_offset_end += measure * tm.mspb
 
         if not almost_equals(tja_time, bar_offset_begin):
             if output_trace_info:

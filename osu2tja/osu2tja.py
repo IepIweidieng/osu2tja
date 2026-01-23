@@ -552,7 +552,8 @@ def get_tsign(tsign_raw: Fraction) -> Tuple[int, int]:
 # the remaining time error will be fixed later by aligning tja precision time to osu precision time
 
 
-def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents) -> Optional[int]:
+def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents) -> Tuple[Optional[int], Optional[Tuple[float, float]]]:
+    (up_now, low_now) = get_tsign(Fraction(int(tm.beats), 4))
     my_beat_cnt = (end - begin) / tm.mspb
 
     # this is accurate
@@ -560,20 +561,19 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     min_beat_cnt = (time_bar_data_last - begin) / tm.mspb
 
     # calculate #MEASURE for quantized part
-    fraction_q = Fraction(int(tm.beat_res * my_beat_cnt), 4 * tm.beat_res)
-    (numerator_q, denominator_q) = get_tsign(fraction_q)
-
-    beat_cnt_q = 4 * numerator_q / denominator_q
+    (up_q, low_q) = get_tsign(Fraction(int(round(tm.beat_res * my_beat_cnt)), 4 * tm.beat_res))
+    beat_cnt_q = 4 * up_q / low_q
     end_q = get_real_offset(begin + beat_cnt_q * tm.mspb)
 
     if output_trace_info:
-        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({numerator_q}/{denominator_q}) * {tm.mspb}ms = {begin + beat_cnt_q * tm.mspb}ms -> end_q {end_q}ms")
+        tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({up_q}/{low_q}) * {tm.mspb}ms = {begin + beat_cnt_q * tm.mspb}ms -> end_q {end_q}ms")
 
     # write quantized part
     objs_written_q = None
-    if numerator_q != 0:
-        tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_q, denominator_q))
-        objs_written_q = write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(numerator_q, denominator_q))
+    if up_q > 0:
+        objs_written_q = write_bar_data(tm, bar_data, begin, end_q, tja_contents, time_sig=(up_q, low_q), time_sig_orig=(up_now, low_now), limit=end)
+        if objs_written_q is not None:
+            (up_now, low_now) = (up_q, low_q)
 
     # data for unquantized part
     if objs_written_q is not None:
@@ -582,44 +582,44 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     min_beat_cnt_unq = min_beat_cnt - beat_cnt_q
 
     # calculate #MEASURE for unquantized part
-    fraction_unq = Fraction(my_beat_cnt_unq / 4).limit_denominator(48 * 48)
-    (numerator_unq, denominator_unq) = get_tsign(fraction_unq)
+    (up_unq, low_unq) = get_tsign(Fraction(my_beat_cnt_unq / 4).limit_denominator(48 * 48))
 
     # avoid the last note to be divided into the next bar
-    if len(bar_data) > 0 and min_beat_cnt_unq > 0 and numerator_unq <= min_beat_cnt_unq * denominator_unq:
-        numerator_unq = int(min_beat_cnt_unq * denominator_unq) + 1
+    if len(bar_data) > 0 and min_beat_cnt_unq > 0 and up_unq <= min_beat_cnt_unq / 4 * low_unq:
+        up_unq = int(min_beat_cnt_unq / 4 * low_unq) + 1
         # re-simplify the fraction
-        (numerator_unq, denominator_unq) = get_tsign(Fraction(numerator_unq, denominator_unq))
-    beat_cnt_unq = 4 * numerator_unq / denominator_unq
+        (up_unq, low_unq) = get_tsign(Fraction(up_unq, low_unq))
+    beat_cnt_unq = 4 * up_unq / low_unq
     end_unq = end_q + beat_cnt_unq * tm.mspb
 
     if output_trace_info:
-        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({numerator_unq}/{denominator_unq}) * {tm.mspb}ms = {end_q + beat_cnt_unq * tm.mspb}ms -> end_unq = {end_unq}ms")
+        tja_contents.append(f"// [incomplete unquantized] {end_q}ms + {beat_cnt_unq}beats ({up_unq}/{low_unq}) * {tm.mspb}ms = {end_q + beat_cnt_unq * tm.mspb}ms -> end_unq = {end_unq}ms")
 
     # write unquantized part
     objs_written_unq = None
-    if not (numerator_unq == 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
+    if not (up_unq <= 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
         # Note: numerator and denominator can both have decimal places
-        if numerator_unq == 0:
-            (numerator_unq, denominator_unq) = (1, 4 * max(1, tm.mspb))
-            beat_cnt_unq = 4 * numerator_unq / denominator_unq
+        if up_unq == 0:
+            (up_unq, low_unq) = (1, 4 * max(1, tm.mspb))
+            beat_cnt_unq = 4 * up_unq / low_unq
             end_unq = end_q + beat_cnt_unq * tm.mspb
-        tja_contents.append(make_cmd(FMT_MEASURECHANGE, numerator_unq, denominator_unq))
         assert tm.redtm is not None
         if not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEOFF))
-        objs_written_unq = write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(numerator_unq, denominator_unq), limit=end)
+        objs_written_unq = write_bar_data(tm, bar_data, end_q, end_unq, tja_contents, time_sig=(up_unq, low_unq), time_sig_orig=(up_now, low_now), limit=end)
+        if objs_written_unq is not None:
+            (up_now, low_now) = (up_unq, low_unq)
         if not tm.redtm.hidefirst.is_hidden():
             tja_contents.append(make_cmd(FMT_BARLINEON))
 
     if objs_written_q is None and objs_written_unq is None:
-        return None
-    return (objs_written_q or 0) + (objs_written_unq or 0)
+        return None, None
+    return (objs_written_q or 0) + (objs_written_unq or 0), (up_now, low_now)
 
 
 def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end, tja_contents,
-    time_sig: Optional[Tuple[float, float]] = None, limit=None
+    time_sig: Optional[Tuple[float, float]] = None, time_sig_orig: Optional[Tuple[float, float]] = None, limit=None
     ) -> Optional[int]:
     global show_head_info
     global combo_cnt
@@ -627,6 +627,8 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
     if time_sig is None:
         time_sig = (tm.beats, 4)
+    if time_sig_orig is None:
+        time_sig_orig = time_sig
     if limit is None:
         limit = end
 
@@ -658,7 +660,8 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     # build offset data
     offset_list = sorted(set(itertools.chain(
         [begin],
-        (max(begin, cmd.offset) for _, cmd in zip(range(idx_cmd_limit), commands_within)), # in-range commands
+        (max(begin, cmd.offset) for _, cmd in zip(range(idx_cmd_limit), commands_within)
+            if cmd.formatter in {FMT_GOGOSTART, FMT_GOGOEND}), # in-range command-time commands
         (max(begin, datum.offset) for _, datum in zip(range(idx_note_limit), bar_data)),
         [end],
     )))
@@ -682,15 +685,18 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     idx_cmd = 0
     idx_bar_data = 0
     divs = 0
+    begin_of_line = True
 
     # floating number offset should match exactly here since they are in the list as-is
     # use <= in case bad things happen
     for offset, delta_divs in time_ddivs:
         # Insert commands
         while idx_cmd < idx_cmd_limit and commands_within[idx_cmd].offset <= offset:
-            bar_strs.append("\n")
+            if not begin_of_line:
+                bar_strs.append("\n")
             bar_strs.append(make_cmd(commands_within[idx_cmd]))
             bar_strs.append("\n")
+            begin_of_line = True
             idx_cmd += 1
 
         if delta_divs > 0:
@@ -703,10 +709,12 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
                 combo_cnt += 1
             if note_type != ONP_NONE or divs_target > 1:
                 bar_strs.append(note_type)
+                begin_of_line = False
                 divs += 1
 
             # Insert blanks (if needed)
             bar_strs.append("0" * int(delta_divs - 1))
+            begin_of_line = False
             divs += int(delta_divs - 1)
 
     # remove processed notechart objects
@@ -714,6 +722,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
     # bar-terminating symbol (1-symbol beat length if comes solely, otherwise zero length)
     bar_strs.append(',')
+    begin_of_line = False
 
     # simulate TJAP3 rounding error
     t_div_tja = 4 * T_MINUTE / 16 / tm.bpm * (time_sig[0] / time_sig[1]) * (16 / max(1, divs))
@@ -728,6 +737,8 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     if show_head_info:  # show debug info?
         print_with_pended(head + bar_str, file=sys.stderr)
 
+    if time_sig != time_sig_orig:
+        tja_contents.append(make_cmd(FMT_MEASURECHANGE, time_sig[0], time_sig[1]))
     tja_contents.append(bar_str)
     return idx_bar_data
 
@@ -1091,15 +1102,14 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
             if tm_idx > 0: # not the start of the initial bar
                 if output_trace_info:
                     tja_contents.append(f"// write_incomplete_bar: {bar_offset_begin}~{end}ms, timing point: {tm}")
-                objs_written = write_incomplete_bar(tm, hitobjects[obj_idx_begin:obj_idx], bar_offset_begin, end, tja_contents)
-                measure_changed = True
+                objs_written, measure_written = write_incomplete_bar(tm, hitobjects[obj_idx_begin:obj_idx], bar_offset_begin, end, tja_contents)
+                if measure_written is not None and (4 * measure_written[0] / measure_written[1]) != measure:
+                    measure_changed = True
 
         if objs_written is not None:
             obj_idx_begin += objs_written
             # unhide bar line after first measure of hidefirst timing point
-            if tmr.unhide_first():
-                tja_contents.append(make_cmd(FMT_BARLINEON))
-                curr_barlineon = True
+            tmr.unhide_first()
         obj_idx = obj_idx_begin
 
         # go to the next measure
@@ -1124,7 +1134,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         bar_offset_end = bar_offset_begin = end
         bar_offset_end += measure * tm.mspb
 
-        if not almost_equals(tja_time, bar_offset_begin):
+        if not almost_equals(tja_time, bar_offset_begin, error=1e-3):
             if output_trace_info:
                 tja_contents.append(f"// TJA time {tja_time}ms -> osu time {bar_offset_begin}ms")
             # Note: jiro will ignore delays shorter than 0.001s, but tjap3 simulators do not

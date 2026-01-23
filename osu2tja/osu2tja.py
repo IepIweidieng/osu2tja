@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.osu import OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
+from common.osu import OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
 from common.tja import get_course_by_number
 from common.utils import print_with_pended
 
@@ -278,8 +278,8 @@ init_debug_globals()
 
 # get quantized offset by the nearest base timing point
 # step 1: find the base timing point around base offset b at or before t
-# step 2: calculate the quantized beat count from t to the base timing point
-# step 3: get quantized offset from quantized beat count and bpm
+# step 2: calculate the quantized unit count from t to the base timing point
+# step 3: get quantized offset from quantized unit count and bpm
 # step 4: find the nearest any-color timing points, past point p and future point f
 # step 5: adjust quantized offset so that it is at or after point p and before point f
 
@@ -1051,9 +1051,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
             end = next_redtm.offset
             next_redtm_reached = True
         else:
-            iend = math.copysign(math.ceil(abs(end)), end)
-            if almost_equals(end, iend):
-                end = iend
+            end = ceil_if_almost_int(end)
 
         # collect object
         if next_obj is not None and next_obj.offset < end:
@@ -1099,14 +1097,13 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         if objs_written is not None:
             obj_idx_begin += objs_written
             # unhide bar line after first measure of hidefirst timing point
-            if tmr.hidefirst == EHideFirst.TO_UNHIDE: # true, unhide at measure end
+            if tmr.unhide_first():
                 tja_contents.append(make_cmd(FMT_BARLINEON))
-                tmr.hidefirst = EHideFirst.UNHIDDEN
                 curr_barlineon = True
         obj_idx = obj_idx_begin
 
-        if chart_end_reached and obj_idx >= len(hitobjects) and len(commands_within) == 0:
         # go to the next measure
+        if chart_end_reached and obj_idx >= len(hitobjects) and len(commands_within) == 0:
             break
 
         if next_redtm_reached:

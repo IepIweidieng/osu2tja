@@ -2,6 +2,7 @@ from array import array
 from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum
+import math
 from typing import Callable, Dict, List, Optional, Sequence
 
 OSU_VER_STR_PREFIX = "osu file format v"
@@ -17,13 +18,37 @@ T_MINUTE = 60000
 
 
 class EHideFirst(Enum):
-    UNHIDDEN = -1
-    SHOWN = 0
-    TO_UNHIDE = 1
-    HIDDEN = 2
+    BARLINE_IN_SHOWN = -2 # TJA real bar line or #BARLINE when #BARLINEON
+    UNHIDDEN = BARLINE_IN_HIDDEN = -1 # osu! after hidefirst / TJA #BARLINE when #BARLINEOFF
+    SHOWN = 0 # osu! not hidefirst / TJA #BARLINEON
+    TO_UNHIDE = 1 # osu! hidefirst
+    HIDDEN = 2 # osu! before hidefirst / TJA #BARLINEOFF
 
     def is_hidden(self) -> bool:
         return self in {EHideFirst.TO_UNHIDE, EHideFirst.HIDDEN}
+
+    def is_barline(self) -> bool:
+        return self in {EHideFirst.BARLINE_IN_HIDDEN, EHideFirst.BARLINE_IN_SHOWN}
+
+    def add_barline(self) -> "EHideFirst":
+        return (EHideFirst.BARLINE_IN_SHOWN if self == EHideFirst.SHOWN
+            else EHideFirst.BARLINE_IN_HIDDEN if self == EHideFirst.HIDDEN
+            else self)
+
+    def remove_barline(self) -> "EHideFirst":
+        return (EHideFirst.SHOWN if self == EHideFirst.BARLINE_IN_SHOWN
+            else EHideFirst.HIDDEN if self == EHideFirst.BARLINE_IN_HIDDEN
+            else self)
+
+    def barline_on(self) -> "EHideFirst":
+        return (EHideFirst.BARLINE_IN_SHOWN if self == EHideFirst.BARLINE_IN_HIDDEN
+            else EHideFirst.SHOWN if self == EHideFirst.HIDDEN
+            else self)
+
+    def barline_off(self) -> "EHideFirst":
+        return (EHideFirst.BARLINE_IN_HIDDEN if self == EHideFirst.BARLINE_IN_SHOWN
+            else EHideFirst.HIDDEN if self == EHideFirst.SHOWN
+            else self)
 
 
 @dataclass
@@ -44,7 +69,33 @@ class OsuTimingPoint:
     redtm: Optional["OsuTimingPoint"] = None
 
     def is_redline(self) -> bool:
-        return self.redtm is None or self.redtm == self
+        return self.redtm == self
+
+    def unhide_first(self) -> bool:
+        if self.hidefirst == EHideFirst.TO_UNHIDE:
+            self.hidefirst = EHideFirst.UNHIDDEN
+            return True
+        return False
+
+    def merge_with(self, tmg: Optional["OsuTimingPoint"] = None, tmr: Optional["OsuTimingPoint"] = None) -> None:
+        tm = tmg or tmr
+        if tm is not None:
+            self.sevol = tm.sevol
+            self.ggt = tm.ggt
+            self.hidefirst = tm.hidefirst
+        # redline or inherited properties
+        if tmr is not None:
+            self.mspb = tmr.mspb
+            self.bpm = tmr.bpm
+            self.beats = tmr.beats
+            self.beat_res = tmr.beat_res
+        # greenline properties
+        if tmg is not None:
+            self.scroll = tmg.scroll
+
+
+def get_osu_meter(beats: float) -> int:
+    return math.ceil(min(max(beats, 1), (1 << 31) - 1))
 
 
 def get_last_tm(timing_points: List[OsuTimingPoint]):
@@ -89,6 +140,13 @@ def almost_bigger(v1, v2, error = EPSILON_F64):
 
 def almost_equals(v1, v2, error = EPSILON_F64):
     return abs(v1 - v2) <= error
+
+# bar end aligned to integer or uninherited timing point
+# https://github.com/ppy/osu/issues/28317
+
+def ceil_if_almost_int(ms: float) -> float:
+    ims = math.copysign(math.ceil(abs(ms)), ms)
+    return ims if almost_equals(ms, ims) else ms
 
 diffrank_to_name: Dict[float, Sequence[str]] = {
     -1: ("beginner", "shokyuu"),

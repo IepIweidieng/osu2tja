@@ -252,16 +252,17 @@ Tool created by @delguoqing
   - [x] `#MEASURE`, positive fraction beats → Uninherited timing point: Beats per bar + incomplete bar (improved), (new) float values
   - [x] Mid-measure `#MEASURE`s are handled as if they were at the head of the measure as in TaikoJiro (improved)
   - [x] Negative (bar length ÷ BPM) or large negative `#DELAY` → Notechart events are not in completely increasing time order, re-sorted by time (new)
-    - FIXME: The bar line of overlapped measures are ignored and not converted
+    - Each bar line of overlapped measures is converted as a visible bar line on the topmost measure. (improved)
   - [x] `#DELAY` → move time of definition cursor
-    - FIXME: The bar line after `#DELAY` will be wrongly displayed until the next uninherited timing point generated.
+    - The time of visible bar lines after `#DELAY` is also moved. (improved)
   - [x] `#SCROLL`, with positive (scroll × BPM) → Inherited timing point: Slider velocity change
     - FIXME: Use BPM changes to work around the slider velocity change being capped between 0.01x to 10x in osu!.
   - [x] Non-positive/complex-valued (scroll × BPM) → Inherited timing point: Absolute-valued slider velocity change (new)
   - [ ] `#SUDDEN`, with positive stop duration → Inherited timing point: Scaled slider velocity change (TODO)
   - [x] `#GOGOSTART` & `#GOGOEND` → Timing point: Kiai time
   - [x] `#BARLINEOFF` & `#BARLINEON` → Timing point: Omit first bar line (new)
-  - [ ] `#BARLINE` → Split bars into (possibly) incomplete bars (TODO)
+  - [x] Visible bar lines (including `#BARLINE`) → Uninherited timing point: not omitting first bar line + incomplete bar, or the bar is complete and no conversion is needed (new)
+  - [x] Invisible bar lines (hidden, or unintended due to `#DELAY` or osu! timing rounding) → Uninherited timing: omit first bar line + (possibly incomplete) bar (new)
   - [ ] `#BARLINESCROLL` → Inherited timing points: Slider velocity change for every bar line and every first note after bar line; split out a 1ms bar with omitted first bar line for notes on the original bar start (TODO)
 - TJA Note Definition
   - Timing
@@ -270,7 +271,7 @@ Tool created by @delguoqing
     - [x] Sum of (bar length ÷ beat division ÷ BPM at each division) → relative time offset to bar start (bug fixed for fractional-beat bars with `#SCROLL`)
     - [x] ms-level timing accuracy (improved)
       - `tja2osu.py` offers the `--beat-align` option for quantized hit objects to specified division of beat (improved).
-      - FIXME: An unintended extra bar line might appear closely before (about 1ms) a (probably hidden) bar line (of an uninherited timing point (red line)).
+    - [x] osu! and TJAPlayer3 timing rounding error simulation (new)
   - Note Symbols
     - [x] `0` (blank) → Empty
     - [x] `1` (regular Don) → Circle, default hitsound

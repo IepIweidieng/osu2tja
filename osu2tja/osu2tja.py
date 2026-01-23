@@ -246,9 +246,10 @@ chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
 timingpoints: List[OsuTimingPoint]
 commands_within: List["TjaTimedCmd"]
+lasting_note: Optional["TjaTimedNote"]
 
 def init_globals() -> None:
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver, lasting_note
     # global variables
     timingpoints = []
     balloons = []
@@ -262,6 +263,7 @@ def init_globals() -> None:
     global commands_within, tja_time
     commands_within = []
     tja_time = 0
+    lasting_note = None
 
     global chart_resources
     chart_resources = {}
@@ -434,8 +436,10 @@ def should_convert_slider_to_hits(tm: OsuTimingPoint, curve_len: float, reverse_
 class TjaTimedNote:
     type: str
     offset: float
+    offset_end: float
     column: int
     offset_raw: float
+    offset_end_raw: float
 
 def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     global timing_point
@@ -457,7 +461,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     offset = get_real_offset(offset_raw, raw=True)
 
     if type & OSU_NOTE_CIRCLE:  # circle
-        ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, column, offset_raw))
+        ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, offset, column, offset_raw, offset_raw))
         if round(offset_raw) in inspect_ms:
             print_with_pended(f"[INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
@@ -474,7 +478,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             j = offset_raw
             while j <= offset_raw + taiko_duration + tick_spacing / 8:
                 point_offset = get_real_offset(j, raw=True)
-                ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, column, offset_raw=j))
+                ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
                 if round(offset_raw) in inspect_ms:
                     print_with_pended(f"[INSPECT_MS {offset_raw}] slider start {ret[idx_head]}, tick: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
@@ -487,10 +491,10 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             offset_end_raw = offset_raw + taiko_duration
             offset_end = get_real_offset(offset_end_raw, raw=True)
             if sound & HITSND_FINISH:
-                ret.append(TjaTimedNote(ONP_RENDA_DAI, offset, column, offset_raw))
+                ret.append(TjaTimedNote(ONP_RENDA_DAI, offset, offset_end, column, offset_raw, offset_end_raw))
             else:
-                ret.append(TjaTimedNote(ONP_RENDA, offset, column, offset_raw))
-            ret.append(TjaTimedNote(ONP_END, offset_end, column, offset_end_raw))
+                ret.append(TjaTimedNote(ONP_RENDA, offset, offset_end, column, offset_raw, offset_end_raw))
+            ret.append(TjaTimedNote(ONP_END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
 
         if round(offset_raw) in inspect_ms:
             print_with_pended(f"[INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
@@ -504,7 +508,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         j = offset_raw
         while j <= offset_raw + taiko_duration + tick_spacing / 8:
             point_offset = get_real_offset(j, raw=True)
-            ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, column, offset_raw=j))
+            ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
             if round(offset_raw) in inspect_ms:
                 print_with_pended(f"[INSPECT_MS {offset_raw}] hold start {ret[idx_head]}, tick: {ret[-1]}, tmr: {tmr}", file=sys.stderr)
 
@@ -517,10 +521,10 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         offset_end_raw = float(ps[5])
         offset_end = get_real_offset(offset_end_raw, raw=True)
         if sound & HITSND_FINISH:
-            ret.append(TjaTimedNote(ONP_IMO, offset, column, offset_raw))
+            ret.append(TjaTimedNote(ONP_IMO, offset, offset_end, column, offset_raw, offset_end_raw))
         else:
-            ret.append(TjaTimedNote(ONP_BALLOON, offset, column, offset_raw))
-        ret.append(TjaTimedNote(ONP_END, offset_end, column, offset_end_raw))
+            ret.append(TjaTimedNote(ONP_BALLOON, offset, offset_end, column, offset_raw, offset_end_raw))
+        ret.append(TjaTimedNote(ONP_END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
         # how many hit will break a ballon
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
@@ -563,7 +567,7 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     # calculate #MEASURE for quantized part
     (up_q, low_q) = get_tsign(Fraction(int(round(tm.beat_res * my_beat_cnt)), 4 * tm.beat_res))
     beat_cnt_q = 4 * up_q / low_q
-    end_q = get_real_offset(begin + beat_cnt_q * tm.mspb)
+    end_q = get_real_offset(begin + beat_cnt_q * tm.mspb, base_offset=begin)
 
     if output_trace_info:
         tja_contents.append(f"// [incomplete quantized] {begin}ms + {beat_cnt_q}beats ({up_q}/{low_q}) * {tm.mspb}ms = {begin + beat_cnt_q * tm.mspb}ms -> end_q {end_q}ms")
@@ -600,7 +604,7 @@ def write_incomplete_bar(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin
     if not (up_unq <= 0 and len(bar_data) == 0 and (len(commands_within) == 0 or commands_within[0].offset >= end)):
         # TaikoJiro does not support 0/x measures. Use a <= 1ms measure instead.
         # Note: numerator and denominator can both have decimal places
-        if up_unq == 0:
+        if up_unq <= 0:
             (up_unq, low_unq) = (1, 4 * max(1, tm.mspb))
             beat_cnt_unq = 4 * up_unq / low_unq
             end_unq = end_q + beat_cnt_unq * tm.mspb
@@ -623,7 +627,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     ) -> Optional[int]:
     global show_head_info
     global combo_cnt
-    global commands_within, tja_time
+    global commands_within, tja_time, lasting_note
 
     if time_sig is None:
         time_sig = (tm.beats, 4)
@@ -663,6 +667,8 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
         (max(begin, cmd.offset) for _, cmd in zip(range(idx_cmd_limit), commands_within)
             if cmd.formatter in {FMT_GOGOSTART, FMT_GOGOEND}), # in-range command-time commands
         (max(begin, datum.offset) for _, datum in zip(range(idx_note_limit), bar_data)),
+        (max(begin, datum.offset_end) for _, datum in zip(range(idx_note_limit), bar_data)), # consider end offset for overlapping handling
+        [max(begin, lasting_note.offset_end)] if lasting_note is not None else [],
         [end],
     )))
 
@@ -677,8 +683,11 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     time_to_div = {t: u // units_per_div for t, u in time_units}
     time_ddivs = [(t, d // units_per_div) for t, u, d in time_unit_deltas if u < units_per_div * time_to_div[end]]
 
-    t_div = min(end - begin, units_per_div * t_unit)
+    t_div = units_per_div * t_unit
     divs_target = time_to_div[end]
+
+    # simulate TJAP3 rounding error
+    t_div_tja = 4 * T_MINUTE / 16 / tm.bpm * (time_sig[0] / time_sig[1]) * (16 / max(1, divs_target))
 
     # build notechart definition bar string
     bar_strs: List[str] = []
@@ -687,35 +696,117 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     divs = 0
     begin_of_line = True
 
+    def ensure_begin_of_line():
+        nonlocal begin_of_line
+        if not begin_of_line:
+            bar_strs.append("\n")
+        begin_of_line = True
+
+    def goto_offset(offset_curr, offset_target):
+        global tja_time
+        nonlocal divs, begin_of_line
+        if offset_curr == offset_target:
+            return offset_target
+
+        if offset_curr not in time_to_div:
+            time_to_div[offset_curr] = get_dt_unit_cnt(t_div, begin, offset_curr)
+        ddivs = time_to_div[offset_target] - time_to_div[offset_curr]
+        delta_ms = ddivs * t_div
+        if output_trace_info:
+            ensure_begin_of_line()
+            bar_strs.append(f"// goto_offset: {offset_curr} -> {offset_target}: {ddivs} divs ({delta_ms})")
+            bar_strs.append("\n")
+        if ddivs > 0:
+            bar_strs.append("0" * ddivs)
+            begin_of_line = False
+            divs += ddivs
+            for _ in range(ddivs):
+                tja_time += t_div_tja
+        elif ddivs < 0:
+            ensure_begin_of_line()
+            bar_strs.append(make_cmd(FMT_DELAY, delta_ms / 1000.0))
+            bar_strs.append("\n")
+            tja_time += delta_ms
+        offset = offset_curr + delta_ms
+        # extra fix if offset_curr and offset_target have different t_unit
+        if ((not has_subdivs or get_tm_at(timingpoints, offset_curr) != tm or get_tm_at(timingpoints, offset_target) != tm)
+            and offset != offset_target
+            ):
+            fix_ms = offset_target - offset
+            ensure_begin_of_line()
+            bar_strs.append(make_cmd(FMT_DELAY, fix_ms / 1000.0))
+            bar_strs.append("\n")
+            tja_time += fix_ms
+            if output_trace_info:
+                ensure_begin_of_line()
+                bar_strs.append(f"// goto_fix {fix_ms}")
+                bar_strs.append("\n")
+        return offset_target
+
     # floating number offset should match exactly here since they are in the list as-is
     # use <= in case bad things happen
     for offset, delta_divs in time_ddivs:
         # Insert commands
         while idx_cmd < idx_cmd_limit and commands_within[idx_cmd].offset <= offset:
-            if not begin_of_line:
-                bar_strs.append("\n")
+            ensure_begin_of_line()
             bar_strs.append(make_cmd(commands_within[idx_cmd]))
             bar_strs.append("\n")
-            begin_of_line = True
             idx_cmd += 1
 
         if delta_divs > 0:
-            # Insert a note (simultaneous notes are not supported)
+            # Insert a note
             note_type = ONP_NONE
+            offset_curr = offset
             while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
-                note_type = bar_data[idx_bar_data].type
+                note = bar_data[idx_bar_data]
                 idx_bar_data += 1
-            if note_type in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
-                combo_cnt += 1
-            if note_type != ONP_NONE or divs_target > 1:
+
+                # ignore straying roll ends
+                if lasting_note is None and note.type == ONP_END:
+                    continue
+
+                # complete overlapped roll
+                if lasting_note is not None and offset <= lasting_note.offset_end:
+                    note_type = ONP_END
+                    offset_curr = goto_offset(offset_curr, lasting_note.offset_end)
+                    bar_strs.append(ONP_END)
+                    begin_of_line = False
+                    lasting_note = None
+                    divs += 1
+                    tja_time += t_div_tja
+                    offset_curr += t_div
+                    if note.type == ONP_END: # the end is for the overlapped roll
+                        continue
+
+                # place the current start
+                note_type = note.type
+                offset_curr = goto_offset(offset_curr, offset)
                 bar_strs.append(note_type)
                 begin_of_line = False
                 divs += 1
+                tja_time += t_div_tja
+                offset_curr += t_div
+
+                if note_type in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
+                    combo_cnt += 1
+                elif note_type in (ONP_RENDA, ONP_RENDA_DAI, ONP_BALLOON, ONP_IMO):
+                    lasting_note = note
+                elif note_type == ONP_END:
+                    lasting_note = None
 
             # Insert blanks (if needed)
+            if note_type == ONP_NONE and (divs_target > 1 or divs > 1):
+                bar_strs.append(note_type)
+                divs += 1
+                tja_time += t_div_tja
             bar_strs.append("0" * int(delta_divs - 1))
             begin_of_line = False
             divs += int(delta_divs - 1)
+            for _ in range(int(delta_divs - 1)):
+                tja_time += t_div_tja
+
+    if divs == 0:
+        tja_time += t_div_tja
 
     # remove processed notechart objects
     commands_within = commands_within[idx_cmd:]
@@ -724,10 +815,22 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     bar_strs.append(',')
     begin_of_line = False
 
-    # simulate TJAP3 rounding error
-    t_div_tja = 4 * T_MINUTE / 16 / tm.bpm * (time_sig[0] / time_sig[1]) * (16 / max(1, divs))
-    for _ in range(max(1, divs)):
-        tja_time += t_div_tja
+    # adjust time signature so that time per div is the same
+    time_sig_scaled = time_sig
+    if divs > 0 and divs != max(1, divs_target):
+        # u/d * 1/divs_target = u'/d' * 1/divs => u'/d' = u/d * divs/divs_target
+        try:
+            time_sig_scaled = get_tsign(Fraction(time_sig[0] * divs, time_sig[1] * max(1, divs_target))) # type: ignore
+        except TypeError:
+            time_sig_scaled = (time_sig[0] * divs, time_sig[1] * max(1, divs_target)) # no simplification
+    
+    if time_sig_scaled != time_sig_orig:
+        tja_contents.append(make_cmd(FMT_MEASURECHANGE, time_sig_scaled[0], time_sig_scaled[1]))
+        if time_sig_scaled != time_sig:
+            # restore after end
+            bar_strs.append("\n")
+            bar_strs.append(make_cmd(FMT_MEASURECHANGE, time_sig[0], time_sig[1]))
+            bar_strs.append("\n")
 
     bar_str = ''.join(bar_strs)
 
@@ -737,8 +840,6 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
     if show_head_info:  # show debug info?
         print_with_pended(head + bar_str, file=sys.stderr)
 
-    if time_sig != time_sig_orig:
-        tja_contents.append(make_cmd(FMT_MEASURECHANGE, time_sig[0], time_sig[1]))
     tja_contents.append(bar_str)
     return idx_bar_data
 
@@ -1034,9 +1135,9 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
-        # allows simultaneous notes in different columns
-        if ho1.offset > ho2.offset or (ho1.offset == ho2.offset and ho1.column == ho2.column):
-            print_with_pended(f"Warning: Hit object {i}: {ho1} occurs non-before hit object {i + 1}: {ho2}.", file=sys.stderr)
+        # allows simultaneous notes
+        if ho1.offset > ho2.offset:
+            print_with_pended(f"Warning: Hit object {i}: {ho1} occurs before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     # for end of chart
     last_play_event = max(hitobjects[-1].offset if len(hitobjects) > 0 else 0,

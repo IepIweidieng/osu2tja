@@ -164,9 +164,10 @@ Tool created by @delguoqing
   - Note Symbols
     - [x] (std mode) short slider to circles (improved using the official algorithm)
     - [x] (mania mode) hold to circles (new)
-      - TODO: Hold to bar drumroll with note overlapping handling.
+      - TODO: Hold to bar drumroll with note overlapping priority handling.
     - [x] (mania mode, > 1 keys) convert Don/Katsu by column position instead of hitsound (new)
       - Layout: KD(D), KDDK, KKDD(DD)K, KKDDDDKK, KKKDDDD(DD)KK, KKKDDDDDDKKK, KKKKDDDDDD(DD)KKK, ...
+    - [x] Overlapping notes → Padding `0` to place the end of overlapped note (if need), then using a negative `#DELAY` to return to the start of the overlapping note and place the start. If across timing points, use additional `#DELAY`s for fixing timing. (new)
     - [x] Empty → `0` (blank)
     - [x] Circle, normal or Don column, non-finish hitsound → `1` (regular Don)
     - [x] Circle, whistle/clap or Katsu column, non-finish hitsound → `2` (regular Katsu)

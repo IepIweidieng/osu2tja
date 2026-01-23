@@ -168,6 +168,7 @@ tja2osz 会在 `[output_folder]` 中为每个已处理的 `.tja` 文件创建一
       - TODO：长键转为长条连打，并处理重叠音符。
     - [x] （mania 模式，> 1 轨）依轨道位置而不依音效决定咚／咔（新功能）
       - 轨道配置（D = 咚、K = 咔）：KD(D)、KDDK、KKDD(DD)K、KKDDDDKK、KKKDDDD(DD)KK、KKKDDDDDDKKK、KKKKDDDDDD(DD)KKK、……
+    - [x] 重叠音符 → 填 `0` 放被重叠音符终点（若需要），再用负 `#DELAY` 回到重叠音符起点来放置起点。跨时间点时再用另外的 `#DELAY` 修正计时 。（新功能）
     - [x] 空白 → `0`（空白）
     - [x] 圆圈，一般或咚轨道，非 finish 音效 → `1`（小咚）
     - [x] 圆圈，whistle/clap 或咔轨道，非 finish 音效 → `2`（小咔）

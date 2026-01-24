@@ -864,7 +864,7 @@ def write_TimingPoints(fout: TextIO) -> None:
             ): # bar line reached early
             # promote to red
             hidefirst = tm_next.hidefirst
-            tm_next.merge_with(tmr=tmr)
+            tm_next.merge_with(tmg if tm_next.redtm is None else None, tmr=tmr)
             tm_next.hidefirst = hidefirst.add_barline()
             tm_next.redtm = tm_next
             aligned_end = emit_tm(tm_next)

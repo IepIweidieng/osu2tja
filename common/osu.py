@@ -78,11 +78,10 @@ class OsuTimingPoint:
         return False
 
     def merge_with(self, tmg: Optional["OsuTimingPoint"] = None, tmr: Optional["OsuTimingPoint"] = None) -> None:
-        tm = tmg or tmr
-        if tm is not None:
-            self.sevol = tm.sevol
-            self.ggt = tm.ggt
-            self.hidefirst = tm.hidefirst
+        if tmg is not None:
+            self.sevol = tmg.sevol
+            self.ggt = tmg.ggt
+            self.hidefirst = tmg.hidefirst
         # redline or inherited properties
         if tmr is not None:
             self.mspb = tmr.mspb

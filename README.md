@@ -167,7 +167,6 @@ Tool created by @delguoqing
       - TODO: Hold to bar drumroll with note overlapping priority handling.
     - [x] (mania mode, > 1 keys) convert Don/Katsu by column position instead of hitsound (new)
       - Layout: KD(D), KDDK, KKDD(DD)K, KKDDDDKK, KKKDDDD(DD)KK, KKKDDDDDDKKK, KKKKDDDDDD(DD)KKK, ...
-    - [x] Overlapping notes → Padding `0` to place the end of overlapped note (if need), then using a negative `#DELAY` to return to the start of the overlapping note and place the start. If across timing points, use additional `#DELAY`s for fixing timing. (new)
     - [x] Empty → `0` (blank)
     - [x] Circle, normal or Don column, non-finish hitsound → `1` (regular Don)
     - [x] Circle, whistle/clap or Katsu column, non-finish hitsound → `2` (regular Katsu)
@@ -177,6 +176,13 @@ Tool created by @delguoqing
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
     - [x] Spinner, non-finish hitsound → `7` + `8` (regular balloon roll)
     - [x] Spinner, finish hitsound → `9` + `8` (special balloon roll) (new)
+    - [x] Overlapping same-column notes → Padding `0` to place the end of overlapped note (if need), then using a negative `#DELAY` to return to the start of the overlapping note and place the start. If across timing points, use additional `#DELAY`s for fixing timing. (new)
+    - [x] Simultaneous different-column notes → Single combined note (new)
+      - Two Dons `1`/`3` + `1`/`3` → `3` (big Don)
+      - Two Katsus `2`/`4` + `2`/`4` → `4` (big Katsu)
+      - One Don one Katsu, or either KaDon `1`/`3`/`G` + `2`/`4`/`G` → `G` (KaDon)
+      - Two bar drumrolls `5`/`6` + `5`/`6` → `6` (big bar drumroll)
+      - Two balloon rolls `7`/`9` + `7`/`9` → `9` (special balloon roll)
 
 ### tja2osu
 

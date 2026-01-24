@@ -75,6 +75,7 @@ ONP_RENDA_DAI = '6'
 ONP_BALLOON = '7'
 ONP_END = '8'
 ONP_IMO = '9'
+ONP_KADON = 'G'
 
 # tja command formatter
 FMT_SCROLLCHANGE = lambda x: f'#SCROLL {repr(x)}'
@@ -760,6 +761,29 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
             while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
                 note = bar_data[idx_bar_data]
                 idx_bar_data += 1
+
+                # combine notes from different columns
+                columns = {note.column}
+                while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
+                    note_i = bar_data[idx_bar_data]
+                    if note_i.column in columns:
+                        break
+                    columns.add(note_i.column)
+                    notes = {note.type, note_i.type}
+                    if notes.issubset({ONP_DON, ONP_DON_DAI}):
+                        note.type = ONP_DON_DAI
+                    elif notes.issubset({ONP_KATSU, ONP_KATSU_DAI}):
+                        note.type = ONP_KATSU_DAI
+                    elif notes.issubset({ONP_DON, ONP_DON_DAI, ONP_KATSU, ONP_KATSU_DAI, ONP_KADON}):
+                        note.type = ONP_KADON
+                    elif notes.issubset({ONP_RENDA, ONP_RENDA_DAI}):
+                        note.type = ONP_RENDA_DAI
+                    elif notes.issubset({ONP_BALLOON, ONP_IMO}):
+                        note.type = ONP_IMO
+                    else:
+                        break
+                    idx_bar_data += 1
+                    continue
 
                 # ignore straying roll ends
                 if lasting_note is None and note.type == ONP_END:

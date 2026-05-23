@@ -14,7 +14,6 @@ from functools import reduce
 import itertools
 import sys
 import argparse
-import codecs
 from fractions import Fraction
 import os
 import math
@@ -1303,9 +1302,9 @@ def main():
 
     # try to open file
     try:
-        fp = codecs.open(args.filename, "r", "utf8")
-        head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp)
-        head_sync_main = head_sync
+        with open(args.filename, "r", encoding="utf-8") as fp:
+            head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp)
+            head_sync_main = head_sync
     except IOError:
         print("// Can't open file `%s`" % args.filename, file=sys.stderr)
         return

@@ -236,11 +236,11 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ret.scroll = -math.copysign(100.0, ret.redtm.scroll) / float(rawbpmv)
         if merge_with_prev:
             if round(ret.offset_raw) in inspect_ms:
-                print_with_pended(f"[INSPECT_MS {ret.offset_raw}] merged timing point {ret}", file=sys.stderr)
+                print_with_pended(f"// [INSPECT_MS {ret.offset_raw}] merged timing point {ret}", file=sys.stderr)
             return None # merge uninherited (red) + inherited (green) timing points
 
     if round(ret.offset_raw) in inspect_ms:
-        print_with_pended(f"[INSPECT_MS {ret.offset_raw}] new timing point {ret}", file=sys.stderr)
+        print_with_pended(f"// [INSPECT_MS {ret.offset_raw}] new timing point {ret}", file=sys.stderr)
     return ret
 
 chart_resources: Dict[str, str] # {'filename': 'type', ...}
@@ -302,18 +302,18 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
         if ret < tm_p_offset:
             ret = tm_p_offset
         if round(dirty_offset) in inspect_ms:
-            print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset left-clamp: {dirty_offset - tm_p_offset} from past: {timingpoints[idx_tm_p]}", file=sys.stderr)
+            print_with_pended(f"// [INSPECT_MS {dirty_offset}] get_real_offset left-clamp: {dirty_offset - tm_p_offset} from past: {timingpoints[idx_tm_p]}", file=sys.stderr)
         if idx_tm_p + 1 < len(timingpoints):
             tm_f_offset = timingpoints[idx_tm_p + 1].offset
             if ret >= tm_f_offset:
                 ret = max(tm_p_offset, tm_f_offset - 1)
             if round(dirty_offset) in inspect_ms:
-                print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset right-clamp: {tm_f_offset - dirty_offset} to future: {timingpoints[idx_tm_p + 1]}", file=sys.stderr)
+                print_with_pended(f"// [INSPECT_MS {dirty_offset}] get_real_offset right-clamp: {tm_f_offset - dirty_offset} to future: {timingpoints[idx_tm_p + 1]}", file=sys.stderr)
             if tm_f_offset <= tm_p_offset:
-                print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical offset")
+                print_with_pended(f"// Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with identical offset", file=sys.stderr)
 
     if round(dirty_offset) in inspect_ms:
-        print_with_pended(f"[INSPECT_MS {dirty_offset}] get_real_offset -> {tm.offset} + {t_unit_cnt} * {t_unit} = {aligned_offset} -> {ret}", file=sys.stderr)
+        print_with_pended(f"// [INSPECT_MS {dirty_offset}] get_real_offset -> {tm.offset} + {t_unit_cnt} * {t_unit} = {aligned_offset} -> {ret}", file=sys.stderr)
     return ret
 
 
@@ -464,7 +464,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     if type & OSU_NOTE_CIRCLE:  # circle
         ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, offset, column, offset_raw, offset_raw))
         if round(offset_raw) in inspect_ms:
-            print_with_pended(f"[INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
+            print_with_pended(f"// [INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
     elif type & OSU_NOTE_SLIDER:  # slider, reverse??
         tm = get_tm_at(timingpoints, offset_raw, raw=True)
         curve_len = float(ps[7])
@@ -481,7 +481,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
                 point_offset = get_real_offset(j, raw=True)
                 ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
                 if round(offset_raw) in inspect_ms:
-                    print_with_pended(f"[INSPECT_MS {offset_raw}] slider start {ret[idx_head]}, tick: {ret[-1]}, tm: {tm}", file=sys.stderr)
+                    print_with_pended(f"// [INSPECT_MS {offset_raw}] slider start {ret[idx_head]}, tick: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
                 j += tick_spacing
                 i = (i + 1) % len(slider_sounds)
@@ -498,7 +498,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             ret.append(TjaTimedNote(ONP_END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
 
         if round(offset_raw) in inspect_ms:
-            print_with_pended(f"[INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
+            print_with_pended(f"// [INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
     elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_red_tm_at(timingpoints, offset_raw, raw=True)
@@ -511,7 +511,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             point_offset = get_real_offset(j, raw=True)
             ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
             if round(offset_raw) in inspect_ms:
-                print_with_pended(f"[INSPECT_MS {offset_raw}] hold start {ret[idx_head]}, tick: {ret[-1]}, tmr: {tmr}", file=sys.stderr)
+                print_with_pended(f"// [INSPECT_MS {offset_raw}] hold start {ret[idx_head]}, tick: {ret[-1]}, tmr: {tmr}", file=sys.stderr)
 
             j += tick_spacing
 
@@ -535,7 +535,7 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         balloons.append(hits)
 
         if round(offset_raw) in inspect_ms:
-            print_with_pended(f"[INSPECT_MS {offset_raw}] spinner start {ret[-2]}, end: {ret[-1]}, hits: {hits}", file=sys.stderr)
+            print_with_pended(f"// [INSPECT_MS {offset_raw}] spinner start {ret[-2]}, end: {ret[-1]}, hits: {hits}", file=sys.stderr)
 
     return ret
 
@@ -858,11 +858,10 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
     bar_str = ''.join(bar_strs)
 
-    head = "%4d %6.f %s %2d/%2d " % (combo_cnt,
-                                  format_time(begin), repr(units_per_div/tm.beat_res), tm.beat_res, len(bar_str))
-
     if show_head_info:  # show debug info?
-        print_with_pended(head + bar_str, file=sys.stderr)
+        head = "%4d %6.f %s %2d/%2d " % (
+            combo_cnt, format_time(begin), repr(units_per_div/tm.beat_res), tm.beat_res, len(bar_str))
+        print_with_pended(f"// {head + bar_str}", file=sys.stderr)
 
     tja_contents.append(bar_str)
     return idx_bar_data
@@ -949,7 +948,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
                 osu_ver_str = line
                 osu_format_ver = int(line.partition(OSU_VER_STR_PREFIX)[2])
                 if not osu_ver_supported(osu_format_ver):
-                    print_with_pended(f"Warning: found osu file format v{osu_format_ver}, but only v{OSU_VER_MIN} to v{OSU_VER_MAX} and v{OSU_VER_LAZER} are supported at this moment. The conversion will be performed but might fail.",
+                    print_with_pended(f"// Warning: found osu file format v{osu_format_ver}, but only v{OSU_VER_MIN} to v{OSU_VER_MAX} and v{OSU_VER_LAZER} are supported at this moment. The conversion will be performed but might fail.",
                           file=sys.stderr)
 
             # new section? Update section name.
@@ -1019,8 +1018,9 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
                     idx_last = bisect_right(hitobjects, obj.offset_raw, lo=idx_last, key=lambda x: x.offset_raw)
                     hitobjects.insert(idx_last, obj)
         except Exception:
-            print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing `{fp.name}` at line {lineno} in section [{curr_sec}]: `{line}`. Continued.", file=sys.stderr)
+            for line in traceback.format_exc().splitlines():
+                print_with_pended(f"// {line}", file=sys.stderr)
+            print_with_pended(f"// Error parsing `{fp.name}` at line {lineno} in section [{curr_sec}]: `{line}`. Continued.", file=sys.stderr)
 
     assert len(hitobjects) > 0
 
@@ -1161,7 +1161,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
         # allows simultaneous notes
         if ho1.offset > ho2.offset:
-            print_with_pended(f"Warning: Hit object {i}: {ho1} occurs before hit object {i + 1}: {ho2}.", file=sys.stderr)
+            print_with_pended(f"// Warning: Hit object {i}: {ho1} occurs before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     # for end of chart
     last_play_event = max(hitobjects[-1].offset if len(hitobjects) > 0 else 0,
@@ -1298,7 +1298,7 @@ def main():
 
     # check filename
     if not args.filename.lower().endswith(".osu"):
-        print("Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % args.filename, file=sys.stderr)
+        print("// Input file should be Osu file!(*.osu): \n\t[[ %s ]]" % args.filename, file=sys.stderr)
         return
 
     # try to open file
@@ -1307,7 +1307,7 @@ def main():
         head_meta, head_sync, head_diff, diff_content, recs = osu2tja(fp)
         head_sync_main = head_sync
     except IOError:
-        print("Can't open file `%s`" % args.filename, file=sys.stderr)
+        print("// Can't open file `%s`" % args.filename, file=sys.stderr)
         return
 
     # print results
@@ -1324,4 +1324,4 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        input("Done. Press the Enter key to exit...")
+        input("// Done. Press the Enter key to exit...")

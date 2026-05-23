@@ -204,11 +204,12 @@ def get_meta_data(filename):
             elif v.name == b"MOVIEOFFSET": MOVIEOFFSET = float(v.arg)
             elif (v.name+b':') not in unknowns:
                 line_printable = convert_str(line.removesuffix(b'\n'), ENCODING)
-                print_with_pended(f"Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
+                print_with_pended(f"// Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
                 unknowns.add(v.name+b':')
         except Exception:
-            print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing header in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
+            for line in traceback.format_exc().splitlines():
+                print_with_pended(f"// {line}", file=sys.stderr)
+            print_with_pended(f"// Error parsing header in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
 
 MS_OSU_MUSIC_OFFSET = 15
 """Ranked osu! beatmaps have late music / early chart sync. osu!'s new audio engine applies a global 15ms chart delay.
@@ -260,13 +261,13 @@ def get_osu_type(snd):
             return SLIDER_END
         elif lasting_note is not None and lasting_note.type == SPINNER:
             return SPINNER_END
-        print_with_pended(f"Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
+        print_with_pended(f"// Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
     if snd not in unknowns:
-        print_with_pended(f"Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
+        print_with_pended(f"// Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
         unknowns.add(snd)
     if lasting_note is not None:
-        print_with_pended(f"Note: With unended roll-type note {lasting_note}", file=sys.stderr)
+        print_with_pended(f"// Note: With unended roll-type note {lasting_note}", file=sys.stderr)
     return None
 
 def get_osu_sound(snd):
@@ -317,15 +318,16 @@ def get_all(filename):
                 continue
             handle_note(line)
         except Exception:
-            print_with_pended(traceback.format_exc(), file=sys.stderr)
-            print_with_pended(f"Error parsing note chart in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
+            for line in traceback.format_exc().splitlines():
+                print_with_pended(f"// {line}", file=sys.stderr)
+            print_with_pended(f"// Error parsing note chart in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
     else:
-        print_with_pended(f"Warning: Missing #END at end of chart.", file=sys.stderr)
+        print_with_pended(f"// Warning: Missing #END at end of chart.", file=sys.stderr)
     if len(bar_data) != 0:
-        print_with_pended(f"Warning: Missing comma (,) at end of chart.", file=sys.stderr)
+        print_with_pended(f"// Warning: Missing comma (,) at end of chart.", file=sys.stderr)
         handle_note(",")
     if lasting_note is not None:
-        print_with_pended(f"Warning: Unended roll-type note {lasting_note} ended by end of chart at {curr_time}.", file=sys.stderr)
+        print_with_pended(f"// Warning: Unended roll-type note {lasting_note} ended by end of chart at {curr_time}.", file=sys.stderr)
         add_a_note('8', curr_time)
 
     # prevent bar lines at and after #END (probably missing and implicit)
@@ -344,7 +346,7 @@ BEAT_RES = 0 # aligning disabled
 
 def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float] = None, raw: bool = False) -> float:
     if debug_mode:
-        print_with_pended("Dirty Offset", dirty_offset, file=sys.stderr)
+        print_with_pended("// Dirty Offset", dirty_offset, file=sys.stderr)
     if BEAT_RES <= 0:
         aligned_offset = dirty_offset
     else:
@@ -357,10 +359,10 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
         aligned_offset = tm.offset + t_unit_cnt * t_unit
 
         if debug_mode:
-            print_with_pended(tm, file=sys.stderr)
-            print("DELTA = ", delta, file=sys.stderr)
-            print("GET UNIT CNT", t_unit, t_unit_cnt, file=sys.stderr)
-            print(dirty_offset, "-->", tm.offset + t_unit_cnt * t_unit, file=sys.stderr)
+            print_with_pended(f"// {tm}", file=sys.stderr)
+            print("// DELTA = ", delta, file=sys.stderr)
+            print("// GET UNIT CNT", t_unit, t_unit_cnt, file=sys.stderr)
+            print("//", dirty_offset, "-->", tm.offset + t_unit_cnt * t_unit, file=sys.stderr)
 
     ret = aligned_offset
     if raw:
@@ -375,7 +377,7 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
             if ret >= int_tm_f_offset:
                 ret = max(int_tm_p_offset, int_tm_f_offset - 1)
             if int_tm_f_offset <= int_tm_p_offset:
-                print_with_pended(f"Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with overlapping integer offset {int_tm_p_offset} and {int_tm_f_offset}")
+                print_with_pended(f"// Warning: time {aligned_offset} is between timing points at {tm_p_offset} and {tm_f_offset}, with overlapping integer offset {int_tm_p_offset} and {int_tm_f_offset}", file=sys.stderr)
 
     return ret
    
@@ -405,7 +407,7 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
     assert isinstance(cmd, TjaCmd)
 
     if debug_mode:
-        print_with_pended("handle cmd", cmd, file=sys.stderr)
+        print_with_pended("// handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
     if cmd.name == DELAY:
@@ -419,7 +421,7 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
         tm.mspb = abs(T_MINUTE / tm.bpm)
     elif cmd.name == MEASURE: # processed before notes
         if len(bar_data) != 0:
-            print_with_pended("Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
+            print_with_pended("// Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
             get_last_red_tm(TimingPoints).beats = cmd.args[0]
         else:
             get_or_create_curr_red_tm().beats = cmd.args[0]
@@ -439,7 +441,7 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
         tm = get_or_create_curr_tm()
         tm.hidefirst = tm.hidefirst.add_barline()
     elif ('#'+cmd.name) not in unknowns:
-        print_with_pended(f"Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
+        print_with_pended(f"// Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
         unknowns.add('#'+cmd.name)
 
 @dataclass
@@ -464,7 +466,7 @@ def add_a_note(snd, offset):
     if osu_type in (SLIDER_END, SPINNER_END):
         lasting_note = None
     if debug_mode:
-        print_with_pended(HitObjects[-1], file=sys.stderr)
+        print_with_pended(f"// {HitObjects[-1]}", file=sys.stderr)
 
 def create_new_tm(has_red: bool = False, last_tm: Optional[OsuTimingPoint] = None, last_red_tm: Optional[OsuTimingPoint] = None):
     if last_tm is None:
@@ -486,7 +488,7 @@ def create_new_tm(has_red: bool = False, last_tm: Optional[OsuTimingPoint] = Non
     if has_red:
         tm.redtm = tm
     if debug_mode:
-        print_with_pended("CREATE NEW TM", tm, file=sys.stderr)
+        print_with_pended("// CREATE NEW TM", tm, file=sys.stderr)
     
     TimingPoints.append(tm)
     return tm
@@ -505,7 +507,7 @@ def get_or_create_curr_red_tm():
 
 def get_t_unit(tm: OsuTimingPoint, tot_note):
     if debug_mode:
-        print_with_pended(tm.bpm, tot_note, file=sys.stderr)
+        print_with_pended("//", tm.bpm, tot_note, file=sys.stderr)
     return tm.beats * T_MINUTE / (tm.bpm * tot_note)
 
 def handle_a_bar():
@@ -523,7 +525,7 @@ def handle_a_bar():
             tot_note += 1
 
     if debug_mode:
-        print_with_pended("TOT_NOTE", tot_note, file=sys.stderr)
+        print_with_pended("// TOT_NOTE", tot_note, file=sys.stderr)
         pure_data = [x for x in bar_data if isinstance(x, str) and x[0].isdigit()]
         p1= "%6d %2.1f %2d %s" % (int(curr_time), \
                 get_last_red_tm(TimingPoints).beats, len(pure_data), \
@@ -531,7 +533,7 @@ def handle_a_bar():
 
         p2= "%s %s" % (repr(get_last_red_tm(TimingPoints).bpm), \
                 repr(get_t_unit(get_last_red_tm(TimingPoints), max(1, tot_note)) * max(1, tot_note)))
-        print_with_pended(p1, file=sys.stderr)
+        print_with_pended(f"// {p1}", file=sys.stderr)
 
     #debug
     last_debug = curr_time
@@ -550,7 +552,7 @@ def handle_a_bar():
                 if data != "0":
                     add_a_note(data, curr_time)
                     if print_each_note:
-                        print_with_pended(note_cnt, data, curr_time,
+                        print_with_pended("//", note_cnt, data, curr_time,
                             bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(TimingPoints), tot_note),
                             get_t_unit(get_last_red_tm(TimingPoints), tot_note),
                             file=sys.stderr)
@@ -560,7 +562,7 @@ def handle_a_bar():
     bar_data = [] 
     
     if print_each_note:
-        print_with_pended("after bar, curr_time= %f", curr_time, file=sys.stderr)
+        print_with_pended(f"// after bar, curr_time= {curr_time}", file=sys.stderr)
 
 def handle_note(line):
     global bar_data
@@ -570,7 +572,7 @@ def handle_note(line):
         elif ch == ",":
             handle_a_bar()
         elif not ch.isspace():
-            print_with_pended(f"Warning: Invalid TJA note symbol {repr(ch)} ignored", file=sys.stderr)
+            print_with_pended(f"// Warning: Invalid TJA note symbol {repr(ch)} ignored", file=sys.stderr)
 
 def write_fmt_ver_str(fout: TextIO) -> None:
     print("osu file format v14", file=fout)
@@ -891,7 +893,7 @@ def write_HitObjects(fout: TextIO) -> None:
         beg_offset = get_real_offset(ho.offset)
         if int(beg_offset) != int(ho.offset):
             if debug_mode:
-                print_with_pended("OFFSET FIXED", int(beg_offset), int(ho.offset), file=sys.stderr)
+                print_with_pended("// OFFSET FIXED", int(beg_offset), int(ho.offset), file=sys.stderr)
         if ho.type == CIRCLE:
             assert lasting_note is None, "this is abnormal"
             res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type, ho.sound)))
@@ -975,4 +977,4 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        input("Done. Press the Enter key to exit...")
+        input("// Done. Press the Enter key to exit...")

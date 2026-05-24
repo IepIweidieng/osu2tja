@@ -36,7 +36,7 @@ Tool created by @SamLangTen
 ### Usage
 
 ```bash
-python osz2tja.py [input_folder] [output_folder]
+python osz2tja.py [input_path] [output_path]
 ```
 
 Example:
@@ -51,14 +51,21 @@ or
 python osz2tja.py a_folder b_folder
 ```
 
-- `[input_folder]` is where your `.osz` files are located. If omited, defaults to `Songs` in the same directory as `osz2tja.py`.
-- `[output_folder]` is where the converted `.tja` files and audio files will be saved. If omitted, defaults to `Output` in the same directory as `osz2tja.py`.
+or
 
-osz2tja will create a folder in `[output_folder]` for each generated `.tja` file.
+```bash
+python osz2tja.py song.osz song.tja
+```
+
+- `[input_path]` is the `.osz` file or `.osu` directory to convert, or where your `.osz` files or `.osu` directories are located. If omited, defaults to `Songs` in the same directory as `osz2tja.py`.
+- `[output_path]` is the `.tja` file to save, or where the converted `.tja` files will be saved. If omitted, defaults to `Output` in the same directory as `osz2tja.py`.
+  - If `[output_path]` is the `.tja` file to save, osz2tja will try to generate all `.tja` file with the given path, with suffix added if necessary.
+  - Otherwise, osz2tja will create a folder in `[output_path]` for each generated `.tja` file.
+  - Resource files are saved into the same directory as each generated `.tja` file.
 
 ### Features
 
-- **Batch conversion** of `.osz` files to `.tja` files. (@MoshirMoshir)
+- **Batch or (new) individual conversion** of `.osz` files or (new) `.osu` directories to `.tja` files. (@MoshirMoshir)
 - Automatically maps osu! difficulties (up to 5 per `.tja` file) to TJA **Edit** (Taiko: Inner/Ura Oni or Extra Extreme), **Oni** (Taiko: Extreme), **Hard**, **Normal**, and **Easy** difficulties. (@MoshirMoshir; improved to 5), (improved) considering osu! difficulty names.
 - Beatmaps with **more than 5 difficulties** are split into multiple `.tja` files (e.g., `title - 1`, `title - 2`). (@MoshirMoshir; improved to suffix only when necessary)
 - Beatmaps with **multiple song audio files** (unrankable but seen in loved beatmaps) or **multiple game modes** are also split into multiple `.tja` files. (new)
@@ -71,7 +78,7 @@ Tool created by @MoshirMoshir
 ### Usage
 
 ```bash
-python tja2osz.py [input_folder] [output_folder]
+python tja2osz.py [input_path] [output_path]
 ```
 
 Example:
@@ -86,14 +93,21 @@ or
 python tja2osz.py a_folder b_folder
 ```
 
-- `[input_folder]` is where your `.tja` files are located (can be in any inner directories). If omitted, defaults to `Songs` in the same directory as `tja2osz.py`.
-- `[output_folder]` is where the converted `.osu` files and audio files will be saved. If omitted, defaults to `Output` in the same directory as `tja2osz.py`.
+or
 
-tja2osz will create a folder in `[output_folder]` for each processed `.tja` file. This folder will contain converted `.osu` files and audio file. tja2osz will also create an `.osz` file in `[output_folder]` for these `.osu` files.
+```bash
+python tja2osz.py song.tja song.osz
+```
+
+- `[input_path]` is the `.tja` file to convert, or where your `.tja` files are located (can be in any inner directories). If omitted, defaults to `Songs` in the same directory as `tja2osz.py`.
+- `[output_path]` is the `.osz` file to save, or where the converted `.osu` files and resource files will be saved. If omitted, defaults to `Output` in the same directory as `tja2osz.py`.
+  - If `[output_path]` is the `.osz` file to save, tja2osz will create a folder named after the `.osz` file as the folder for every processed `.tja` file.
+  - Otherwise, tja2osz will create a folder in `[output_path]` for each processed `.tja` file.
+  - The folder for each processed `.tja` file will contain converted `.osu` files and resource files. tja2osz will also create an `.osz` file from this folder.
 
 ### Features
 
-- **Batch conversion** of `.tja` files to `.osz` files. (new)
+- **Batch or individual conversion** of `.tja` files to `.osz` files. (new)
 - Automatically split each TJA difficulty, player-side, and each main branch route as a separate `.osu` difficulty file. (fixed)
 - **Automatically copy** song audio, background image, and other files used by the chart (new)
 

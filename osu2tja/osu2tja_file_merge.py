@@ -130,12 +130,12 @@ def get_best_difftypes(diffranks: List[float]) -> List[int]:
 FnameDiffrankLevel = Tuple[str, Optional[float], Optional[Union[int, float]]]
 
 # return number of .tja file generated
-def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optional[str] = None, target_path: Optional[str] = None,
+def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optional[str] = None, root_path: str = "", target_path: Optional[str] = None,
     extract_file: Callable[[str, str], Any] = copy2, open_file: Callable[[str], TextIO] = open,
     ) -> int:
     osu_infos_by_song: Dict[Tuple[str, int], List] = {}
     for filename, diffrank, level in fname_diffrank_levels:
-        with open_file(filename) as fp:
+        with open_file(os.path.join(root_path, filename)) as fp:
             osu_info = extract_osu_file_info(fp)
         osu_info["filename"] = filename
         osu_info["audio"] = osu_info["audio"] or ""
@@ -147,10 +147,19 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
         osu_infos_by_song.setdefault((osu_info["audio"], mode_group), []).append(osu_info)
 
     osu_info_first = next(iter(osu_infos_by_song.values()))[0]
-    title = osu_info_first["title"] # Use the title of the first map for naming
-    title_for_path = ''.join((
-        ch if ch not in bad_chars_for_path else '_'
-        for ch in osu_info_first["title_ascii"]))
+
+    # get base tja name
+    will_create_folder = True
+    tja_name_base = None
+    if target_path is not None and (os.path.isfile(target_path) or not os.path.exists(target_path)):
+        target_path_noext, target_ext = os.path.splitext(target_path)
+        if target_ext.lower() == ".tja":
+            target_path, tja_name_base = os.path.dirname(target_path_noext), os.path.basename(target_path_noext)
+            will_create_folder = False
+    if tja_name_base is None:
+        tja_name_base = ''.join((
+            ch if ch not in bad_chars_for_path else '_'
+            for ch in osu_info_first["title_ascii"]))
 
     will_split_tja = (
         len(osu_infos_by_song) > 1
@@ -158,6 +167,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
     )
 
     n_tjas = 0
+    n_tja_shift = 0
     for (song_audio, game_mode_group), osu_infos in osu_infos_by_song.items():
         mixed_mode = False
         first_mode = None
@@ -175,20 +185,29 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
 
             # 1 directory per .tja file for maximum compatibility
             n_tjas += 1
-            folder_name = f"{title_for_path} - {n_tjas}" if will_split_tja else title_for_path
+            get_tja_name = lambda: f"{tja_name_base} - {n_tjas + n_tja_shift}" if will_split_tja else tja_name_base
+            tja_name = get_tja_name()
 
             # Extract audio first
             if target_path is None:
                 song_audio_tja = storage_path = None
             else:
-                storage_path = path.join(target_path, folder_name)
+                if not will_create_folder: # prevent overriding TJA due to different song
+                    while os.path.exists(os.path.join(target_path, f"{tja_name}.tja")):
+                        if not will_split_tja:
+                            will_split_tja = True
+                        else:
+                            n_tja_shift += 1
+                        tja_name = get_tja_name()
+
+                storage_path = path.join(target_path, tja_name) if will_create_folder else target_path
                 os.makedirs(storage_path, exist_ok=True)
                 ext, audio_name_ogg, audio_path_ogg = get_ogg_path(storage_path, song_audio)
                 if os.path.exists(audio_path_ogg):
                     song_audio_tja = audio_name_ogg
                 else:
                     try:
-                        extract_file(song_audio, storage_path)
+                        extract_file(os.path.join(root_path, song_audio), storage_path)
                         song_audio_tja = convert_to_ogg(storage_path, song_audio)
                     except (KeyError, FileNotFoundError):
                         print(f"// Warning: song audio `{song_audio}` not found. Neither copied nor converted.", file=sys.stderr)
@@ -200,7 +219,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
             if storage_path is None:
                 tja_fname = tja_fpath = None
             else:
-                tja_fname = f"{folder_name}.tja"
+                tja_fname = f"{tja_name}.tja"
                 tja_fpath = path.join(storage_path, tja_fname)
                 if osus_name is not None:
                     print(f"// Converting `{osus_name}` to `{tja_fname}` ...", end="", flush=True)
@@ -221,7 +240,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
             head_sync_main_printed = False
             for diff, info in zip(difficulties, reversed(selected_infos)):
                 try:
-                    with open_file(info["filename"]) as diff_fp:
+                    with open_file(os.path.join(root_path, info["filename"])) as diff_fp:
                         level = info["difficulty_tja"] if info["difficulty_tja"] is not None else info["difficulty"]
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff], rescs = (
                             osu2tja(diff_fp, diff, level, song_audio_tja, mixed_mode)
@@ -237,7 +256,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
                 except Exception:
                     for line in traceback.format_exc().splitlines():
                         print_with_pended(f"// {line}", file=sys.stderr)
-                    print(f"// Error processing {diff} [{info['version']}] difficulty of `{folder_name}`. Continued.", file=sys.stderr)
+                    print(f"// Error processing {diff} [{info['version']}] difficulty of `{tja_name}`. Continued.", file=sys.stderr)
 
             # Save .tja file
             def write_file(f: TextIO) -> None:
@@ -274,7 +293,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
             if storage_path is not None:
                 for rfname, rtype in resources.items():
                     try:
-                        extract_file(rfname, storage_path)
+                        extract_file(os.path.join(root_path, rfname), storage_path)
                     except (KeyError, FileNotFoundError):
                         print_with_pended(f"// Warning: Referenced {rtype} file `{rfname}` not found. Not copied.", file=sys.stderr)
 

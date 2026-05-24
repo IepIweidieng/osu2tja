@@ -197,9 +197,9 @@ def divide_branch(path_tja: str, dir_out: str) -> List[str]:
     return file_list
 
 
-def tja2osus(fpath_tja: str, target_path: str, tmp_path: str) -> None:
-    dirname_dest, ext = os.path.splitext(os.path.basename(fpath_tja))
-    dir_tmp = os.path.join(tmp_path, dirname_dest)
+def tja2osus(fpath_tja: str, target_root: str, tmp_root: str, fname: str = "") -> None:
+    dirname_dest, ext = os.path.splitext(os.path.basename(fname or fpath_tja))
+    dir_tmp = os.path.join(tmp_root, dirname_dest)
     os.makedirs(dir_tmp, exist_ok=True)
     all_file_list = []
     print(f"Splitting `{fpath_tja}` ...", end="", flush=True)
@@ -227,7 +227,7 @@ def tja2osus(fpath_tja: str, target_path: str, tmp_path: str) -> None:
 
     resources: Dict[str, str] = {}
 
-    dir_out = os.path.join(target_path, dirname_dest)
+    dir_out = os.path.join(target_root, dirname_dest)
     os.makedirs(dir_out, exist_ok=True)
     for fname_tja_i in all_file_list:
         fpath_tja_i = os.path.join(dir_tmp, fname_tja_i)

@@ -35,7 +35,7 @@ def get_style(str_: bytes) -> Optional[int]:
 def divide_diff(path_tja: str, dir_out: str) -> List[str]:
     assert isinstance(path_tja, str)
     fname_base, ext = os.path.splitext(os.path.basename(path_tja))
-    assert ext == ".tja"
+    assert ext.lower() == ".tja"
 
     fnames_by_course: Dict[Tuple[str, int, int], List[str]] = {}
     course = "Oni"
@@ -129,7 +129,7 @@ def divide_diff(path_tja: str, dir_out: str) -> List[str]:
 def divide_branch(path_tja: str, dir_out: str) -> List[str]:
     assert isinstance(path_tja, str)
     fname, ext = os.path.splitext(os.path.basename(path_tja))
-    assert ext == ".tja"
+    assert ext.lower() == ".tja"
 
     try:
         fobj = open(path_tja, "rb")

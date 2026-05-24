@@ -18,7 +18,8 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
 
     with ZipFile(osus_fpath, "r") as osu_zip:
         osus_fname = os.path.basename(osus_fpath)
-        osu_files: List[FnameDiffrankLevel] = [(filename, None, None) for filename in osu_zip.namelist() if filename.endswith(".osu")]
+        osu_files: List[FnameDiffrankLevel] = [(filename, None, None)
+            for filename in osu_zip.namelist() if filename.lower().endswith(".osu")]
         if not osu_files:
             raise ValueError(f"No .osu files found in {osus_fpath}")
         osus2tja(osu_files, osus_name=osus_fname, target_path=target_path,
@@ -28,7 +29,7 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
 def batch_convert_osz2tja(input_folder: str, output_folder: str):
     skipped_files = []
     for filename in os.listdir(input_folder):
-        if filename.endswith(".osz"):
+        if filename.lower().endswith(".osz"):
             source_path = path.join(input_folder, filename)
             try:
                 convert_osz2tja(source_path, output_folder)
@@ -57,7 +58,7 @@ def batch_convert_tja2osz(input_folder: str, output_folder: str, tmp_folder: str
         for filename in names:
             path_tja = os.path.join(dirpath, filename)
             fname, ext = os.path.splitext(filename)
-            if ext != ".tja":
+            if ext.lower() != ".tja":
                 continue
             try:
                 dir_out = convert_tja2osz(path_tja, output_folder, tmp_folder, fname)

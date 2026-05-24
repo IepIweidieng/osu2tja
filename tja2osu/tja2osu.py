@@ -115,7 +115,7 @@ SCROLL = "SCROLL"
 def check_unsupported(filename):
     return
     assert isinstance(filename, str)
-    assert filename.endswith(".tja"), "filename should ends with .tja"
+    assert filename.lower().endswith(".tja"), "filename should ends with .tja"
     try: fobj = open(filename, "rb")
     except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
@@ -168,7 +168,7 @@ def get_meta_data(filename):
     global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
     global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
     assert isinstance(filename, str)
-    assert filename.endswith(".tja"), "filename should ends with .tja"
+    assert filename.lower().endswith(".tja"), "filename should ends with .tja"
     try: fobj = open(filename, "rb")
     except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
@@ -932,7 +932,7 @@ def write_HitObjects(fout: TextIO) -> None:
 def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
     init_globals()
     assert isinstance(filename, str)
-    assert filename.endswith(".tja"), "filename should ends with .tja"
+    assert filename.lower().endswith(".tja"), "filename should ends with .tja"
     check_unsupported(filename)
 
     # real work

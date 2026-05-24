@@ -103,7 +103,7 @@ tja2osz will create a folder in `[output_folder]` for each processed `.tja` file
 
 Tool created by @delguoqing
 
-- Input (`.osu`) (extracted from `.osz` by osz2tja):
+- Input (`.osu` files) (extracted from `.osz` by osz2tja):
   - [x] osu file format v3&ndash;14, v128 (those tested; warns and continues to process for other versions) (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] taiko mode
@@ -188,7 +188,7 @@ Tool created by @delguoqing
 
 Tool created by @delguoqing
 
-- Output (`.osu`) (packed to song folder and `.osz` by tja2osz):
+- Output (`.osu` files) (packed to song folder and `.osz` by tja2osz):
   - [x] osu file format v14 (improved)
   - [x] Encoding: UTF-8 (without BOM)
   - [x] Floating number precision: Python builtin `float` (IEEE 754 binary64) precision, (improved) output simpliest decimal without digit count limits.

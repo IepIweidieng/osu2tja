@@ -139,7 +139,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
             osu_info = extract_osu_file_info(fp)
         osu_info["filename"] = filename
         osu_info["audio"] = osu_info["audio"] or ""
-        osu_info["mode"] = osu_info["mode"] or 0
+        osu_info["mode"] = osu_info.get("mode") or 0
         osu_info["difficulty_tja"] = level # internal field
         osu_info["diffrank"] = diffrank
         assert type(osu_info["audio"]) == str and type(osu_info["mode"]) == int

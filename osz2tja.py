@@ -204,7 +204,7 @@ def convert_osz2tja(osus_fpath: str, target_path: str) -> None:
             for diff, info in zip(difficulties, reversed(selected_infos)):
                 try:
                     with TextIOWrapper(osu_zip.open(info["filename"]), encoding="utf-8") as diff_fp:
-                        level = int(info["difficulty"])
+                        level = info["difficulty"]
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff], rescs = (
                             osu2tja(diff_fp, diff, level, song_audio_tja)
                         )

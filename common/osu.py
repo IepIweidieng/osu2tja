@@ -3,7 +3,7 @@ from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum
 import math
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence, TypeVar, Union, cast
 
 OSU_VER_STR_PREFIX = "osu file format v"
 
@@ -163,14 +163,17 @@ diffrank_to_name: Dict[float, Sequence[str]] = {
     4.5: ("extreme", "hell", "deluge", "leggendaria", "hvn", "vvd", "xcd", "re:master", "ultima", "world's", "lunatic", "glitch", "crash"),
 }
 
+T = TypeVar('T', bound=Optional[float])
 
-def get_diffrank_by_name(name: Optional[str]) -> float:
+def get_diffrank_by_name(name: Optional[str], default: T = 3, allow_num: bool = True) -> T:
     if name is not None:
-        try:
-            return float(name)
-        except ValueError:
-            words = set(name.lower().split())
-            for rank, keywords in diffrank_to_name.items():
-                if any(((kw in words) for kw in keywords)):
-                    return rank
-    return 3
+        if allow_num:
+            try:
+                return cast(T, float(name))
+            except ValueError:
+                pass
+        words = set(name.lower().split())
+        for rank, keywords in diffrank_to_name.items():
+            if any(((kw in words) for kw in keywords)):
+                return cast(T, rank)
+    return default 

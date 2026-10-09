@@ -176,7 +176,7 @@ def get_timing_point(G: "Global", str, prev_timing_point: Optional[OsuTimingPoin
         offset = float(offset),  # time
         offset_raw = float(offset),
         sevol = float(sevol),
-        ggt = ((effects & ETimingFxOsu.GGT) != 0),
+        ggt = bool(effects & ETimingFxOsu.GGT),
     )
     if uninherited: # BPM change
         ret.mspb = abs(float(rawbpmv))

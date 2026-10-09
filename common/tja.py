@@ -1,8 +1,60 @@
 from dataclasses import dataclass
+from enum import Enum
 import re
 from typing import Generic, Optional, OrderedDict, Sequence, Tuple, TypeVar, Union, cast
 
 Str = TypeVar('Str', str, bytes)
+
+
+class EHitTypeTja(Enum):
+    HIT = '1'
+    RENDA = '5'
+    BALLOON = '7'
+
+class EHitSoundTja(Enum):
+    DON = '1'
+    KATSU = '2'
+    KADON = 'G'
+    CLAP = '4'
+
+class ENoteTja(Enum):
+    NONE = '0'
+
+    DON = '1'
+    KATSU = '2'
+    DON_DAI = '3'
+    KATSU_DAI = '4'
+    DON_HAND = 'A'
+    KATSU_HAND = 'B'
+    KADON = 'G'
+
+    BOMB = 'C'
+    ADLIB = 'F'
+
+    RENDA = '5'
+    RENDA_DAI = '6'
+    RENDA_CLAP = 'H'
+    RENDA_PA = 'I'
+
+    BALLOON = '7'
+    IMO = '9'
+    FUZE = 'D'
+
+    END = '8'
+
+    hit_type = (DON, KATSU, DON_DAI, DON_HAND, KATSU_DAI, KATSU_HAND, KADON)
+    renda_type = (RENDA, RENDA_DAI, RENDA_CLAP, RENDA_PA)
+    balloon_type = (BALLOON, IMO, FUZE)
+
+    def is_hit_type(self) -> bool:
+        return self.value in ENoteTja.hit_type.value
+
+    def is_renda_type(self) -> bool:
+        return self.value in ENoteTja.renda_type.value
+
+    def is_balloon_type(self) -> bool:
+        return self.value in ENoteTja.balloon_type.value
+
 
 # guess str
 ENCODINGS_KNOWN = ["utf-8-sig", "gbk", "shift-jis", "big5"]

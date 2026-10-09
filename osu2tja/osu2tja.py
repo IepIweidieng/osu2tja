@@ -1,10 +1,11 @@
 # sys.path hack
+from enum import Enum, Flag, auto
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.osu import OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
-from common.tja import get_course_by_number
+from common.osu import EHitTypeOsu, EHitSoundOsu, ETimingFxOsu, OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
+from common.tja import ENoteTja, get_course_by_number
 from common.utils import print_with_pended
 
 from bisect import bisect_left, bisect_right
@@ -34,23 +35,6 @@ GAMEMODE_TO_STR = {
     GAMEMODE_MANIA: "osu!mania",
 }
 
-# osu timing effects consts
-OSU_TMFX_GGT = 1 << 0
-OSU_TMFX_HIDEFIRST = 1 << 3
-
-# osu note type consts
-OSU_NOTE_CIRCLE = 1 << 0
-OSU_NOTE_SLIDER = 1 << 1
-OSU_NOTE_NC = 1 << 2
-OSU_NOTE_SPINNER = 1 << 3
-OSU_NOTE_HOLD = 1 << 7
-
-# osu hitsound consts
-HITSND_NORMAL = 1 << 0
-HITSND_WHISTLE = 1 << 1
-HITSND_FINISH = 1 << 2
-HITSND_CLAP = 1 << 3
-
 # osu event type consts
 OSU_EVENT_BG = '0'
 OSU_EVENT_VIDEO = 'Video'
@@ -62,18 +46,6 @@ INT_TO_OSU_EVENT = {
     2: OSU_EVENT_BREAK,
 }
 
-# tja onp consts
-ONP_NONE = '0'
-ONP_DON = '1'
-ONP_KATSU = '2'
-ONP_DON_DAI = '3'
-ONP_KATSU_DAI = '4'
-ONP_RENDA = '5'
-ONP_RENDA_DAI = '6'
-ONP_BALLOON = '7'
-ONP_END = '8'
-ONP_IMO = '9'
-ONP_KADON = 'G'
 
 # tja command formatter
 FMT_SCROLLCHANGE = lambda x: f'#SCROLL {repr(x)}'
@@ -197,14 +169,14 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
     beats = ps[2] if len(ps) > 2 else '4'
     sevol = ps[5] if len(ps) > 5 else '100'
     uninherited = int(ps[6]) if len(ps) > 6 else float(rawbpmv) > 0
-    effects = int(ps[7] if len(ps) > 7 else '0')
+    effects = ETimingFxOsu(int(ps[7] if len(ps) > 7 else '0'))
 
     # fill a timing point dict
     ret = OsuTimingPoint(
         offset = float(offset),  # time
         offset_raw = float(offset),
         sevol = float(sevol),
-        ggt = ((effects & OSU_TMFX_GGT) != 0),
+        ggt = ((effects & ETimingFxOsu.GGT) != 0),
     )
     if uninherited: # BPM change
         ret.mspb = abs(float(rawbpmv))
@@ -212,7 +184,7 @@ def get_timing_point(str, prev_timing_point: Optional[OsuTimingPoint] = None) ->
         ret.beats = abs(int(beats)) # measure change
         ret.beat_res = get_beat_res(ret.mspb)
         ret.scroll = math.copysign(1.0, float(rawbpmv))
-        ret.hidefirst = EHideFirst.TO_UNHIDE if (effects & OSU_TMFX_HIDEFIRST) else EHideFirst.SHOWN
+        ret.hidefirst = EHideFirst.TO_UNHIDE if (effects & ETimingFxOsu.HIDEFIRST) else EHideFirst.SHOWN
         ret.redtm = ret
     else: # SCROLL speed change
         assert prev_timing_point is not None
@@ -315,25 +287,25 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
     return ret
 
 
-def get_slider_sound(str):
+def get_slider_sound(str) -> EHitSoundOsu:
     ps = str.split(',')
     reverse_cnt = int(ps[6])
     if len(ps) > 8:
-        return [int(x) for x in ps[8].split('|')]
+        return [EHitSoundOsu(int(x)) for x in ps[8].split('|')]
     else:
-        return [int(ps[4])] * (reverse_cnt + 1)
+        return [EHitSoundOsu(int(ps[4]))] * (reverse_cnt + 1)
 
 
-def get_hitnote_type(sound: int, column: int):
-    is_dai = bool(sound & HITSND_FINISH)
+def get_hitnote_type(sound: EHitSoundOsu, column: int):
+    is_dai = bool(sound & EHitSoundOsu.FINISH)
     if column_count <= 1: # Purely keysounded
-        is_katsu = bool(sound & (HITSND_CLAP | HITSND_WHISTLE))
+        is_katsu = bool(sound & (EHitSoundOsu.CLAP | EHitSoundOsu.WHISTLE))
     else: # Donkey Konga (KD) / Taiko (KDDK) layout
         n_cols_ka_l = int(math.ceil(column_count / 4))
         n_cols_ka_r = int(column_count / 4)
         is_katsu = (column < n_cols_ka_l or column_count - 1 - column < n_cols_ka_r)
-    return ((ONP_KATSU_DAI if is_katsu else ONP_DON_DAI) if is_dai
-        else ONP_KATSU if is_katsu else ONP_DON)
+    return ((ENoteTja.KATSU_DAI if is_katsu else ENoteTja.DON_DAI) if is_dai
+        else ENoteTja.KATSU if is_katsu else ENoteTja.DON)
 
 
 # https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Taiko/Beatmaps/TaikoBeatmapConverter.cs
@@ -433,7 +405,7 @@ def should_convert_slider_to_hits(tm: OsuTimingPoint, curve_len: float, reverse_
 
 @dataclass
 class TjaTimedNote:
-    type: str
+    type: ENoteTja
     offset: float
     offset_end: float
     column: int
@@ -454,16 +426,16 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     column = (min(max(math.floor(float(ps[0]) * column_count / 512), 0), column_count - 1)
         if gamemode_idx == GAMEMODE_MANIA
         else 0)
-    type = int(ps[3])
-    sound = int(ps[4])
+    type = EHitTypeOsu(int(ps[3]))
+    sound = EHitSoundOsu(int(ps[4]))
     offset_raw = float(ps[2])
     offset = get_real_offset(offset_raw, raw=True)
 
-    if type & OSU_NOTE_CIRCLE:  # circle
+    if type & EHitTypeOsu.CIRCLE:  # circle
         ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, offset, column, offset_raw, offset_raw))
         if round(offset_raw) in inspect_ms:
             print_with_pended(f"// [INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
-    elif type & OSU_NOTE_SLIDER:  # slider, reverse??
+    elif type & EHitTypeOsu.SLIDER:  # slider, reverse??
         tm = get_tm_at(timingpoints, offset_raw, raw=True)
         curve_len = float(ps[7])
         reverse_cnt = int(ps[6])
@@ -489,16 +461,16 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         else:
             offset_end_raw = offset_raw + taiko_duration
             offset_end = get_real_offset(offset_end_raw, raw=True)
-            if sound & HITSND_FINISH:
-                ret.append(TjaTimedNote(ONP_RENDA_DAI, offset, offset_end, column, offset_raw, offset_end_raw))
+            if sound & EHitSoundOsu.FINISH:
+                ret.append(TjaTimedNote(ENoteTja.RENDA_DAI, offset, offset_end, column, offset_raw, offset_end_raw))
             else:
-                ret.append(TjaTimedNote(ONP_RENDA, offset, offset_end, column, offset_raw, offset_end_raw))
-            ret.append(TjaTimedNote(ONP_END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
+                ret.append(TjaTimedNote(ENoteTja.RENDA, offset, offset_end, column, offset_raw, offset_end_raw))
+            ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
 
         if round(offset_raw) in inspect_ms:
             print_with_pended(f"// [INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
-    elif type & OSU_NOTE_HOLD:  # hold, converted to circle because overlapping notes are not supported
+    elif type & EHitTypeOsu.HOLD:  # hold, converted to circle because overlapping notes are not supported
         tmr = get_red_tm_at(timingpoints, offset_raw, raw=True)
         offset_end = get_real_offset(float(ps[5].split(':', 1)[0]), raw=True)
         taiko_duration = offset_end - offset
@@ -516,14 +488,14 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             if almost_equals(tick_spacing, 0):
                 break
 
-    elif type & OSU_NOTE_SPINNER:  # spinner
+    elif type & EHitTypeOsu.SPINNER:  # spinner
         offset_end_raw = float(ps[5])
         offset_end = get_real_offset(offset_end_raw, raw=True)
-        if sound & HITSND_FINISH:
-            ret.append(TjaTimedNote(ONP_IMO, offset, offset_end, column, offset_raw, offset_end_raw))
+        if sound & EHitSoundOsu.FINISH:
+            ret.append(TjaTimedNote(ENoteTja.IMO, offset, offset_end, column, offset_raw, offset_end_raw))
         else:
-            ret.append(TjaTimedNote(ONP_BALLOON, offset, offset_end, column, offset_raw, offset_end_raw))
-        ret.append(TjaTimedNote(ONP_END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
+            ret.append(TjaTimedNote(ENoteTja.BALLOON, offset, offset_end, column, offset_raw, offset_end_raw))
+        ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
         # how many hit will break a ballon
         global balloons
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
@@ -754,7 +726,7 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
 
         if delta_divs > 0:
             # Insert a note
-            note_type = ONP_NONE
+            note_type = ENoteTja.NONE
             offset_curr = offset
             while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
                 note = bar_data[idx_bar_data]
@@ -768,60 +740,60 @@ def write_bar_data(tm: OsuTimingPoint, bar_data: List[TjaTimedNote], begin, end,
                         break
                     columns.add(note_i.column)
                     notes = {note.type, note_i.type}
-                    if notes.issubset({ONP_DON, ONP_DON_DAI}):
-                        note.type = ONP_DON_DAI
-                    elif notes.issubset({ONP_KATSU, ONP_KATSU_DAI}):
-                        note.type = ONP_KATSU_DAI
-                    elif notes.issubset({ONP_DON, ONP_DON_DAI, ONP_KATSU, ONP_KATSU_DAI, ONP_KADON}):
-                        note.type = ONP_KADON
-                    elif notes.issubset({ONP_RENDA, ONP_RENDA_DAI}):
-                        note.type = ONP_RENDA_DAI
-                    elif notes.issubset({ONP_BALLOON, ONP_IMO}):
-                        note.type = ONP_IMO
+                    if notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI}):
+                        note.type = ENoteTja.DON_DAI
+                    elif notes.issubset({ENoteTja.KATSU, ENoteTja.KATSU_DAI}):
+                        note.type = ENoteTja.KATSU_DAI
+                    elif notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI, ENoteTja.KATSU, ENoteTja.KATSU_DAI, ENoteTja.KADON}):
+                        note.type = ENoteTja.KADON
+                    elif notes.issubset({ENoteTja.RENDA, ENoteTja.RENDA_DAI}):
+                        note.type = ENoteTja.RENDA_DAI
+                    elif notes.issubset({ENoteTja.BALLOON, ENoteTja.IMO}):
+                        note.type = ENoteTja.IMO
                     else:
                         break
                     idx_bar_data += 1
                     continue
 
                 # ignore straying roll ends
-                if lasting_note is None and note.type == ONP_END:
+                if lasting_note is None and note.type == ENoteTja.END:
                     continue
 
                 # complete overlapped roll
                 if lasting_note is not None and offset <= lasting_note.offset_end:
-                    note_type = ONP_END
+                    note_type = ENoteTja.END
                     offset_curr = goto_offset(offset_curr, lasting_note.offset_end)
-                    bar_strs.append(ONP_END)
+                    bar_strs.append(ENoteTja.END.value)
                     begin_of_line = False
                     lasting_note = None
                     divs += 1
                     tja_time += t_div_tja
                     offset_curr += t_div
-                    if note.type == ONP_END: # the end is for the overlapped roll
+                    if note.type == ENoteTja.END: # the end is for the overlapped roll
                         continue
 
                 # place the current start
                 note_type = note.type
                 offset_curr = goto_offset(offset_curr, offset)
-                bar_strs.append(note_type)
+                bar_strs.append(note_type.value)
                 begin_of_line = False
                 divs += 1
                 tja_time += t_div_tja
                 offset_curr += t_div
 
-                if note_type in (ONP_DON, ONP_KATSU, ONP_DON_DAI, ONP_KATSU_DAI):
+                if note_type in (ENoteTja.DON, ENoteTja.KATSU, ENoteTja.DON_DAI, ENoteTja.KATSU_DAI):
                     combo_cnt += 1
-                elif note_type in (ONP_RENDA, ONP_RENDA_DAI, ONP_BALLOON, ONP_IMO):
+                elif note_type in (ENoteTja.RENDA, ENoteTja.RENDA_DAI, ENoteTja.BALLOON, ENoteTja.IMO):
                     lasting_note = note
-                elif note_type == ONP_END:
+                elif note_type == ENoteTja.END:
                     lasting_note = None
 
             # Insert blanks (if needed)
-            if note_type == ONP_NONE and (divs_target > 1 or divs > 1):
-                bar_strs.append(note_type)
+            if note_type == ENoteTja.NONE and (divs_target > 1 or divs > 1):
+                bar_strs.append(note_type.value)
                 divs += 1
                 tja_time += t_div_tja
-            bar_strs.append("0" * int(delta_divs - 1))
+            bar_strs.append(ENoteTja.NONE.value * int(delta_divs - 1))
             begin_of_line = False
             divs += int(delta_divs - 1)
             for _ in range(int(delta_divs - 1)):

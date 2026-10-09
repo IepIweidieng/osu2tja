@@ -3,9 +3,9 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.tja import TjaCmd, convert_str, get_course_by_number, parse_tja_command, parse_tja_header
+from common.tja import ENoteTja, TjaCmd, convert_str, get_course_by_number, parse_tja_command, parse_tja_header
 from common.utils import print_with_pended
-from common.osu import T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, get_idx_tm_at, get_last_red_tm, get_last_tm, get_osu_meter, get_red_tm_at, get_tm_at
+from common.osu import T_MINUTE, EHitTypeOsu, EHitSoundOsu, ETimingFxOsu, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, get_idx_tm_at, get_last_red_tm, get_last_tm, get_osu_meter, get_red_tm_at, get_tm_at
 
 import argparse
 import codecs
@@ -234,33 +234,30 @@ def add_default_timing_point():
 
     curr_time = tm.offset
 
-CIRCLE = 1
-SLIDER = 2
-SPINNER = 12
-SLIDER_END = -SLIDER
-SPINNER_END = -SPINNER
-FORCED_END = -CIRCLE
 
-EMPTY = 0
-CLAP = 8
-FINISH = 4
-WHISTLE = 2 
+def get_osu_type(snd: Tuple[ENoteTja, str]) -> Optional[EHitTypeOsu]:
+    if not isinstance(snd, ENoteTja):
+        snd = ENoteTja(snd)
+    assert isinstance(snd, ENoteTja)
+    assert snd != ENoteTja.NONE
 
-def get_osu_type(snd):
-    assert snd != '0'
     # non-rolls: end unended roll first if exists, then emit the note
-    if snd in ('1', '2', '3', '4', 'A', 'B', 'G'): return CIRCLE if lasting_note is None else FORCED_END
+    if snd.is_hit_type():
+        return EHitTypeOsu.CIRCLE if lasting_note is None else EHitTypeOsu.FORCED_END
     # converted to empty
-    if snd in ('F', 'C'): return None if lasting_note is None else FORCED_END
+    if snd in (ENoteTja.ADLIB, ENoteTja.BOMB):
+        return None if lasting_note is None else EHitTypeOsu.FORCED_END
     # roll heads: ignore repeated roll heads (especially for special balloon bonus border)
-    if snd in ('5', '6', 'I', 'H'): return SLIDER if lasting_note is None else None
-    if snd in ('7', '9', 'D'): return SPINNER if lasting_note is None else None
+    if snd.is_renda_type():
+        return EHitTypeOsu.SLIDER if lasting_note is None else None
+    if snd.is_balloon_type():
+        return EHitTypeOsu.SPINNER if lasting_note is None else None
     # roll end and unrecognized note symbols
-    if snd == '8':
-        if lasting_note is not None and lasting_note.type == SLIDER:
-            return SLIDER_END
-        elif lasting_note is not None and lasting_note.type == SPINNER:
-            return SPINNER_END
+    if snd == ENoteTja.END:
+        if lasting_note is not None and lasting_note.type == EHitTypeOsu.SLIDER:
+            return EHitTypeOsu.SLIDER_END
+        elif lasting_note is not None and lasting_note.type == EHitTypeOsu.SPINNER:
+            return EHitTypeOsu.SPINNER_END
         print_with_pended(f"// Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
     if snd not in unknowns:
@@ -270,22 +267,26 @@ def get_osu_type(snd):
         print_with_pended(f"// Note: With unended roll-type note {lasting_note}", file=sys.stderr)
     return None
 
-def get_osu_sound(snd):
-    assert snd != '0'
-    if snd == '1': return EMPTY
-    elif snd == '2': return CLAP
-    elif snd in ('3', 'A'): return FINISH
-    elif snd in ('4', 'B'): return FINISH+CLAP
-    elif snd == 'G': return FINISH+WHISTLE+CLAP
-    elif snd == '5': return EMPTY
-    elif snd == 'I': return CLAP
-    elif snd == '6': return FINISH
-    elif snd == 'H': return FINISH+CLAP
-    elif snd == '7': return EMPTY
-    elif snd == '8': return EMPTY
-    elif snd == '9': return FINISH
-    elif snd == 'D': return CLAP
-    else: return EMPTY # empty or unknown and warned
+def get_osu_sound(snd: Union[ENoteTja, str]) -> ENoteTja:
+    if not isinstance(snd, ENoteTja):
+        snd = ENoteTja(snd)
+    assert isinstance(snd, ENoteTja)
+    assert snd != ENoteTja.NONE
+
+    if snd == ENoteTja.DON: return EHitSoundOsu.EMPTY
+    elif snd == ENoteTja.KATSU: return EHitSoundOsu.CLAP
+    elif snd in (ENoteTja.DON_DAI, ENoteTja.DON_HAND): return EHitSoundOsu.FINISH
+    elif snd in (ENoteTja.KATSU_DAI, ENoteTja.KATSU_HAND): return EHitSoundOsu.FINISH | EHitSoundOsu.CLAP
+    elif snd == ENoteTja.KADON: return EHitSoundOsu.FINISH | EHitSoundOsu.WHISTLE | EHitSoundOsu.CLAP
+    elif snd == ENoteTja.RENDA: return EHitSoundOsu.EMPTY
+    elif snd == ENoteTja.RENDA_PA: return EHitSoundOsu.CLAP
+    elif snd == ENoteTja.RENDA_DAI: return EHitSoundOsu.FINISH
+    elif snd == ENoteTja.RENDA_CLAP: return EHitSoundOsu.FINISH | EHitSoundOsu.CLAP
+    elif snd == ENoteTja.BALLOON: return EHitSoundOsu.EMPTY
+    elif snd == ENoteTja.END: return EHitSoundOsu.EMPTY
+    elif snd == ENoteTja.IMO: return EHitSoundOsu.FINISH
+    elif snd == ENoteTja.FUZE: return EHitSoundOsu.CLAP
+    else: return EHitSoundOsu.EMPTY # empty or unknown and warned
 
 
 def get_all(filename):
@@ -446,14 +447,14 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
 
 @dataclass
 class OsuHitObject:
-    type: int
-    sound: int
+    type: EHitTypeOsu
+    sound: EHitSoundOsu
     offset: float
 
 def add_a_note(snd, offset):
     global lasting_note
     (osu_type, osu_sound) = (get_osu_type(snd), get_osu_sound(snd))
-    if osu_type == FORCED_END: # end unended roll, then emit the note
+    if osu_type == EHitTypeOsu.FORCED_END: # end unended roll, then emit the note
         add_a_note('8', offset)
         add_a_note(snd, offset)
         return
@@ -461,9 +462,9 @@ def add_a_note(snd, offset):
         return
     obj = OsuHitObject(osu_type, osu_sound, offset)
     HitObjects.append(obj)
-    if osu_type in (SLIDER, SPINNER):
+    if osu_type in (EHitTypeOsu.SLIDER, EHitTypeOsu.SPINNER):
         lasting_note = obj
-    if osu_type in (SLIDER_END, SPINNER_END):
+    if osu_type in (EHitTypeOsu.SLIDER_END, EHitTypeOsu.SPINNER_END):
         lasting_note = None
     if debug_mode:
         print_with_pended(f"// {HitObjects[-1]}", file=sys.stderr)
@@ -822,13 +823,14 @@ def write_TimingPoints(fout: TextIO) -> None:
         # write
         write_queue(int(tm.offset))
         meter = get_osu_meter(tmr.beats) # convert x.x measure to incomplete measure
-        fx = tm.ggt + 8 * (not tm.hidefirst.is_barline())
+        fx = ((ETimingFxOsu.GGT if tm.ggt else ETimingFxOsu.NONE)
+            | (ETimingFxOsu.HIDEFIRST if not tm.hidefirst.is_barline() else ETimingFxOsu.NONE))
         if tm.is_redline():
             beat_dur = min(max(tmr.mspb, 6E-298), 6E+298)
-            queued_red = f"{int(tm.offset)},{beat_dur},{meter},1,0,{volume},1,{fx}"
+            queued_red = f"{int(tm.offset)},{beat_dur},{meter},1,0,{volume},1,{fx.value}"
         if not tm.is_redline() or tm.scroll != 1.0:
             beat_dur = -100 / tm.scroll
-            queued_green = f"{int(tm.offset)},{beat_dur},{meter},1,0,{volume},0,{fx}"
+            queued_green = f"{int(tm.offset)},{beat_dur},{meter},1,0,{volume},0,{fx.value}"
         # update
         tm.redtm = tmr
         tmg = tm
@@ -894,34 +896,34 @@ def write_HitObjects(fout: TextIO) -> None:
         if int(beg_offset) != int(ho.offset):
             if debug_mode:
                 print_with_pended("// OFFSET FIXED", int(beg_offset), int(ho.offset), file=sys.stderr)
-        if ho.type == CIRCLE:
+        if ho.type == EHitTypeOsu.CIRCLE:
             assert lasting_note is None, "this is abnormal"
-            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type, ho.sound)))
-        elif ho.type == SLIDER:
-            assert lasting_note is None, "this is abnormal"
-            lasting_note = ho
-        elif ho.type == SPINNER:
+            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type.value, ho.sound.value)))
+        elif ho.type == EHitTypeOsu.SLIDER:
             assert lasting_note is None, "this is abnormal"
             lasting_note = ho
-        elif ho.type == SLIDER_END:
+        elif ho.type == EHitTypeOsu.SPINNER:
+            assert lasting_note is None, "this is abnormal"
+            lasting_note = ho
+        elif ho.type == EHitTypeOsu.SLIDER_END:
             assert lasting_note is not None and \
-                    lasting_note.type == SLIDER
+                    lasting_note.type == EHitTypeOsu.SLIDER
             ln = lasting_note
             if ho.offset > ln.offset: # skip non-positive duration rolls
                 tmr = get_red_tm_at(TimingPoints, int(ln.offset))
                 tmg = get_tm_at(TimingPoints, int(ln.offset)) # green if red + green, otherwise red
                 curve_len = 100 * (ho.offset - ln.offset) * tmr.bpm  * SliderMultiplier * tmg.scroll / T_MINUTE
                 res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
-                        int(get_real_offset(ln.offset)), ln.type, ln.sound, \
+                        int(get_real_offset(ln.offset)), ln.type.value, ln.sound.value, \
                         int(CircleX+curve_len), CircleY, 1, curve_len)))
             lasting_note = None
-        elif ho.type == SPINNER_END:
+        elif ho.type == EHitTypeOsu.SPINNER_END:
             assert lasting_note is not None and \
-                    lasting_note.type == SPINNER, "this is abnormal"
+                    lasting_note.type == EHitTypeOsu.SPINNER, "this is abnormal"
             ln = lasting_note
             if ho.offset > ln.offset: # skip non-positive length rolls
                 res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln.offset)), \
-                        ln.type, ln.sound, int(get_real_offset(ho.offset)))))
+                        (ln.type | EHitTypeOsu.NC).value, ln.sound.value, int(get_real_offset(ho.offset)))))
             lasting_note = None
 
     res.sort(key=lambda x: x[0])

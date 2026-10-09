@@ -1,7 +1,7 @@
 from array import array
 from bisect import bisect_right
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, Flag
 import math
 from typing import Callable, Dict, List, Optional, Sequence, TypeVar, Union, cast
 
@@ -16,6 +16,31 @@ def osu_ver_supported(v):
 
 T_MINUTE = 60000
 
+
+class EHitTypeOsu(Flag):
+    CIRCLE = 1 << 0
+    SLIDER = 1 << 1
+    NC = 1 << 2
+    SPINNER = 1 << 3
+    HOLD = 1 << 7
+
+    # internal flags
+    END = 1 << 31 
+    FORCED_END = CIRCLE | END
+    SLIDER_END = SLIDER | END
+    SPINNER_END = SPINNER | END
+
+class EHitSoundOsu(Flag):
+    EMPTY = 0
+    NORMAL = 1 << 0
+    WHISTLE = 1 << 1
+    FINISH = 1 << 2
+    CLAP = 1 << 3
+
+class ETimingFxOsu(Flag):
+    NONE = 0
+    GGT = 1 << 0
+    HIDEFIRST = 1 << 3
 
 class EHideFirst(Enum):
     BARLINE_IN_SHOWN = -2 # TJA real bar line or #BARLINE when #BARLINEON

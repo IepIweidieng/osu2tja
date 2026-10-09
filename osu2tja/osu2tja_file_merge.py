@@ -4,9 +4,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from osu2tja.osu2tja import osu2tja, init_debug_globals, WATER_MARK
+    from osu2tja.osu2tja import osu2tja, DebugGlobal, WATER_MARK
 except ImportError:
-    from osu2tja import osu2tja, init_debug_globals, WATER_MARK
+    from osu2tja import osu2tja, DebugGlobal, WATER_MARK
 assert callable(osu2tja)
 
 from common.osu import OSU_VER_STR_PREFIX, get_diffrank_by_name
@@ -132,6 +132,7 @@ FnameDiffrankLevel = Tuple[str, Optional[float], Optional[Union[int, float]]]
 # return number of .tja file generated
 def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optional[str] = None, root_path: str = "", target_path: Optional[str] = None,
     extract_file: Callable[[str, str], Any] = copy2, open_file: Callable[[str], TextIO] = open,
+    debugGlobal: Optional[DebugGlobal] = None,
     ) -> int:
     osu_infos_by_song: Dict[Tuple[str, int], List] = {}
     for filename, diffrank, level in fname_diffrank_levels:
@@ -243,7 +244,7 @@ def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optiona
                     with open_file(os.path.join(root_path, info["filename"])) as diff_fp:
                         level = info["difficulty_tja"] if info["difficulty_tja"] is not None else info["difficulty"]
                         head_meta, head_syncs[diff], head_diffs[diff], diff_contents[diff], rescs = (
-                            osu2tja(diff_fp, diff, level, song_audio_tja, mixed_mode)
+                            osu2tja(diff_fp, diff, level, song_audio_tja, mixed_mode, debugGlobal=debugGlobal)
                         )
                         resources.update(rescs)
                         if len(head_sync_main) == 0:
@@ -316,7 +317,7 @@ def main():
         help="deprecated option intended for forcing skipping predefined integer ratio look-up (now removed) for bar length. Has no effects.")
     args = parser.parse_args()
 
-    init_debug_globals(args.debug, args.trace, args.inspect)
+    debugGlobal = DebugGlobal(show_head_info=args.debug, output_trace_info=args.trace, inspect_ms=args.inspect)
 
     # check filenames
     fname_diffrank_levels: List[FnameDiffrankLevel] = []
@@ -354,7 +355,7 @@ def main():
         print("// No valid .osu files specified.", file=sys.stderr)
         return
 
-    n_tjas = osus2tja(fname_diffrank_levels)
+    n_tjas = osus2tja(fname_diffrank_levels, debugGlobal=debugGlobal)
     if n_tjas > 1:
         print(f"// Warning: Concatenated {n_tjas} .tja files. Look for `{WATER_MARK}` for each .tja header.", file=sys.stderr)
 

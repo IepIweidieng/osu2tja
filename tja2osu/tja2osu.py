@@ -9,93 +9,80 @@ from common.osu import T_MINUTE, EHitTypeOsu, EHitSoundOsu, ETimingFxOsu, EHideF
 
 import argparse
 import codecs
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 import re
 import sys
 import traceback
 from typing import Dict, List, Optional, TextIO, Tuple, TypeVar, Union, cast
 
-chart_resources: Dict[str, str] # {'filename': 'type', ...}
 
-TimingPoints: List[OsuTimingPoint]
-HitObjects: List["OsuHitObject"]
-bar_data: List[Union[str, TjaCmd]]
-lasting_note: Optional["OsuHitObject"]
-
-def init_globals() -> None:
-    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, BPM, WAVE, OFFSET, DEMOSTART, HEADSCROLL
-    global MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL
-    global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
+@dataclass
+class Global:
     # jiro data
-    ENCODING = None
-    TITLE = "NO TITLE"
-    SUBTITLE = ""
-    ARTIST = ""
-    GENRE = []
-    BPM = 120.0
-    WAVE = None
-    OFFSET = 0.0
-    DEMOSTART = 0.0
-    HEADSCROLL = 1.0
-    MAKER = None
-    CREATOR = None
-    SONGVOL = 100.0
-    SEVOL = 100.0
-    COURSE = "Oni"
-    LEVEL = 0
-    PREIMAGE = None
-    BGIMAGE = None
-    BGMOVIE = None
-    MOVIEOFFSET = 0.0
+    ENCODING: Optional[str] = None
+    TITLE: str = "NO TITLE"
+    SUBTITLE: str = ""
+    ARTIST: str = ""
+    GENRE: List[str] = field(default_factory=list)
+    BPM: float = 120.0
+    WAVE: Optional[str] = None
+    OFFSET: float = 0.0
+    DEMOSTART: float = 0.0
+    HEADSCROLL: Union[complex, float] = 1.0
+    MAKER: Optional[str] = None
+    CREATOR: Optional[str] = None
+    SONGVOL: float = 100.0
+    SEVOL: float = 100.0
+    COURSE: str = "Oni"
+    LEVEL: float = 0
+    PREIMAGE: Optional[str] = None
+    BGIMAGE: Optional[str] = None
+    BGMOVIE: Optional[str] = None
+    MOVIEOFFSET: float = 0.0
 
-    global AudioFilename, Title, Source, Tags, Artist, Creator, Version
-    global AudioLeadIn, CountDown, SampleSet, StackLeniency, Mode, LetterboxInBreaks, PreviewTime
-    global TimingPoints, HitObjects
-    global HPDrainRate, CircleSize, OverallDifficulty, ApproachRate, SliderMultiplier, SliderTickRate, CircleX, CircleY
     # osu data
-    AudioFilename = ""
-    Title = ""
-    Source = ""
-    Tags = ["tja", "tja2osu"]
-    Artist = "Unknown Artist"
-    Creator = "unknown"
-    Version = "Oni"
-    AudioLeadIn = 0
-    CountDown = 0
-    SampleSet = "Normal"
-    StackLeniency = 0.7
-    Mode = 1
-    LetterboxInBreaks = 0
-    PreviewTime = -1
-    TimingPoints = []
-    HitObjects = []
-    HPDrainRate = 7
-    CircleSize = 5
-    OverallDifficulty = 8
-    ApproachRate = 5
-    SliderMultiplier = 1.4
-    SliderTickRate = 4
-    CircleX = 256
-    CircleY = 192
+    AudioFilename: str = ""
+    Title: str = ""
+    Source: str = ""
+    Tags: List[str] = field(default_factory=lambda: ["tja", "tja2osu"])
+    Artist: str = "Unknown Artist"
+    Creator: str = "unknown"
+    Version: str = "Oni"
+    AudioLeadIn: int = 0
+    CountDown: int = 0
+    SampleSet: str = "Normal"
+    StackLeniency: float = 0.7
+    Mode: int = 1
+    LetterboxInBreaks: int = 0
+    PreviewTime: float = -1
+    TimingPoints: List[OsuTimingPoint] = field(default_factory=list)
+    HitObjects: List["OsuHitObject"] = field(default_factory=list)
+    HPDrainRate: int = 7
+    CircleSize: int = 5
+    OverallDifficulty: float = 8
+    ApproachRate: int = 5
+    SliderMultiplier: float = 1.4
+    SliderTickRate: int = 4
+    CircleX: int = 256
+    CircleY: int = 192
 
-    global chart_resources
-    chart_resources = {}
+    chart_resources: Dict[str, str] = field(default_factory=dict) # {'filename': 'type', ...}
 
-    global has_started, curr_time, bar_data, lasting_note, unknowns
-    has_started = False
-    curr_time = 0.0
-    bar_data = []
-    lasting_note = None
-    unknowns = set()
+    has_started: bool = False
+    curr_time: float = 0.0
+    bar_data: List[Union[str, TjaCmd]] = field(default_factory=list)
+    lasting_note: Optional["OsuHitObject"] = None
+    unknowns: set = field(default_factory=set)
 
-def init_debug_globals() -> None:
-    global debug_mode, last_debug, print_each_note
-    debug_mode = False
-    last_debug = None
-    print_each_note = False
+@dataclass
+class DebugGlobal():
+    debug_mode: bool = False
+    print_each_note: bool = False
+    last_debug: Optional[float] = None
 
-init_debug_globals()
+D = DebugGlobal()
+
 
 # const_data
 BRANCHSTART = "BRANCHSTART"
@@ -164,15 +151,13 @@ def parse_tja_genre(genres: str) -> List[str]:
             res.append(genre)
     return res
 
-def get_meta_data(filename):
-    global ENCODING, TITLE, SUBTITLE, ARTIST, GENRE, WAVE, OFFSET, DEMOSTART, HEADSCROLL, MAKER, CREATOR, SONGVOL, SEVOL, COURSE, LEVEL, BPM
-    global PREIMAGE, BGIMAGE, BGMOVIE, MOVIEOFFSET
+def get_meta_data(G: Global, filename) -> None:
     assert isinstance(filename, str)
     assert filename.lower().endswith(".tja"), "filename should ends with .tja"
     try: fobj = open(filename, "rb")
     except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
-        ENCODING = "utf-8-sig"
+        G.ENCODING = "utf-8-sig"
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
     for lineno, line in enumerate(fobj):
         try:
@@ -180,32 +165,32 @@ def get_meta_data(filename):
             v = parse_tja_header(line)
             if v is None: # try metadata in comments
                 creator = line.partition(b"//created by ")[2].strip()
-                if creator: CREATOR = convert_str(creator, ENCODING)
+                if creator: G.CREATOR = convert_str(creator, G.ENCODING)
                 continue
             varg_raw = v.arg
             v.arg = rm_jiro_comment(v.arg).rstrip()
-            if v.name == b"TITLE": TITLE = convert_str(varg_raw, ENCODING)
-            elif v.name == b"SUBTITLE": SUBTITLE = convert_str(varg_raw, ENCODING)
-            elif v.name == b"ARTIST": ARTIST = convert_str(varg_raw, ENCODING)
-            elif v.name == b"GENRE": GENRE = parse_tja_genre(convert_str(varg_raw, ENCODING))
-            elif v.name == b"BPM": BPM = float(v.arg)
-            elif v.name == b"WAVE": WAVE = convert_str(v.arg, ENCODING)
-            elif v.name == b"OFFSET": OFFSET = float(v.arg)
-            elif v.name == b"DEMOSTART": DEMOSTART = float(v.arg)
-            elif v.name == b"HEADSCROLL": HEADSCROLL = parse_tja_complex(v.arg)
-            elif v.name in (b"MAKER", b"AUTHOR"): MAKER = convert_str(varg_raw, ENCODING)
-            elif v.name == b"SONGVOL": SONGVOL = float(v.arg)
-            elif v.name == b"SEVOL": SEVOL = float(v.arg)
-            elif v.name == b"COURSE": COURSE = get_course_by_number(convert_str(v.arg, ENCODING))
-            elif v.name == b"LEVEL": LEVEL = float(v.arg)
-            elif v.name in (b"PREIMAGE", b"COVER"): PREIMAGE = convert_str(v.arg, ENCODING)
-            elif v.name == b"BGIMAGE": BGIMAGE = convert_str(v.arg, ENCODING)
-            elif v.name == b"BGMOVIE": BGMOVIE = convert_str(v.arg, ENCODING)
-            elif v.name == b"MOVIEOFFSET": MOVIEOFFSET = float(v.arg)
-            elif (v.name+b':') not in unknowns:
-                line_printable = convert_str(line.removesuffix(b'\n'), ENCODING)
+            if v.name == b"TITLE": G.TITLE = convert_str(varg_raw, G.ENCODING)
+            elif v.name == b"SUBTITLE": G.SUBTITLE = convert_str(varg_raw, G.ENCODING)
+            elif v.name == b"ARTIST": G.ARTIST = convert_str(varg_raw, G.ENCODING)
+            elif v.name == b"GENRE": G.GENRE = parse_tja_genre(convert_str(varg_raw, G.ENCODING))
+            elif v.name == b"BPM": G.BPM = float(v.arg)
+            elif v.name == b"WAVE": G.WAVE = convert_str(v.arg, G.ENCODING)
+            elif v.name == b"OFFSET": G.OFFSET = float(v.arg)
+            elif v.name == b"DEMOSTART": G.DEMOSTART = float(v.arg)
+            elif v.name == b"HEADSCROLL": G.HEADSCROLL = parse_tja_complex(v.arg)
+            elif v.name in (b"MAKER", b"AUTHOR"): G.MAKER = convert_str(varg_raw, G.ENCODING)
+            elif v.name == b"SONGVOL": G.SONGVOL = float(v.arg)
+            elif v.name == b"SEVOL": G.SEVOL = float(v.arg)
+            elif v.name == b"COURSE": G.COURSE = get_course_by_number(convert_str(v.arg, G.ENCODING))
+            elif v.name == b"LEVEL": G.LEVEL = float(v.arg)
+            elif v.name in (b"PREIMAGE", b"COVER"): G.PREIMAGE = convert_str(v.arg, G.ENCODING)
+            elif v.name == b"BGIMAGE": G.BGIMAGE = convert_str(v.arg, G.ENCODING)
+            elif v.name == b"BGMOVIE": G.BGMOVIE = convert_str(v.arg, G.ENCODING)
+            elif v.name == b"MOVIEOFFSET": G.MOVIEOFFSET = float(v.arg)
+            elif (v.name+b':') not in G.unknowns:
+                line_printable = convert_str(line.removesuffix(b'\n'), G.ENCODING)
                 print_with_pended(f"// Warning: Unknown or unsupported header {line_printable}", file=sys.stderr)
-                unknowns.add(v.name+b':')
+                G.unknowns.add(v.name+b':')
         except Exception:
             for line in traceback.format_exc().splitlines():
                 print_with_pended(f"// {line}", file=sys.stderr)
@@ -216,26 +201,24 @@ MS_OSU_MUSIC_OFFSET = 15
 <https://github.com/ppy/osu/issues/24625>
 """
 
-def add_default_timing_point():
-    global curr_time
-
+def add_default_timing_point(G: Global):
     tm = OsuTimingPoint(
-        offset = -(OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET),
+        offset = -(G.OFFSET * 1000.0 + MS_OSU_MUSIC_OFFSET),
         scroll = 1.0,
         beats = 4.0,
         ggt = False,
         hidefirst = EHideFirst.SHOWN,
-        bpm = BPM,
-        mspb = abs(T_MINUTE / BPM),
+        bpm = G.BPM,
+        mspb = abs(T_MINUTE / G.BPM),
     )
     tm.redtm = tm
 
-    TimingPoints.append(tm)
+    G.TimingPoints.append(tm)
 
-    curr_time = tm.offset
+    G.curr_time = tm.offset
 
 
-def get_osu_type(snd: Union[ENoteTja, str]) -> Optional[EHitTypeOsu]:
+def get_osu_type(G: Global, snd: Union[ENoteTja, str]) -> Optional[EHitTypeOsu]:
     if not isinstance(snd, ENoteTja):
         snd = ENoteTja(snd)
     snd = cast(ENoteTja, snd)
@@ -243,31 +226,31 @@ def get_osu_type(snd: Union[ENoteTja, str]) -> Optional[EHitTypeOsu]:
 
     # non-rolls: end unended roll first if exists, then emit the note
     if snd.is_hit_type():
-        return EHitTypeOsu.CIRCLE if lasting_note is None else EHitTypeOsu.FORCED_END
+        return EHitTypeOsu.CIRCLE if G.lasting_note is None else EHitTypeOsu.FORCED_END
     # converted to empty
     if snd in (ENoteTja.ADLIB, ENoteTja.BOMB):
-        return None if lasting_note is None else EHitTypeOsu.FORCED_END
+        return None if G.lasting_note is None else EHitTypeOsu.FORCED_END
     # roll heads: ignore repeated roll heads (especially for special balloon bonus border)
     if snd.is_renda_type():
-        return EHitTypeOsu.SLIDER if lasting_note is None else None
+        return EHitTypeOsu.SLIDER if G.lasting_note is None else None
     if snd.is_balloon_type():
-        return EHitTypeOsu.SPINNER if lasting_note is None else None
+        return EHitTypeOsu.SPINNER if G.lasting_note is None else None
     # roll end and unrecognized note symbols
     if snd == ENoteTja.END:
-        if lasting_note is not None and lasting_note.type == EHitTypeOsu.SLIDER:
+        if G.lasting_note is not None and G.lasting_note.type == EHitTypeOsu.SLIDER:
             return EHitTypeOsu.SLIDER_END
-        elif lasting_note is not None and lasting_note.type == EHitTypeOsu.SPINNER:
+        elif G.lasting_note is not None and G.lasting_note.type == EHitTypeOsu.SPINNER:
             return EHitTypeOsu.SPINNER_END
         print_with_pended(f"// Warning: Straying TJA note symbol 8 (roll-type end)", file=sys.stderr)
         return None
-    if snd not in unknowns:
+    if snd not in G.unknowns:
         print_with_pended(f"// Warning: Unknown TJA note symbol {repr(snd)}", file=sys.stderr)
-        unknowns.add(snd)
-    if lasting_note is not None:
-        print_with_pended(f"// Note: With unended roll-type note {lasting_note}", file=sys.stderr)
+        G.unknowns.add(snd)
+    if G.lasting_note is not None:
+        print_with_pended(f"// Note: With unended roll-type note {G.lasting_note}", file=sys.stderr)
     return None
 
-def get_osu_sound(snd: Union[ENoteTja, str]) -> EHitSoundOsu:
+def get_osu_sound(G: Global, snd: Union[ENoteTja, str]) -> EHitSoundOsu:
     if not isinstance(snd, ENoteTja):
         snd = ENoteTja(snd)
     snd = cast(ENoteTja, snd)
@@ -289,15 +272,14 @@ def get_osu_sound(snd: Union[ENoteTja, str]) -> EHitSoundOsu:
     else: return EHitSoundOsu.EMPTY # empty or unknown and warned
 
 
-def get_all(filename):
-    global has_started, curr_time, lasting_note
+def get_all(G: Global, filename):
     try: fobj = open(filename, "rb")
     except IOError: assert False, "can't open tja file."
     if fobj.peek(len(codecs.BOM_UTF8)).startswith(codecs.BOM_UTF8):
         fobj.seek(len(codecs.BOM_UTF8)) # ignore UTF-8 BOM
 
-    has_started = False
-    add_default_timing_point()
+    G.has_started = False
+    add_default_timing_point(G)
     for lineno, line in enumerate(fobj):
         try:
             line = line.decode("latin-1").strip()
@@ -308,33 +290,33 @@ def get_all(filename):
                 continue
             cmd = parse_tja_command(line)
             if cmd is not None:
-                if not has_started and cmd.name == START:
-                    has_started = True
-                    if HEADSCROLL != 1.0:
-                        real_do_cmd((SCROLL, HEADSCROLL))
+                if not G.has_started and cmd.name == START:
+                    G.has_started = True
+                    if G.HEADSCROLL != 1.0:
+                        real_do_cmd(G, (SCROLL, G.HEADSCROLL))
                     continue
                 if cmd.name == END:
                     break
-                handle_cmd(line, cmd)
+                handle_cmd(G, line, cmd)
                 continue
-            handle_note(line)
+            handle_note(G, line)
         except Exception:
             for line in traceback.format_exc().splitlines():
                 print_with_pended(f"// {line}", file=sys.stderr)
             print_with_pended(f"// Error parsing note chart in `{filename}` at line {lineno}: `{line}`. Continued.", file=sys.stderr)
     else:
         print_with_pended(f"// Warning: Missing #END at end of chart.", file=sys.stderr)
-    if len(bar_data) != 0:
+    if len(G.bar_data) != 0:
         print_with_pended(f"// Warning: Missing comma (,) at end of chart.", file=sys.stderr)
-        handle_note(",")
-    if lasting_note is not None:
-        print_with_pended(f"// Warning: Unended roll-type note {lasting_note} ended by end of chart at {curr_time}.", file=sys.stderr)
-        add_a_note('8', curr_time)
+        handle_note(G, ",")
+    if G.lasting_note is not None:
+        print_with_pended(f"// Warning: Unended roll-type note {G.lasting_note} ended by end of chart at {G.curr_time}.", file=sys.stderr)
+        add_a_note(G, '8', G.curr_time)
 
     # prevent bar lines at and after #END (probably missing and implicit)
-    tm = get_last_red_tm(TimingPoints)
-    real_do_cmd((MEASURE, math.ceil(min(max(tm.beats, tm.bpm, 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
-    real_do_cmd((BARLINEOFF,)) # hide its bar line
+    tm = get_last_red_tm(G.TimingPoints)
+    real_do_cmd(G, (MEASURE, math.ceil(min(max(tm.beats, tm.bpm, 1), (1 << 31) - 1)))) # insert a >= 1 minute measure
+    real_do_cmd(G, (BARLINEOFF,)) # hide its bar line
 
 # get quantized offset by the nearest base timing point
 # step 1: find the base timing point around base offset b at or before t
@@ -345,21 +327,21 @@ def get_all(filename):
 
 BEAT_RES = 0 # aligning disabled
 
-def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float] = None, raw: bool = False) -> float:
-    if debug_mode:
+def get_real_offset(G: Global, dirty_offset: Union[int, float], base_offset: Optional[float] = None, raw: bool = False) -> float:
+    if D.debug_mode:
         print_with_pended("// Dirty Offset", dirty_offset, file=sys.stderr)
     if BEAT_RES <= 0:
         aligned_offset = dirty_offset
     else:
         if base_offset is None:
             base_offset = dirty_offset
-        tm = get_red_tm_at(TimingPoints, base_offset, raw)
+        tm = get_red_tm_at(G.TimingPoints, base_offset, raw)
         delta = dirty_offset - tm.offset # more accurate
         t_unit = tm.mspb / BEAT_RES
         t_unit_cnt = round(delta / t_unit)
         aligned_offset = tm.offset + t_unit_cnt * t_unit
 
-        if debug_mode:
+        if D.debug_mode:
             print_with_pended(f"// {tm}", file=sys.stderr)
             print("// DELTA = ", delta, file=sys.stderr)
             print("// GET UNIT CNT", t_unit, t_unit_cnt, file=sys.stderr)
@@ -367,13 +349,13 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
 
     ret = aligned_offset
     if raw:
-        idx_tm_p = get_idx_tm_at(TimingPoints, dirty_offset, raw)
-        tm_p_offset = TimingPoints[idx_tm_p].offset
+        idx_tm_p = get_idx_tm_at(G.TimingPoints, dirty_offset, raw)
+        tm_p_offset = G.TimingPoints[idx_tm_p].offset
         int_tm_p_offset = int(tm_p_offset)
         if ret < tm_p_offset:
             ret = int_tm_p_offset
-        if idx_tm_p + 1 < len(TimingPoints):
-            tm_f_offset = TimingPoints[idx_tm_p + 1].offset
+        if idx_tm_p + 1 < len(G.TimingPoints):
+            tm_f_offset = G.TimingPoints[idx_tm_p + 1].offset
             int_tm_f_offset = int(tm_f_offset)
             if ret >= int_tm_f_offset:
                 ret = max(int_tm_p_offset, int_tm_f_offset - 1)
@@ -382,7 +364,7 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
 
     return ret
    
-def handle_cmd(line: str, cmd: TjaCmd) -> None:
+def handle_cmd(G: Global, line: str, cmd: TjaCmd) -> None:
     if cmd.name == BPMCHANGE:
         cmd = TjaCmd(cmd.name, float(cmd.args[0]))
     elif cmd.name == MEASURE:
@@ -395,55 +377,53 @@ def handle_cmd(line: str, cmd: TjaCmd) -> None:
     else: # default handling
         cmd = TjaCmd(cmd.name, cmd.args[0])
 
-    if bar_data == [] or cmd.name == MEASURE:
-        real_do_cmd(cmd)
+    if G.bar_data == [] or cmd.name == MEASURE:
+        real_do_cmd(G, cmd)
     else:
-        bar_data.append(cmd)
+        G.bar_data.append(cmd)
 
-def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
-    global curr_time
-
+def real_do_cmd(G: Global, cmd: Union[Tuple, TjaCmd]):
     if not isinstance(cmd, TjaCmd):
         cmd = TjaCmd(*cmd)
     cmd = cast(TjaCmd, cmd)
 
-    if debug_mode:
+    if D.debug_mode:
         print_with_pended("// handle cmd", cmd, file=sys.stderr)
     
     # handle delay, no timing point change
     if cmd.name == DELAY:
-        curr_time += cmd.args[0] * 1000
+        G.curr_time += cmd.args[0] * 1000
         return
     
     # handle timing point change command
     if cmd.name == BPMCHANGE:
-        tm = get_or_create_curr_red_tm()
+        tm = get_or_create_curr_red_tm(G)
         tm.bpm = cmd.args[0]
         tm.mspb = abs(T_MINUTE / tm.bpm)
     elif cmd.name == MEASURE: # processed before notes
-        if len(bar_data) != 0:
+        if len(G.bar_data) != 0:
             print_with_pended("// Warning: Changing measure within a bar is handled as changing at the start of bar.", file=sys.stderr)
-            get_last_red_tm(TimingPoints).beats = cmd.args[0]
+            get_last_red_tm(G.TimingPoints).beats = cmd.args[0]
         else:
-            get_or_create_curr_red_tm().beats = cmd.args[0]
+            get_or_create_curr_red_tm(G).beats = cmd.args[0]
     elif cmd.name == SCROLL:
-        get_or_create_curr_tm().scroll = abs(cmd.args[0])
+        get_or_create_curr_tm(G).scroll = abs(cmd.args[0])
     elif cmd.name == GOGOSTART:
-        get_or_create_curr_tm().ggt = True
+        get_or_create_curr_tm(G).ggt = True
     elif cmd.name == GOGOEND:
-        get_or_create_curr_tm().ggt = False
+        get_or_create_curr_tm(G).ggt = False
     elif cmd.name == BARLINEOFF:
-        tm = get_or_create_curr_tm()
+        tm = get_or_create_curr_tm(G)
         tm.hidefirst = tm.hidefirst.barline_off()
     elif cmd.name == BARLINEON:
-        tm = get_or_create_curr_tm()
+        tm = get_or_create_curr_tm(G)
         tm.hidefirst = tm.hidefirst.barline_on()
     elif cmd.name == BARLINE:
-        tm = get_or_create_curr_tm()
+        tm = get_or_create_curr_tm(G)
         tm.hidefirst = tm.hidefirst.add_barline()
-    elif ('#'+cmd.name) not in unknowns:
+    elif ('#'+cmd.name) not in G.unknowns:
         print_with_pended(f"// Warning: Unknown or unsupported command {cmd}.", file=sys.stderr)
-        unknowns.add('#'+cmd.name)
+        G.unknowns.add('#'+cmd.name)
 
 @dataclass
 class OsuHitObject:
@@ -451,33 +431,32 @@ class OsuHitObject:
     sound: EHitSoundOsu
     offset: float
 
-def add_a_note(snd, offset):
-    global lasting_note
-    (osu_type, osu_sound) = (get_osu_type(snd), get_osu_sound(snd))
+def add_a_note(G: Global, snd, offset):
+    (osu_type, osu_sound) = (get_osu_type(G, snd), get_osu_sound(G, snd))
     if osu_type == EHitTypeOsu.FORCED_END: # end unended roll, then emit the note
-        add_a_note('8', offset)
-        add_a_note(snd, offset)
+        add_a_note(G, '8', offset)
+        add_a_note(G, snd, offset)
         return
     if osu_type is None:
         return
     obj = OsuHitObject(osu_type, osu_sound, offset)
-    HitObjects.append(obj)
+    G.HitObjects.append(obj)
     if osu_type in (EHitTypeOsu.SLIDER, EHitTypeOsu.SPINNER):
-        lasting_note = obj
+        G.lasting_note = obj
     if osu_type in (EHitTypeOsu.SLIDER_END, EHitTypeOsu.SPINNER_END):
-        lasting_note = None
-    if debug_mode:
-        print_with_pended(f"// {HitObjects[-1]}", file=sys.stderr)
+        G.lasting_note = None
+    if D.debug_mode:
+        print_with_pended(f"// {G.HitObjects[-1]}", file=sys.stderr)
 
-def create_new_tm(has_red: bool = False, last_tm: Optional[OsuTimingPoint] = None, last_red_tm: Optional[OsuTimingPoint] = None):
+def create_new_tm(G: Global, has_red: bool = False, last_tm: Optional[OsuTimingPoint] = None, last_red_tm: Optional[OsuTimingPoint] = None):
     if last_tm is None:
-        last_tm = get_last_tm(TimingPoints)
+        last_tm = get_last_tm(G.TimingPoints)
     if last_red_tm is None:
-        last_red_tm = get_last_red_tm(TimingPoints)
-    
+        last_red_tm = get_last_red_tm(G.TimingPoints)
+
     tm = OsuTimingPoint(
-        offset = curr_time,
-        offset_raw = curr_time,
+        offset = G.curr_time,
+        offset_raw = G.curr_time,
         redtm = last_red_tm, # can upgrade to red + green later if not having red
         scroll = last_tm.scroll if last_tm is not None else 1.0,
         beats = last_tm.beats,
@@ -488,119 +467,113 @@ def create_new_tm(has_red: bool = False, last_tm: Optional[OsuTimingPoint] = Non
     )
     if has_red:
         tm.redtm = tm
-    if debug_mode:
+    if D.debug_mode:
         print_with_pended("// CREATE NEW TM", tm, file=sys.stderr)
     
-    TimingPoints.append(tm)
+    G.TimingPoints.append(tm)
     return tm
 
-def get_or_create_curr_tm(need_red: bool = False):
-    global curr_time
-    tm = get_last_tm(TimingPoints)
-    if curr_time != tm.offset:
-        tm = create_new_tm(need_red)
+def get_or_create_curr_tm(G: Global, need_red: bool = False):
+    tm = get_last_tm(G.TimingPoints)
+    if G.curr_time != tm.offset:
+        tm = create_new_tm(G, need_red)
     elif need_red and not tm.is_redline(): # needs to upgrade to red + green
         tm.redtm = tm
     return tm
 
-def get_or_create_curr_red_tm():
-    return get_or_create_curr_tm(True)
+def get_or_create_curr_red_tm(G: Global):
+    return get_or_create_curr_tm(G, True)
 
 def get_t_unit(tm: OsuTimingPoint, tot_note):
-    if debug_mode:
+    if D.debug_mode:
         print_with_pended("//", tm.bpm, tot_note, file=sys.stderr)
     return tm.beats * T_MINUTE / (tm.bpm * tot_note)
 
-def handle_a_bar():
-    global bar_data, curr_time
-    
+def handle_a_bar(G: Global):
     #debug
-    global last_debug
-    if last_debug is None:
-        last_debug = TimingPoints[0].offset
+    if D.last_debug is None:
+        D.last_debug = G.TimingPoints[0].offset
     #debug
 
     tot_note = 0
-    for data in bar_data:
+    for data in G.bar_data:
         if isinstance(data, str):
             tot_note += 1
 
-    if debug_mode:
+    if D.debug_mode:
         print_with_pended("// TOT_NOTE", tot_note, file=sys.stderr)
-        pure_data = [x for x in bar_data if isinstance(x, str) and x[0].isdigit()]
-        p1= "%6d %2.1f %2d %s" % (int(curr_time), \
-                get_last_red_tm(TimingPoints).beats, len(pure_data), \
+        pure_data = [x for x in G.bar_data if isinstance(x, str) and x[0].isdigit()]
+        p1= "%6d %2.1f %2d %s" % (int(G.curr_time), \
+                get_last_red_tm(G.TimingPoints).beats, len(pure_data), \
                 "".join(pure_data))
 
-        p2= "%s %s" % (repr(get_last_red_tm(TimingPoints).bpm), \
-                repr(get_t_unit(get_last_red_tm(TimingPoints), max(1, tot_note)) * max(1, tot_note)))
+        p2= "%s %s" % (repr(get_last_red_tm(G.TimingPoints).bpm), \
+                repr(get_t_unit(get_last_red_tm(G.TimingPoints), max(1, tot_note)) * max(1, tot_note)))
         print_with_pended(f"// {p1}", file=sys.stderr)
 
     #debug
-    last_debug = curr_time
-    bak_curr_time = curr_time
+    D.last_debug = G.curr_time
+    bak_curr_time = G.curr_time
     note_cnt = -1
     #debug
 
-    if not get_last_tm(TimingPoints).hidefirst.remove_barline().is_hidden():
-        real_do_cmd((BARLINE,))
+    if not get_last_tm(G.TimingPoints).hidefirst.remove_barline().is_hidden():
+        real_do_cmd(G, (BARLINE,))
     if not tot_note: # empty or command-only measure
-        curr_time += get_t_unit(get_last_red_tm(TimingPoints), 1)
+        G.curr_time += get_t_unit(get_last_red_tm(G.TimingPoints), 1)
     else:
-        for data in bar_data:
+        for data in G.bar_data:
             if isinstance(data, str): #note
                 note_cnt += 1
                 if data != "0":
-                    add_a_note(data, curr_time)
-                    if print_each_note:
-                        print_with_pended("//", note_cnt, data, curr_time,
-                            bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(TimingPoints), tot_note),
-                            get_t_unit(get_last_red_tm(TimingPoints), tot_note),
+                    add_a_note(G, data, G.curr_time)
+                    if D.print_each_note:
+                        print_with_pended("//", note_cnt, data, G.curr_time,
+                            bak_curr_time + note_cnt * get_t_unit(get_last_red_tm(G.TimingPoints), tot_note),
+                            get_t_unit(get_last_red_tm(G.TimingPoints), tot_note),
                             file=sys.stderr)
-                curr_time += get_t_unit(get_last_red_tm(TimingPoints), tot_note)           
+                G.curr_time += get_t_unit(get_last_red_tm(G.TimingPoints), tot_note)           
             else: #cmd
-                real_do_cmd(data)
-    bar_data = [] 
+                real_do_cmd(G, data)
+    G.bar_data = [] 
     
-    if print_each_note:
-        print_with_pended(f"// after bar, curr_time= {curr_time}", file=sys.stderr)
+    if D.print_each_note:
+        print_with_pended(f"// after bar, curr_time= {G.curr_time}", file=sys.stderr)
 
-def handle_note(line):
-    global bar_data
+def handle_note(G: Global, line: str):
     for ch in line:
         if ch.isalnum() and ch.isascii():
-            bar_data.append(ch)
+            G.bar_data.append(ch)
         elif ch == ",":
-            handle_a_bar()
+            handle_a_bar(G)
         elif not ch.isspace():
             print_with_pended(f"// Warning: Invalid TJA note symbol {repr(ch)} ignored", file=sys.stderr)
 
-def write_fmt_ver_str(fout: TextIO) -> None:
+def write_fmt_ver_str(G: Global, fout: TextIO) -> None:
     print("osu file format v14", file=fout)
     print("", file=fout)
 
-def write_General(fout: TextIO) -> None:
-    global AudioFilename, PreviewTime
-    if WAVE:
-        AudioFilename = WAVE
-        chart_resources[WAVE] = 'song audio'
+def write_General(G: Global, fout: TextIO) -> None:
+    if G.WAVE:
+        G.AudioFilename = G.WAVE
+        G.chart_resources[G.WAVE] = 'song audio'
     else:
-        AudioFilename = ""
-    PreviewTime = DEMOSTART * 1000 - MS_OSU_MUSIC_OFFSET
+        G.AudioFilename = ""
+    G.PreviewTime = G.DEMOSTART * 1000 - MS_OSU_MUSIC_OFFSET
 
     print("[General]", file=fout)
-    print("AudioFilename: %s" % (AudioFilename,), file=fout)
-    print("AudioLeadIn: %d" % (round(AudioLeadIn)), file=fout)
-    print("PreviewTime: %d" % (round(PreviewTime)), file=fout)
-    print("CountDown: %d" % (CountDown,), file=fout)
-    print("SampleSet: %s" % (SampleSet,), file=fout)
-    print("StackLeniency: %s" % (repr(StackLeniency),), file=fout)
-    print("Mode: %d" % (Mode,), file=fout)
-    print("LetterboxInBreaks: %d" % (LetterboxInBreaks,), file=fout)
+    print("AudioFilename: %s" % (G.AudioFilename,), file=fout)
+    print("AudioLeadIn: %d" % (round(G.AudioLeadIn)), file=fout)
+    print("PreviewTime: %d" % (round(G.PreviewTime)), file=fout)
+    print("CountDown: %d" % (G.CountDown,), file=fout)
+    print("SampleSet: %s" % (G.SampleSet,), file=fout)
+    print("StackLeniency: %s" % (repr(G.StackLeniency),), file=fout)
+    print("Mode: %d" % (G.Mode,), file=fout)
+    print("LetterboxInBreaks: %d" % (G.LetterboxInBreaks,), file=fout)
     print("", file=fout)
 
 # no use, but required by osu
-def write_Editor(fout: TextIO) -> None:
+def write_Editor(G: Global, fout: TextIO) -> None:
     print("[Editor]", file=fout)
     print("DistanceSpacing: 0.8", file=fout)
     print("BeatDivisor: 4", file=fout)
@@ -610,7 +583,7 @@ def write_Editor(fout: TextIO) -> None:
 pat_work_info = re.compile(r'^\w*?(?:ドラマ|[\w ]*?Drama|剧|劇|アニメ|[\w ]*? Anime|动画|動畫|映画|[\w ]*? Movie|电影|電影|CMソング)')
 pat_song_type = re.compile(r'(?:(?:オープニング・?|OP|エンディング・?|ED)?(?:テーマ|主題)[歌曲]?|(?:Opening |Ending )?Theme( Song)?|(?:主[题題]|片[头頭尾])[歌曲]?|デモソング|Demo Song|メドレー|Medley|組曲) *$')
 
-def parse_tja_subtitle(title: str, subtitle: str, genres: List[str]) -> Tuple[str, str, str]: # Title, Artist, Source
+def parse_tja_subtitle(G: Global, title: str, subtitle: str, genres: List[str]) -> Tuple[str, str, str]: # Title, Artist, Source
     artist = ""
     # original genre as Source, where the work title extracted from subtitle is assumed to be fictional
     source = ""
@@ -622,7 +595,7 @@ def parse_tja_subtitle(title: str, subtitle: str, genres: List[str]) -> Tuple[st
     # subtitle is second line of title
     if subtitle.startswith("++"): # or not subtitle.startswith("--"): # some charters omits --
         subtitle = subtitle.removeprefix('++')
-        return title + " " + subtitle, artist or Artist, source or Source
+        return title + " " + subtitle, artist or G.Artist, source or G.Source
 
     # try extracting info
     subtitle = subtitle.removeprefix("--")
@@ -698,61 +671,59 @@ def parse_tja_subtitle(title: str, subtitle: str, genres: List[str]) -> Tuple[st
     if match is not None:
         source = source.removesuffix(match.group(0)).rstrip()
 
-    return title, artist or Artist, source or Source
+    return title, artist or G.Artist, source or G.Source
 
-def write_Metadata(fout: TextIO) -> None:
-    global Title, Artist, Source, Creator, AudioFilename, PreviewTime, Version
-    Title, Artist, Source = parse_tja_subtitle(TITLE, SUBTITLE, GENRE)
-    if not Artist:
-        Artist = ARTIST # fallback, as ARTIST: for Malody is romanized
-    Creator = MAKER or CREATOR or Creator
-    Version = COURSE
-    Tags.extend((genre for genre in GENRE if genre not in ("namco", "opentaiko")))
-    for i, tag in enumerate(Tags):
-        Tags[i] = tag.strip().replace(' ', '_')
+def write_Metadata(G: Global, fout: TextIO) -> None:
+    G.Title, G.Artist, G.Source = parse_tja_subtitle(G, G.TITLE, G.SUBTITLE, G.GENRE)
+    if not G.Artist:
+        G.Artist = G.ARTIST # fallback, as ARTIST: for Malody is romanized
+    G.Creator = G.MAKER or G.CREATOR or G.Creator
+    G.Version = G.COURSE
+    G.Tags.extend((genre for genre in G.GENRE if genre not in ("namco", "opentaiko")))
+    for i, tag in enumerate(G.Tags):
+        G.Tags[i] = tag.strip().replace(' ', '_')
     print("[Metadata]", file=fout)
-    print("Title:%s" % (Title,), file=fout)
-    print("Artist:%s" % (Artist,), file=fout)
-    print("Creator:%s" % (Creator,), file=fout)
-    print("Version:%s" % (Version,), file=fout)
-    print("Source:%s" % (Source,), file=fout)
-    print("Tags:%s" % (" ".join(Tags),), file=fout)
+    print("Title:%s" % (G.Title,), file=fout)
+    print("Artist:%s" % (G.Artist,), file=fout)
+    print("Creator:%s" % (G.Creator,), file=fout)
+    print("Version:%s" % (G.Version,), file=fout)
+    print("Source:%s" % (G.Source,), file=fout)
+    print("Tags:%s" % (" ".join(G.Tags),), file=fout)
     print("", file=fout)
 
-def write_Difficulty(fout: TextIO) -> None:
-    global HPDrainRate, OverallDifficulty, SliderTickRate
-    course = COURSE.lower()
+def write_Difficulty(G: Global, fout: TextIO) -> None:
+    course = G.COURSE.lower()
     # lower-limit of ranking guideline if note count is not high
-    HPDrainRate = (8 if course.startswith('easy')
+    G.HPDrainRate = (8 if course.startswith('easy')
         else 7 if course.startswith('normal')
         else 6 if course.startswith('hard')
-        else (5 if LEVEL < 8 else 6)) # for higher BAD penalty
-    OverallDifficulty = (2.3 if course.startswith('easy') or course.startswith('normal') # 42.5ms for GREAT/GOOD
+        else (5 if G.LEVEL < 8 else 6)) # for higher BAD penalty
+    G.OverallDifficulty = (2.3 if course.startswith('easy') or course.startswith('normal') # 42.5ms for GREAT/GOOD
         else 5 if course.startswith('hard') # upper-limit of ranking guideline
         else 8) # 25.5ms for GREAT/GOOD
 
     print("[Difficulty]", file=fout)
-    print("HPDrainRate:%s" % (repr(HPDrainRate),), file=fout)
-    print("CircleSize:%s" % (repr(CircleSize),), file=fout)
-    print("OverallDifficulty:%s" % (repr(OverallDifficulty),), file=fout)
-    print("ApproachRate:%s" % (repr(ApproachRate),), file=fout)
-    print("SliderMultiplier:%s" % (repr(SliderMultiplier),), file=fout)
-    print("SliderTickRate:%s" % (repr(SliderTickRate),), file=fout)
+    print("HPDrainRate:%s" % (repr(G.HPDrainRate),), file=fout)
+    print("CircleSize:%s" % (repr(G.CircleSize),), file=fout)
+    print("OverallDifficulty:%s" % (repr(G.OverallDifficulty),), file=fout)
+    print("ApproachRate:%s" % (repr(G.ApproachRate),), file=fout)
+    print("SliderMultiplier:%s" % (repr(G.SliderMultiplier),), file=fout)
+    print("SliderTickRate:%s" % (repr(G.SliderTickRate),), file=fout)
     print("", file=fout)
 
-def write_Events(fout: TextIO) -> None:
+def write_Events(G: Global, fout: TextIO) -> None:
     print("[Events]", file=fout)
     print("//Background and Video events", file=fout)
 
     # FIXME: What if the filename contains double quotes (")?
-    bg = BGIMAGE or PREIMAGE
+    bg = G.BGIMAGE or G.PREIMAGE
     if bg:
         print(f'0,0,"{bg}",0,0', file=fout)
-        chart_resources[bg] = 'background image'
-    if BGMOVIE:
-        offset = int(round(MOVIEOFFSET * 1000)) - MS_OSU_MUSIC_OFFSET
-        print(f'Video,{offset},"{BGMOVIE}",0,0', file=fout)
-        chart_resources[BGMOVIE] = 'background video'
+        G.chart_resources[bg] = 'background image'
+    if G.BGMOVIE:
+        offset = int(round(G.MOVIEOFFSET * 1000)) - MS_OSU_MUSIC_OFFSET
+        print(f'Video,{offset},"{G.BGMOVIE}",0,0', file=fout)
+        G.chart_resources[G.BGMOVIE] = 'background video'
 
     print("//Break Periods", file=fout)
     print("//Storyboard Layer 0 (Background)", file=fout)
@@ -764,11 +735,10 @@ def write_Events(fout: TextIO) -> None:
     print("", file=fout)
 
 
-def write_TimingPoints(fout: TextIO) -> None:
-    global TimingPoints
+def write_TimingPoints(G: Global, fout: TextIO) -> None:
     # flatten timing points
     tms: List[OsuTimingPoint] = []
-    for tm in TimingPoints:
+    for tm in G.TimingPoints:
         # ignore (assumely overlapped) negative sections
         negative = tm.beats / tm.bpm < 0
         if tm.hidefirst.is_barline():
@@ -789,10 +759,10 @@ def write_TimingPoints(fout: TextIO) -> None:
     tms.sort(key=lambda tm: tm.offset)
 
     print("[TimingPoints]", file=fout)
-    volume = int(round(min(100, 100 * abs(SEVOL) / max(1, abs(SONGVOL)))))
+    volume = int(round(min(100, 100 * abs(G.SEVOL) / max(1, abs(G.SONGVOL)))))
     tm_idx = 0
     tmg = tmr = tms[0]
-    TimingPoints = [tmr] # rebuild
+    G.TimingPoints = [tmr] # rebuild
 
     # use the last timing points if simultaneous
     queued_ms: Optional[float] = None
@@ -835,7 +805,7 @@ def write_TimingPoints(fout: TextIO) -> None:
         tm.redtm = tmr
         tmg = tm
         tm.offset = int(tm.offset)
-        TimingPoints.append(tm)
+        G.TimingPoints.append(tm)
         return tm.offset
 
     # simulate osu rounding error
@@ -874,7 +844,7 @@ def write_TimingPoints(fout: TextIO) -> None:
             aligned_end = emit_tm(tm_next)
             tm_idx += 1
         else: # no bar lines or hidden
-            tm_next = create_new_tm(True, tmg, tmr)
+            tm_next = create_new_tm(G, True, tmg, tmr)
             tm_next.offset = tm_next.offset_raw = aligned_end
             tm_next.hidefirst = tm_next.hidefirst.remove_barline()
             aligned_end = emit_tm(tm_next)
@@ -887,18 +857,18 @@ def write_TimingPoints(fout: TextIO) -> None:
     write_queue(force=True)
     print("", file=fout)
 
-def write_HitObjects(fout: TextIO) -> None:
+def write_HitObjects(G: Global, fout: TextIO) -> None:
     print("[HitObjects]", file=fout)
     lasting_note = None
     res: List[Tuple[float, str]] = []
-    for ho in HitObjects:
-        beg_offset = get_real_offset(ho.offset)
+    for ho in G.HitObjects:
+        beg_offset = get_real_offset(G, ho.offset)
         if int(beg_offset) != int(ho.offset):
-            if debug_mode:
+            if D.debug_mode:
                 print_with_pended("// OFFSET FIXED", int(beg_offset), int(ho.offset), file=sys.stderr)
         if ho.type == EHitTypeOsu.CIRCLE:
             assert lasting_note is None, "this is abnormal"
-            res.append((beg_offset, "%d,%d,%d,%d,%d" % (CircleX, CircleY, beg_offset, ho.type.value, ho.sound.value)))
+            res.append((beg_offset, "%d,%d,%d,%d,%d" % (G.CircleX, G.CircleY, beg_offset, ho.type.value, ho.sound.value)))
         elif ho.type == EHitTypeOsu.SLIDER:
             assert lasting_note is None, "this is abnormal"
             lasting_note = ho
@@ -910,20 +880,20 @@ def write_HitObjects(fout: TextIO) -> None:
                     lasting_note.type == EHitTypeOsu.SLIDER
             ln = lasting_note
             if ho.offset > ln.offset: # skip non-positive duration rolls
-                tmr = get_red_tm_at(TimingPoints, int(ln.offset))
-                tmg = get_tm_at(TimingPoints, int(ln.offset)) # green if red + green, otherwise red
-                curve_len = 100 * (ho.offset - ln.offset) * tmr.bpm  * SliderMultiplier * tmg.scroll / T_MINUTE
-                res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (CircleX, CircleY, \
-                        int(get_real_offset(ln.offset)), ln.type.value, ln.sound.value, \
-                        int(CircleX+curve_len), CircleY, 1, curve_len)))
+                tmr = get_red_tm_at(G.TimingPoints, int(ln.offset))
+                tmg = get_tm_at(G.TimingPoints, int(ln.offset)) # green if red + green, otherwise red
+                curve_len = 100 * (ho.offset - ln.offset) * tmr.bpm  * G.SliderMultiplier * tmg.scroll / T_MINUTE
+                res.append((beg_offset, "%d,%d,%d,%d,%d,L|%d:%d,%d,%f" % (G.CircleX, G.CircleY, \
+                        int(get_real_offset(G, ln.offset)), ln.type.value, ln.sound.value, \
+                        int(G.CircleX + curve_len), G.CircleY, 1, curve_len)))
             lasting_note = None
         elif ho.type == EHitTypeOsu.SPINNER_END:
             assert lasting_note is not None and \
                     lasting_note.type == EHitTypeOsu.SPINNER, "this is abnormal"
             ln = lasting_note
             if ho.offset > ln.offset: # skip non-positive length rolls
-                res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (CircleX, CircleY, int(get_real_offset(ln.offset)), \
-                        (ln.type | EHitTypeOsu.NC).value, ln.sound.value, int(get_real_offset(ho.offset)))))
+                res.append((beg_offset, "%d,%d,%d,%d,%d,%d" % (G.CircleX, G.CircleY, int(get_real_offset(G, ln.offset)), \
+                        (ln.type | EHitTypeOsu.NC).value, ln.sound.value, int(get_real_offset(G, ho.offset)))))
             lasting_note = None
 
     res.sort(key=lambda x: x[0])
@@ -931,31 +901,34 @@ def write_HitObjects(fout: TextIO) -> None:
         print(line, file=fout)
     print("", file=fout)
 
-def tja2osu(filename: str, fout: TextIO) -> Dict[str, str]:
-    init_globals()
+def tja2osu(filename: str, fout: TextIO, debugGlobal: Optional[DebugGlobal] = None) -> Dict[str, str]:
+    if debugGlobal is None:
+        debugGlobal = DebugGlobal()
+    global D
+    D = debugGlobal
+    G = Global()
     assert isinstance(filename, str)
     assert filename.lower().endswith(".tja"), "filename should ends with .tja"
     check_unsupported(filename)
 
     # real work
-    get_meta_data(filename)
-    write_fmt_ver_str(fout)
-    write_General(fout)
-    write_Editor(fout)
-    write_Metadata(fout)
-    write_Difficulty(fout)
-    write_Events(fout)
+    get_meta_data(G, filename)
+    write_fmt_ver_str(G, fout)
+    write_General(G, fout)
+    write_Editor(G, fout)
+    write_Metadata(G, fout)
+    write_Difficulty(G, fout)
+    write_Events(G, fout)
 
-    get_all(filename)
-    write_TimingPoints(fout)
-    write_HitObjects(fout)
+    get_all(G, filename)
+    write_TimingPoints(G, fout)
+    write_HitObjects(G, fout)
 
-    init_debug_globals()
-    return chart_resources
+    return G.chart_resources
 
 
 def main():
-    global BEAT_RES, debug_mode, print_each_note
+    global BEAT_RES
     parser = argparse.ArgumentParser(
         description='Convert a single-notechart branch-less .tja file to .osu format and print the result.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -971,9 +944,8 @@ def main():
         help="display debug info for each note")
     args = parser.parse_args()
     BEAT_RES = args.beat_align
-    debug_mode = args.debug or ("debug" in args.options)
-    print_each_note = args.verbose
-    tja2osu(args.filename, sys.stdout)
+    debugGlobal = DebugGlobal(debug_mode=args.debug or ("debug" in args.options), print_each_note=args.verbose)
+    tja2osu(args.filename, sys.stdout, debugGlobal=debugGlobal)
 
 if __name__ == "__main__":
     try:

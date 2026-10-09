@@ -46,6 +46,13 @@ class ENoteTja(Enum):
     __renda_type = (RENDA, RENDA_DAI, RENDA_CLAP, RENDA_PA)
     __balloon_type = (BALLOON, IMO, FUZE)
 
+    @staticmethod
+    def get_hit_types(): return ENoteTja.__hit_type
+    @staticmethod
+    def get_renda_types(): return ENoteTja.__renda_type
+    @staticmethod
+    def get_balloon_types(): return ENoteTja.__balloon_type
+
     def is_hit_type(self) -> bool:
         return self.value in ENoteTja.__hit_type
 

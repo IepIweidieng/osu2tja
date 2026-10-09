@@ -756,15 +756,15 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
                         break
                     columns.add(note_i.column)
                     notes = {note.type, note_i.type}
-                    if notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI}):
+                    if notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI, ENoteTja.DON_HAND}):
                         note.type = ENoteTja.DON_DAI
-                    elif notes.issubset({ENoteTja.KATSU, ENoteTja.KATSU_DAI}):
+                    elif notes.issubset({ENoteTja.KATSU, ENoteTja.KATSU_DAI, ENoteTja.KATSU_HAND}):
                         note.type = ENoteTja.KATSU_DAI
-                    elif notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI, ENoteTja.KATSU, ENoteTja.KATSU_DAI, ENoteTja.KADON}):
+                    elif notes.issubset(ENoteTja.get_hit_types()):
                         note.type = ENoteTja.KADON
-                    elif notes.issubset({ENoteTja.RENDA, ENoteTja.RENDA_DAI}):
+                    elif notes.issubset(ENoteTja.get_renda_types()):
                         note.type = ENoteTja.RENDA_DAI
-                    elif notes.issubset({ENoteTja.BALLOON, ENoteTja.IMO}):
+                    elif notes.issubset(ENoteTja.get_balloon_types()):
                         note.type = ENoteTja.IMO
                     else:
                         break
@@ -797,9 +797,9 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
                 G.tja_time += t_div_tja
                 offset_curr += t_div
 
-                if note_type in (ENoteTja.DON, ENoteTja.KATSU, ENoteTja.DON_DAI, ENoteTja.KATSU_DAI):
+                if note_type.is_hit_type():
                     D.combo_cnt += 1
-                elif note_type in (ENoteTja.RENDA, ENoteTja.RENDA_DAI, ENoteTja.BALLOON, ENoteTja.IMO):
+                elif note_type.is_renda_type() or note_type.is_balloon_type():
                     G.lasting_note = note
                 elif note_type == ENoteTja.END:
                     G.lasting_note = None

@@ -288,7 +288,7 @@ def get_real_offset(dirty_offset: Union[int, float], base_offset: Optional[float
     return ret
 
 
-def get_slider_sound(str) -> EHitSoundOsu:
+def get_slider_sound(str) -> List[EHitSoundOsu]:
     ps = str.split(',')
     reverse_cnt = int(ps[6])
     if len(ps) > 8:

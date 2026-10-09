@@ -42,18 +42,18 @@ class ENoteTja(Enum):
 
     END = '8'
 
-    hit_type = (DON, KATSU, DON_DAI, DON_HAND, KATSU_DAI, KATSU_HAND, KADON)
-    renda_type = (RENDA, RENDA_DAI, RENDA_CLAP, RENDA_PA)
-    balloon_type = (BALLOON, IMO, FUZE)
+    __hit_type = (DON, KATSU, DON_DAI, DON_HAND, KATSU_DAI, KATSU_HAND, KADON)
+    __renda_type = (RENDA, RENDA_DAI, RENDA_CLAP, RENDA_PA)
+    __balloon_type = (BALLOON, IMO, FUZE)
 
     def is_hit_type(self) -> bool:
-        return self.value in ENoteTja.hit_type.value
+        return self.value in ENoteTja.__hit_type
 
     def is_renda_type(self) -> bool:
-        return self.value in ENoteTja.renda_type.value
+        return self.value in ENoteTja.__renda_type
 
     def is_balloon_type(self) -> bool:
-        return self.value in ENoteTja.balloon_type.value
+        return self.value in ENoteTja.__balloon_type
 
 
 # guess str

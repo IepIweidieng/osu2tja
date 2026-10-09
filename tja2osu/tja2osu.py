@@ -235,10 +235,10 @@ def add_default_timing_point():
     curr_time = tm.offset
 
 
-def get_osu_type(snd: Tuple[ENoteTja, str]) -> Optional[EHitTypeOsu]:
+def get_osu_type(snd: Union[ENoteTja, str]) -> Optional[EHitTypeOsu]:
     if not isinstance(snd, ENoteTja):
         snd = ENoteTja(snd)
-    assert isinstance(snd, ENoteTja)
+    snd = cast(ENoteTja, snd)
     assert snd != ENoteTja.NONE
 
     # non-rolls: end unended roll first if exists, then emit the note
@@ -267,10 +267,10 @@ def get_osu_type(snd: Tuple[ENoteTja, str]) -> Optional[EHitTypeOsu]:
         print_with_pended(f"// Note: With unended roll-type note {lasting_note}", file=sys.stderr)
     return None
 
-def get_osu_sound(snd: Union[ENoteTja, str]) -> ENoteTja:
+def get_osu_sound(snd: Union[ENoteTja, str]) -> EHitSoundOsu:
     if not isinstance(snd, ENoteTja):
         snd = ENoteTja(snd)
-    assert isinstance(snd, ENoteTja)
+    snd = cast(ENoteTja, snd)
     assert snd != ENoteTja.NONE
 
     if snd == ENoteTja.DON: return EHitSoundOsu.EMPTY
@@ -405,7 +405,7 @@ def real_do_cmd(cmd: Union[Tuple, TjaCmd]):
 
     if not isinstance(cmd, TjaCmd):
         cmd = TjaCmd(*cmd)
-    assert isinstance(cmd, TjaCmd)
+    cmd = cast(TjaCmd, cmd)
 
     if debug_mode:
         print_with_pended("// handle cmd", cmd, file=sys.stderr)

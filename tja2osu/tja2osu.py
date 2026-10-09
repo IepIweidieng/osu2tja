@@ -57,7 +57,7 @@ def init_globals() -> None:
     AudioFilename = ""
     Title = ""
     Source = ""
-    Tags = ["tja"]
+    Tags = ["tja", "tja2osu"]
     Artist = "Unknown Artist"
     Creator = "unknown"
     Version = "Oni"

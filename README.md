@@ -137,6 +137,7 @@ Tool created by @delguoqing
     - [x] `PreviewTime:` → `DEMOSTART:`, (@IepIweidieng) with osu! music offset correction
     - [x] `Creator:` → `MAKER:` (@MoshirMoshir) & (@IepIweidieng) `AUTHOR:` (for Malody)
     - [x] timing point: hitsound volume (max) → `SEVOL:` ÷ `SONGVOL:` (@IepIweidieng)
+    - [x] `Tags:` → When contains the tag `tja2osu`, convert the extra note types in the OutFox-OpenTaiko standard as output by tja2osu (except for bomb/mine `C` (bomb/mine) and `F` (ad-lib), which are converted into blanks by tja2osu) (@IepIweidieng)
   - Decoration Headers
     - [x] First horizontally centered background event: filename → `PREIMAGE:` & `COVER:` (for Malody) (@IepIweidieng)
     - [ ] ~~First horizontally centered background event: filename → `BGIMAGE:`~~ (not planned)
@@ -186,10 +187,14 @@ Tool created by @delguoqing
     - [x] Circle, whistle/clap or Katsu column, non-finish hitsound → `2` (regular Katsu)
     - [x] Circle, normal or Don column, finish hitsound → `3` (big Don)
     - [x] Circle, whistle/clap or Katsu column, finish hitsound → `4` (big Katsu)
+    - [x] Circle, whistle + clap finish hitsound →`G` (Kadon) (if `Tags:` contains `tja2osu`, otherwise `4` (big Katsu)) (@IepIweidieng)
     - [x] Slider, non-finish hitsound → `5` + `8` (regular bar drumroll)
+    - [x] Slider, clap hitsound → `I` + `8` (regular/Katsu? bar drumroll) (if `Tags:` contains `tja2osu`, otherwise `5` + `8` (regular bar drumroll)) (@IepIweidieng)
     - [x] Slider, finish hitsound → `6` + `8` (big bar drumroll)
+    - [x] Slider, clap finish hitsound → `H` + `8` (big/Don? bar drumroll) (if `Tags:` contains `tja2osu`, otherwise `6` + `8` (big bar drumroll)) (@IepIweidieng)
     - [x] Spinner, non-finish hitsound → `7` + `8` (regular balloon roll)
     - [x] Spinner, finish hitsound → `9` + `8` (special balloon roll) (@IepIweidieng)
+    - [x] Spinner, non-finish clap hitsound → `D` + `8` (fuze balloon roll) (if `Tags:` contains `tja2osu`, otherwise `7` + `8` (regular balloon roll)) (@IepIweidieng)
     - [x] Overlapping same-column notes → Padding `0` to place the end of overlapped note (if need), then using a negative `#DELAY` to return to the start of the overlapping note and place the start. If across timing points, use additional `#DELAY`s for fixing timing. (@IepIweidieng)
     - [x] Simultaneous different-column notes → Single combined note (@IepIweidieng)
       - Two Dons `1`/`3` + `1`/`3` → `3` (big Don)
@@ -218,7 +223,7 @@ Tool created by @delguoqing
     - [x] `SUBTITLE:` & `GENRE:` → `Artist:` & `Source:`, (@IepIweidieng) based on many common patterns and keywords, (improved by @IepIweidieng) where unknown `Artist:` fall backs to `ARTIST:` header and unknown `Source:` defaults to empty
     - [x] `ARTIST:` → `Artist:` (@IepIweidieng), (improved by @IepIweidieng) defaults to `Unknown Artist`
     - [x] `MAKER:`/`AUTHOR:`/`//created by ` → `Creator:` (@IepIweidieng) (defaults to `unknown`)
-    - [x] ? → `Tags:` (defaults to `tja` (improved by @IepIweidieng))
+    - [x] ? → `Tags:` (defaults to `tja` & `tja2osu` (improved by @IepIweidieng))
     - [x] `GENRE:` → `Tags:` (@IepIweidieng)
     - [ ] `NOTESDESIGNER<n>:` → `Tags:` (for guest chart creators) (TODO)
     - [x] `WAVE:` → `AudioFilename:`, (@IepIweidieng) with automatic file copy

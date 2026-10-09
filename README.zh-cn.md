@@ -138,6 +138,7 @@ python tja2osz.py song.tja song.osz
     - [x] `PreviewTime:` → `DEMOSTART:`，（@IepIweidieng）经 osu! 校准误差修正
     - [x] `Creator:` → `MAKER:`（@MoshirMoshir）&（@IepIweidieng）`AUTHOR:`（Malody 用）
     - [x] 时间点：音效音量（取最大）→ `SEVOL:` ÷ `SONGVOL:`（@IepIweidieng）
+    - [x] `Tags:` → 包含 `tja2osu` 标签时，转换 tja2osu 输出的 OutFox-OpenTaiko 标准中的额外音符类型（除了 `C`（炸弹/地雷）与 `F`（ad-lib），会被 tja2osu 转换为空白）（@IepIweidieng）
   - 美术标头
     - [x] 首个左右置中背景事件：文件名 → `PREIMAGE:` & `COVER:`（Malody 用）（@IepIweidieng）
     - [ ] ~~首个左右置中背景事件：文件名 → `BGIMAGE:`~~（计划外）
@@ -187,10 +188,14 @@ python tja2osz.py song.tja song.osz
     - [x] 圆圈，whistle/clap 或咔轨道，非 finish 音效 → `2`（小咔）
     - [x] 圆圈，一般或咚轨道，finish 音效 → `3`（大咚）
     - [x] 圆圈，whistle/clap 或咔轨道，finish 音效 → `4`（大咔）
+    - [x] 圆圈，whistle + clap finish 音效 →`G`（咔咚）（如果 `Tags:` 包含 `tja2osu`，否则 `4`（大咔））（@IepIweidieng）
     - [x] 滑条，非 finish 音效 → `5` + `8`（小条连打）
+    - [x] 滑条，clap 音效 → `I` + `8`（小/咔？条连打）（如果 `Tags:` 包含 `tja2osu`，否则 `5` + `8`（小条连打））（@IepIweidieng）
     - [x] 滑条，finish 音效 → `6` + `8`（大条连打）
+    - [x] 滑条，clap finish 音效 → `H` + `8`（大/咚？条连打头）（如果 `Tags:` 包含 `tja2osu`，否则 `6` + `8`（大条连打））（@IepIweidieng）
     - [x] 转盘，非 finish 音效 → `7` + `8`（一般气球连打）
     - [x] 转盘，finish 音效 → `9` + `8` (特殊气球连打)（@IepIweidieng）
+    - [x] 转盘，非 finish，clap 音效 → `D` + `8`（计时弹气球连打）（如果 `Tags:` 包含 `tja2osu`，否则 `7` + `8`（一般气球连打））（@IepIweidieng）
     - [x] 重叠同轨音符 → 填 `0` 放被重叠音符终点（若需要），再用负 `#DELAY` 回到重叠音符起点来放置起点。跨时间点时再用另外的 `#DELAY` 修正计时 。（@IepIweidieng）
     - [x] 同时不同轨音符 → 单个组合音符（@IepIweidieng）
       - 两咚 `1`/`3` + `1`/`3` → `3`（大咚）

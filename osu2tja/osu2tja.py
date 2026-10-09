@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from common.osu import EHitTypeOsu, EHitSoundOsu, ETimingFxOsu, OSU_VER_LAZER, OSU_VER_MAX, OSU_VER_MIN, OSU_VER_STR_PREFIX, T_MINUTE, EHideFirst, OsuTimingPoint, almost_bigger, almost_equals, ceil_if_almost_int, f32, get_diffrank_by_name, get_idx_tm_at, get_red_tm_at, get_tm_at, osu_ver_supported
-from common.tja import ENoteTja, get_course_by_number
+from common.tja import ENoteTja, EHitTypeTja, EHitSoundTja, get_course_by_number
 from common.utils import print_with_pended
 
 from bisect import bisect_left, bisect_right
@@ -220,7 +220,7 @@ commands_within: List["TjaTimedCmd"]
 lasting_note: Optional["TjaTimedNote"]
 
 def init_globals() -> None:
-    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver, lasting_note
+    global timingpoints, balloons, slider_multiplier, slider_tick_rate, overall_difficulty, column_count, gamemode_idx, osu_format_ver, lasting_note, from_tja2osu
     # global variables
     timingpoints = []
     balloons = []
@@ -230,6 +230,7 @@ def init_globals() -> None:
     column_count = 1
     gamemode_idx = GAMEMODE_STD
     osu_format_ver = 0
+    from_tja2osu = False
 
     global commands_within, tja_time
     commands_within = []
@@ -296,16 +297,41 @@ def get_slider_sound(str) -> EHitSoundOsu:
         return [EHitSoundOsu(int(ps[4]))] * (reverse_cnt + 1)
 
 
-def get_hitnote_type(sound: EHitSoundOsu, column: int):
-    is_dai = bool(sound & EHitSoundOsu.FINISH)
+def get_hitnote_type(soundOsu: EHitSoundOsu, column: int) -> Tuple[EHitSoundTja, bool]:
+    is_dai = bool(soundOsu & EHitSoundOsu.FINISH)
+    soundTja = EHitSoundTja.DON
     if column_count <= 1: # Purely keysounded
-        is_katsu = bool(sound & (EHitSoundOsu.CLAP | EHitSoundOsu.WHISTLE))
+        if bool(soundOsu & (EHitSoundOsu.CLAP | EHitSoundOsu.WHISTLE)):
+            soundTja = EHitSoundTja.KATSU
     else: # Donkey Konga (KD) / Taiko (KDDK) layout
         n_cols_ka_l = int(math.ceil(column_count / 4))
         n_cols_ka_r = int(column_count / 4)
-        is_katsu = (column < n_cols_ka_l or column_count - 1 - column < n_cols_ka_r)
-    return ((ENoteTja.KATSU_DAI if is_katsu else ENoteTja.DON_DAI) if is_dai
-        else ENoteTja.KATSU if is_katsu else ENoteTja.DON)
+        if column < n_cols_ka_l or column >= column_count - n_cols_ka_r:
+            soundTja = EHitSoundTja.KATSU
+    if is_dai and bool(soundOsu & EHitSoundOsu.CLAP and soundOsu & EHitSoundOsu.WHISTLE):
+        soundTja = EHitSoundTja.KADON
+    return (soundTja, is_dai)
+
+
+def get_hitnote_symbol(typeTja: EHitTypeTja, soundTja: EHitSoundTja, is_dai: bool, from_tja2osu: bool) -> ENoteTja:
+    if typeTja == EHitTypeTja.HIT:
+        if soundTja == EHitSoundTja.DON:
+            return ENoteTja.DON_DAI if is_dai else ENoteTja.DON
+        elif soundTja == EHitSoundTja.KATSU:
+            return ENoteTja.KATSU_DAI if is_dai else ENoteTja.KATSU
+        elif soundTja == EHitSoundTja.KADON:
+            return ENoteTja.KADON if from_tja2osu else ENoteTja.KATSU_DAI
+    elif typeTja == EHitTypeTja.RENDA:
+        if soundTja == EHitSoundTja.KATSU and from_tja2osu:
+            return ENoteTja.RENDA_CLAP if is_dai else ENoteTja.RENDA_PA
+        return ENoteTja.RENDA_DAI if is_dai else ENoteTja.RENDA
+    elif typeTja == EHitTypeTja.BALLOON:
+        if is_dai:
+            return ENoteTja.IMO
+        if soundTja == EHitSoundTja.KATSU and from_tja2osu:
+            return ENoteTja.FUZE
+        return ENoteTja.IMO if is_dai else ENoteTja.BALLOON
+    return ENoteTja.NONE
 
 
 # https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Taiko/Beatmaps/TaikoBeatmapConverter.cs
@@ -432,7 +458,9 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     offset = get_real_offset(offset_raw, raw=True)
 
     if type & EHitTypeOsu.CIRCLE:  # circle
-        ret.append(TjaTimedNote(get_hitnote_type(sound, column), offset, offset, column, offset_raw, offset_raw))
+        note_type = get_hitnote_type(sound, column)
+        note_symbol = get_hitnote_symbol(EHitTypeTja.HIT, *note_type, from_tja2osu)
+        ret.append(TjaTimedNote(note_symbol, offset, offset, column, offset_raw, offset_raw))
         if round(offset_raw) in inspect_ms:
             print_with_pended(f"// [INSPECT_MS {offset_raw}] circle: {ret[-1]}", file=sys.stderr)
     elif type & EHitTypeOsu.SLIDER:  # slider, reverse??
@@ -449,7 +477,10 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
             j = offset_raw
             while j <= offset_raw + taiko_duration + tick_spacing / 8:
                 point_offset = get_real_offset(j, raw=True)
-                ret.append(TjaTimedNote(get_hitnote_type(slider_sounds[i], column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
+
+                note_type = get_hitnote_type(slider_sounds[i], column)
+                note_symbol = get_hitnote_symbol(EHitTypeTja.HIT, *note_type, from_tja2osu)
+                ret.append(TjaTimedNote(note_symbol, point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
                 if round(offset_raw) in inspect_ms:
                     print_with_pended(f"// [INSPECT_MS {offset_raw}] slider start {ret[idx_head]}, tick: {ret[-1]}, tm: {tm}", file=sys.stderr)
 
@@ -461,10 +492,10 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         else:
             offset_end_raw = offset_raw + taiko_duration
             offset_end = get_real_offset(offset_end_raw, raw=True)
-            if sound & EHitSoundOsu.FINISH:
-                ret.append(TjaTimedNote(ENoteTja.RENDA_DAI, offset, offset_end, column, offset_raw, offset_end_raw))
-            else:
-                ret.append(TjaTimedNote(ENoteTja.RENDA, offset, offset_end, column, offset_raw, offset_end_raw))
+
+            note_type = get_hitnote_type(sound, column)
+            note_symbol = get_hitnote_symbol(EHitTypeTja.RENDA, *note_type, from_tja2osu)
+            ret.append(TjaTimedNote(note_symbol, offset, offset_end, column, offset_raw, offset_end_raw))
             ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
 
         if round(offset_raw) in inspect_ms:
@@ -479,7 +510,9 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
         j = offset_raw
         while j <= offset_raw + taiko_duration + tick_spacing / 8:
             point_offset = get_real_offset(j, raw=True)
-            ret.append(TjaTimedNote(get_hitnote_type(sound, column), point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
+            note_type = get_hitnote_type(sound, column)
+            note_symbol = get_hitnote_symbol(EHitTypeTja.HIT, *note_type, from_tja2osu)
+            ret.append(TjaTimedNote(note_symbol, point_offset, point_offset, column, offset_raw=j, offset_end_raw=j))
             if round(offset_raw) in inspect_ms:
                 print_with_pended(f"// [INSPECT_MS {offset_raw}] hold start {ret[idx_head]}, tick: {ret[-1]}, tmr: {tmr}", file=sys.stderr)
 
@@ -491,10 +524,10 @@ def get_note(str_: str, od: float) -> List[TjaTimedNote]:
     elif type & EHitTypeOsu.SPINNER:  # spinner
         offset_end_raw = float(ps[5])
         offset_end = get_real_offset(offset_end_raw, raw=True)
-        if sound & EHitSoundOsu.FINISH:
-            ret.append(TjaTimedNote(ENoteTja.IMO, offset, offset_end, column, offset_raw, offset_end_raw))
-        else:
-            ret.append(TjaTimedNote(ENoteTja.BALLOON, offset, offset_end, column, offset_raw, offset_end_raw))
+
+        note_type = get_hitnote_type(sound, column)
+        note_symbol = get_hitnote_symbol(EHitTypeTja.BALLOON, *note_type, from_tja2osu)
+        ret.append(TjaTimedNote(note_symbol, offset, offset_end, column, offset_raw, offset_end_raw))
         ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
         # how many hit will break a ballon
         global balloons
@@ -883,6 +916,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
     global osu_format_ver
     global commands_within, tja_time
     global gamemode_idx
+    global from_tja2osu
 
     tja_heads_meta: List[str] = []
     tja_heads_sync: List[str] = []
@@ -951,6 +985,9 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
                     creator = vval
                 elif vname == "Version":
                     version = vval
+                elif vname == "Tags":
+                    tags = vval.split()
+                    from_tja2osu = "tja2osu" in tags
                 elif vname == "Source":
                     subtitle = vval
                 elif vname == "Artist":

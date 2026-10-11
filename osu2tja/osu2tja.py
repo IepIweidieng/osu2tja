@@ -1026,6 +1026,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         # timing point for the first beat, if not a whole bar
         if init_frac_bar_beats != 0:
             new_tm_first_frac = copy(tm_first)
+            new_tm_first_frac.redtm = new_tm_first_frac
             new_tm_first_frac.offset = get_real_offset(G,
                 tm_first.offset - init_beats * tm_first.mspb)
             new_tm_first_frac.beats = init_frac_bar_beats
@@ -1035,6 +1036,7 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
         # timing point for the first whole bar, if any
         if init_whole_bars != 0:
             new_tm_first_whole = copy(tm_first)
+            new_tm_first_whole.redtm = new_tm_first_whole
             new_tm_first_whole.offset = get_real_offset(G,
                 tm_first.offset - init_whole_bars * tm_first.beats * tm_first.mspb)
             new_tm_first_whole.beats = tm_first.beats

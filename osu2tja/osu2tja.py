@@ -728,7 +728,7 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
         offset = offset_curr + delta_ms
         # extra fix if offset_curr and offset_target have different t_unit
         if ((not has_subdivs or get_tm_at(G.timingpoints, offset_curr) != tm or get_tm_at(G.timingpoints, offset_target) != tm)
-            and offset != offset_target
+            and not almost_equals(offset, offset_target, error=1e-3)
             ):
             fix_ms = offset_target - offset
             ensure_begin_of_line()

@@ -197,6 +197,7 @@ python tja2osz.py song.tja song.osz
     - [x] 转盘，finish 音效 → `9` + `8` (特殊气球连打)（@IepIweidieng）
     - [x] 转盘，非 finish，clap 音效 → `D` + `8`（计时弹气球连打）（如果 `Tags:` 包含 `tja2osu`，否则 `7` + `8`（一般气球连打））（@IepIweidieng）
     - [x] 重叠同轨音符 → 填 `0` 放被重叠音符终点（若需要），再用负 `#DELAY` 回到重叠音符起点来放置起点。跨时间点时再用另外的 `#DELAY` 修正计时 。（@IepIweidieng）
+    - [x] 负时长滑条或转盘 → 视为重叠同轨音符，用负 `#DELAY` 回到滑条或转盘终点来放置终点。（@IepIweidieng）
     - [x] 同时不同轨音符 → 单个组合音符（@IepIweidieng）
       - 两咚 `1`/`3` + `1`/`3` → `3`（大咚）
       - 两咔 `2`/`4` + `2`/`4` → `4`（大咔）

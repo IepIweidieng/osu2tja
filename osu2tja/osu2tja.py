@@ -446,6 +446,13 @@ def get_note(G: Global, str_: str, od: float) -> List[TjaTimedNote]:
     offset_raw = float(ps[2])
     offset = get_real_offset(G, offset_raw, raw=True)
 
+    def insert_temp_end(offset, offset_end, column, offset_raw, offset_end_raw):
+        # temporary end object, for calculating measure divs
+        ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
+        # temporary end object at later tip, to close negative long note at end of chart
+        if offset_end < offset: # negative long note
+            ret.append(TjaTimedNote(ENoteTja.END, offset, offset, column, offset_raw, offset_raw))
+
     if type & EHitTypeOsu.CIRCLE:  # circle
         note_type = get_hitnote_type(G, sound, column)
         note_symbol = get_hitnote_symbol(EHitTypeTja.HIT, *note_type, G.from_tja2osu)
@@ -485,7 +492,7 @@ def get_note(G: Global, str_: str, od: float) -> List[TjaTimedNote]:
             note_type = get_hitnote_type(G, sound, column)
             note_symbol = get_hitnote_symbol(EHitTypeTja.RENDA, *note_type, G.from_tja2osu)
             ret.append(TjaTimedNote(note_symbol, offset, offset_end, column, offset_raw, offset_end_raw))
-            ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
+            insert_temp_end(offset, offset_end, column, offset_raw, offset_end_raw)
 
         if round(offset_raw) in D.inspect_ms:
             print_with_pended(f"// [INSPECT_MS {offset_raw}] slider start: {ret[-2]}, end: {ret[-1]}, tm: {tm}", file=sys.stderr)
@@ -517,7 +524,7 @@ def get_note(G: Global, str_: str, od: float) -> List[TjaTimedNote]:
         note_type = get_hitnote_type(G, sound, column)
         note_symbol = get_hitnote_symbol(EHitTypeTja.BALLOON, *note_type, G.from_tja2osu)
         ret.append(TjaTimedNote(note_symbol, offset, offset_end, column, offset_raw, offset_end_raw))
-        ret.append(TjaTimedNote(ENoteTja.END, offset_end, offset_end, column, offset_end_raw, offset_end_raw))
+        insert_temp_end(offset, offset_end, column, offset_raw, offset_end_raw)
         # how many hit will break a ballon
         hit_multiplier = (5 - 2 * (5 - od) / 5 if od < 5
             else 5 + 2.5 * (od - 5) / 5 if od > 5
@@ -655,8 +662,9 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
         (max(begin, cmd.offset) for _, cmd in zip(range(idx_cmd_limit), G.commands_within)
             if cmd.formatter in {FMT_GOGOSTART, FMT_GOGOEND}), # in-range command-time commands
         (max(begin, datum.offset) for _, datum in zip(range(idx_note_limit), bar_data)),
-        (max(begin, datum.offset_end) for _, datum in zip(range(idx_note_limit), bar_data)), # consider end offset for overlapping handling
-        [max(begin, G.lasting_note.offset_end)] if G.lasting_note is not None else [],
+        # consider end offset except for the last note to handle mid-measure overlapping
+        (max(begin, datum.offset_end) for _, datum in zip(range(idx_note_limit - 1), bar_data)),
+        [max(begin, G.lasting_note.offset_end)] if G.lasting_note is not None and idx_note_limit > 0 else [],
         [end],
     )))
 
@@ -690,21 +698,24 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
             bar_strs.append("\n")
         begin_of_line = True
 
-    def goto_offset(offset_curr, offset_target):
-        nonlocal divs, begin_of_line
+    def get_div(offset):
+        if offset not in time_to_div:
+            time_to_div[offset] = get_dt_unit_cnt(t_div, begin, offset)
+        return time_to_div[offset]
+
+    def goto_offset(offset_target):
+        nonlocal offset_curr, divs, begin_of_line
         if offset_curr == offset_target:
             return offset_target
 
-        if offset_curr not in time_to_div:
-            time_to_div[offset_curr] = get_dt_unit_cnt(t_div, begin, offset_curr)
-        ddivs = time_to_div[offset_target] - time_to_div[offset_curr]
+        ddivs = get_div(offset_target) - get_div(offset_curr)
         delta_ms = ddivs * t_div
         if D.output_trace_info:
             ensure_begin_of_line()
             bar_strs.append(f"// goto_offset: {offset_curr} -> {offset_target}: {ddivs} divs ({delta_ms})")
             bar_strs.append("\n")
         if ddivs > 0:
-            bar_strs.append("0" * ddivs)
+            bar_strs.append(ENoteTja.NONE.value * ddivs)
             begin_of_line = False
             divs += ddivs
             for _ in range(ddivs):
@@ -728,10 +739,25 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
                 ensure_begin_of_line()
                 bar_strs.append(f"// goto_fix {fix_ms}")
                 bar_strs.append("\n")
-        return offset_target
+        offset_curr = offset_target
+
+    def emit_note_at(G, note_type, offset):
+        nonlocal offset_curr, divs, begin_of_line
+        goto_offset(offset)
+        bar_strs.append(note_type.value)
+        begin_of_line = False
+        divs += 1
+        G.tja_time += t_div_tja
+        offset_curr += t_div
+
+    def close_lasting_note(G):
+        nonlocal offset_curr, divs, begin_of_line
+        emit_note_at(G, ENoteTja.END, G.lasting_note.offset_end)
+        G.lasting_note = None
 
     # floating number offset should match exactly here since they are in the list as-is
     # use <= in case bad things happen
+    offset_curr = begin
     for offset, delta_divs in time_ddivs:
         # Insert commands
         while idx_cmd < idx_cmd_limit and G.commands_within[idx_cmd].offset <= offset:
@@ -742,81 +768,55 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
 
         if delta_divs > 0:
             # Insert a note
-            note_type = ENoteTja.NONE
-            offset_curr = offset
+            note_type_curr = ENoteTja.NONE
+
             while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
                 note = bar_data[idx_bar_data]
+                note_type_merged = note.type
                 idx_bar_data += 1
 
                 # combine notes from different columns
                 columns = {note.column}
                 while idx_bar_data < idx_note_limit and bar_data[idx_bar_data].offset <= offset:
                     note_i = bar_data[idx_bar_data]
-                    if note_i.column in columns:
+                    if note_i.column in columns or note_i.type is ENoteTja.END:
                         break
                     columns.add(note_i.column)
-                    notes = {note.type, note_i.type}
+                    notes = {note_type_merged, note_i.type}
                     if notes.issubset({ENoteTja.DON, ENoteTja.DON_DAI, ENoteTja.DON_HAND}):
-                        note.type = ENoteTja.DON_DAI
+                        note_type_merged = ENoteTja.DON_DAI
                     elif notes.issubset({ENoteTja.KATSU, ENoteTja.KATSU_DAI, ENoteTja.KATSU_HAND}):
-                        note.type = ENoteTja.KATSU_DAI
+                        note_type_merged = ENoteTja.KATSU_DAI
                     elif notes.issubset(ENoteTja.get_hit_types()):
-                        note.type = ENoteTja.KADON
+                        note_type_merged = ENoteTja.KADON
                     elif notes.issubset(ENoteTja.get_renda_types()):
-                        note.type = ENoteTja.RENDA_DAI
+                        note_type_merged = ENoteTja.RENDA_DAI
                     elif notes.issubset(ENoteTja.get_balloon_types()):
-                        note.type = ENoteTja.IMO
+                        note_type_merged = ENoteTja.IMO
                     else:
                         break
                     idx_bar_data += 1
                     continue
 
-                # ignore straying roll ends
-                if G.lasting_note is None and note.type == ENoteTja.END:
+                # close current roll
+                if G.lasting_note is not None:
+                    close_lasting_note(G)
+                    note_type_curr = ENoteTja.END
+
+                # ignore temporary roll end objects (only for calculating measure division)
+                if note_type_merged is ENoteTja.END:
                     continue
 
-                # complete overlapped roll
-                if G.lasting_note is not None and offset <= G.lasting_note.offset_end:
-                    note_type = ENoteTja.END
-                    offset_curr = goto_offset(offset_curr, G.lasting_note.offset_end)
-                    bar_strs.append(ENoteTja.END.value)
-                    begin_of_line = False
-                    G.lasting_note = None
-                    divs += 1
-                    G.tja_time += t_div_tja
-                    offset_curr += t_div
-                    if note.type == ENoteTja.END: # the end is for the overlapped roll
-                        continue
-
                 # place the current start
-                note_type = note.type
-                offset_curr = goto_offset(offset_curr, offset)
-                bar_strs.append(note_type.value)
-                begin_of_line = False
-                divs += 1
-                G.tja_time += t_div_tja
-                offset_curr += t_div
+                note_type_curr = note_type_merged
+                emit_note_at(G, note_type_merged, offset)
 
-                if note_type.is_hit_type():
+                if note_type_curr.is_hit_type():
                     D.combo_cnt += 1
-                elif note_type.is_renda_type() or note_type.is_balloon_type():
+                elif note_type_curr.is_renda_type() or note_type_curr.is_balloon_type():
                     G.lasting_note = note
-                elif note_type == ENoteTja.END:
-                    G.lasting_note = None
 
-            # Insert blanks (if needed)
-            if note_type == ENoteTja.NONE and (divs_target > 1 or divs > 1):
-                bar_strs.append(note_type.value)
-                divs += 1
-                G.tja_time += t_div_tja
-            bar_strs.append(ENoteTja.NONE.value * int(delta_divs - 1))
-            begin_of_line = False
-            divs += int(delta_divs - 1)
-            for _ in range(int(delta_divs - 1)):
-                G.tja_time += t_div_tja
-
-    if divs == 0:
-        G.tja_time += t_div_tja
+    goto_offset(end)
 
     # remove processed notechart objects
     G.commands_within = G.commands_within[idx_cmd:]
@@ -1152,8 +1152,8 @@ def osu2tja(fp: IO[str], course: Optional[Union[str, int]] = None, level: Option
 
     # check if all notes align ok
     for i, (ho1, ho2) in enumerate(zip(hitobjects[:-1], hitobjects[1:])):
-        # allows simultaneous notes
-        if ho1.offset > ho2.offset:
+        # allows simultaneous notes; ignores long notes' ends
+        if ho1.offset > ho2.offset and ENoteTja.END not in (ho1.type, ho2.type):
             print_with_pended(f"// Warning: Hit object {i}: {ho1} occurs before hit object {i + 1}: {ho2}.", file=sys.stderr)
 
     # for end of chart

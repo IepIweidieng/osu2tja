@@ -196,6 +196,7 @@ Tool created by @delguoqing
     - [x] Spinner, finish hitsound → `9` + `8` (special balloon roll) (@IepIweidieng)
     - [x] Spinner, non-finish clap hitsound → `D` + `8` (fuze balloon roll) (if `Tags:` contains `tja2osu`, otherwise `7` + `8` (regular balloon roll)) (@IepIweidieng)
     - [x] Overlapping same-column notes → Padding `0` to place the end of overlapped note (if need), then using a negative `#DELAY` to return to the start of the overlapping note and place the start. If across timing points, use additional `#DELAY`s for fixing timing. (@IepIweidieng)
+    - [x] Negative-length slider or spinner → Handled as a overlapping same-column note, use a negative `#DELAY` to return to the end of the slider or spinner and place the end (@IepIweidieng)
     - [x] Simultaneous different-column notes → Single combined note (@IepIweidieng)
       - Two Dons `1`/`3` + `1`/`3` → `3` (big Don)
       - Two Katsus `2`/`4` + `2`/`4` → `4` (big Katsu)

@@ -131,7 +131,7 @@ FnameDiffrankLevel = Tuple[str, Optional[float], Optional[Union[int, float]]]
 
 # return number of .tja file generated
 def osus2tja(fname_diffrank_levels: List[FnameDiffrankLevel], osus_name: Optional[str] = None, root_path: str = "", target_path: Optional[str] = None,
-    extract_file: Callable[[str, str], Any] = copy2, open_file: Callable[[str], TextIO] = open,
+    extract_file: Callable[[str, str], Any] = copy2, open_file: Callable[[str], TextIO] = lambda path: open(path, encoding="utf-8-sig"),
     debugGlobal: Optional[DebugGlobal] = None,
     ) -> int:
     osu_infos_by_song: Dict[Tuple[str, int], List] = {}

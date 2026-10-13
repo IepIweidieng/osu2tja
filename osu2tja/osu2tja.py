@@ -761,6 +761,7 @@ def write_bar_data(G: Global, tm: OsuTimingPoint, bar_data: List[TjaTimedNote], 
     for offset, delta_divs in time_ddivs:
         # Insert commands
         while idx_cmd < idx_cmd_limit and G.commands_within[idx_cmd].offset <= offset:
+            goto_offset(G.commands_within[idx_cmd].offset)
             ensure_begin_of_line()
             bar_strs.append(make_cmd(G.commands_within[idx_cmd]))
             bar_strs.append("\n")
